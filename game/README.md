@@ -10,6 +10,13 @@ npm run dev        # http://localhost:5173
 npm run build      # hasil di dist/
 ```
 
+Uji otomatis (Playwright, memainkan game di Chromium sungguhan):
+
+```bash
+npx playwright install chromium   # sekali saja
+npm test
+```
+
 Buka `?reset` di URL untuk menghapus save lokal. Kontrol sentuh (joystick + tombol Aksi) muncul otomatis di HP/tablet; paksa tampil di desktop dengan `?touch`.
 
 ## Kontrol
