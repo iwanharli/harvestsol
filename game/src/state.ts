@@ -680,3 +680,32 @@ export function restOnSofa(s: GameState): string | null {
   s.minutes += SOFA_MINUTES;
   return null;
 }
+
+// ---------- shipping bin ----------
+
+/** Put a whole stack (or everything) from the bag into the shipping bin. */
+export function shipItem(s: GameState, key: string) {
+  const q = s.produce[key] ?? 0;
+  if (!q) return;
+  add(s.produce, key, -q);
+  add(s.shipping, key, q);
+}
+
+export function shipAll(s: GameState) {
+  for (const k of Object.keys(s.produce)) shipItem(s, k);
+}
+
+/** Take items back out of the bin before the night; returns an error message or null. */
+export function unshipItem(s: GameState, key: string): string | null {
+  const q = s.shipping[key] ?? 0;
+  if (!q) return null;
+  const n = Math.min(q, roomFor(s, 'produce', key));
+  if (!n) return 'Tas penuh.';
+  add(s.shipping, key, -n);
+  add(s.produce, key, n);
+  return null;
+}
+
+/** What the bin will pay tomorrow morning. */
+export const shippingValue = (s: GameState) =>
+  Object.entries(s.shipping).reduce((a, [k, q]) => a + produceById(k).sellPrice * q, 0);

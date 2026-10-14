@@ -80,6 +80,8 @@ Item di toko (masuk slot 3, ganti dengan Q):
 
 **Keseimbangan ekonomi**: `npm run sim` memainkan satu tahun game (112 hari, 25 percobaan per gaya) memakai aturan asli game, untuk gaya Santai, Rajin, Pemancing, dan Sawit. Hasil saat ini (median): Santai Lv 7 di hari 56 dan ±63 ribu G setahun; Rajin Lv 12 di hari 71 dan ±307 ribu G; Pemancing ±184 ribu G; Sawit mulai hari 77 dan baru unggul ±10% di akhir tahun kedua (`SIM_DAYS=224 npm run sim`).
 
+**Kotak Kirim**: jendela dua sisi (Tas ⇄ Kotak). Klik barang untuk memilih yang dijual, atau Kirim Semua / Ambil Semua; barang bisa diambil kembali sebelum tidur. Isi kotak dibayar besok pagi.
+
 Loop: cangkul → tanam → siram tiap hari → tidur (pintu rumah) → panen → kotak kirim → dibayar pagi berikutnya. Isi penyiram di kolam. Jam 24:00 pemain pingsan dan tenaga pagi berikutnya hanya 60%.
 
 ## Struktur
