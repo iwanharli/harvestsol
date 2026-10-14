@@ -12,12 +12,12 @@ test('tanam, siram, tumbuh, panen, kirim, dibayar', async ({ page }) => {
   let s = await state(page);
   expect(s.plots['10,10']).toMatchObject({ tilled: true, watered: true, crop: { id: 'kangkung', growth: 0 } });
 
-  for (let d = 0; d < 2; d++) {
+  for (let d = 0; d < 3; d++) {
     await sleep(page);
     await patch(page, "s.plots['10,10'].watered = true");
   }
   s = await state(page);
-  expect(s.plots['10,10'].crop.growth).toBe(2);
+  expect(s.plots['10,10'].crop.growth).toBe(3);
 
   await at(page, 10, 9, 'down');
   await use(page, 4);
@@ -30,7 +30,7 @@ test('tanam, siram, tumbuh, panen, kirim, dibayar', async ({ page }) => {
   await press(page, 'Space');
   expect(Object.keys((await state(page)).shipping)).toEqual(keys);
   await sleep(page);
-  expect((await state(page)).coins).toBeGreaterThanOrEqual(300 + Math.round(35 * 1.5));
+  expect((await state(page)).coins).toBeGreaterThanOrEqual(300 + Math.round(30 * 1.4)); // kangkung ★3+
   noErrors(errors);
 });
 
@@ -110,7 +110,7 @@ test('festival mingguan', async ({ page }) => {
   await page.waitForTimeout(100);
   const s = await state(page);
   expect(s.festival.enteredDay).toBe(7);
-  expect(s.produce).toEqual({});
+  expect(s.produce).toEqual({ kangkung: 4, padi: 1 }); // handed back after judging
   noErrors(errors);
 });
 
@@ -161,14 +161,14 @@ test('pancing harus dibeli, lalu bisa dapat ikan', async ({ page }) => {
 test('tas penuh menolak panen, lalu upgrade tas', async ({ page }) => {
   const errors = await start(page);
   // 12 stacks of 99 fill the starter bag
-  await patch(page, "s.seeds = {}; s.produce = { kangkung: 12 * 99 }; s.plots['10,10'] = { tilled: true, watered: false, crop: { id: 'tomat', growth: 4 } }");
+  await patch(page, "s.seeds = {}; s.produce = { kangkung: 12 * 99 }; s.plots['10,10'] = { tilled: true, watered: false, crop: { id: 'tomat', growth: 5 } }");
   await at(page, 10, 9, 'down');
   await use(page, 4);
   let s = await state(page);
   expect(s.plots['10,10'].crop).toBeTruthy();
   expect((await toasts(page)).join()).toContain('Tas penuh');
 
-  await patch(page, 's.level = 2; s.coins = 2500');
+  await patch(page, 's.level = 2; s.coins = 3500');
   await press(page, 'i');
   await page.mouse.click(300, 475); // "Upgrade → 18 slot"
   s = await state(page);
@@ -239,7 +239,7 @@ test('memasak di dapur lalu makan untuk tenaga', async ({ page }) => {
 test('kualitas: dirawat sempurna ★4+, ditelantarkan ★1-2', async ({ page }) => {
   const errors = await start(page);
   await patch(page, "s.level = 3; s.seeds = { kangkung: 2, pupuk: 1 }");
-  // tile A (10,10): fertilizer + watered → mature after one night (2 growth)
+  // tile A (10,10): fertilizer + watered every night → kangkung (3 days) matures in two nights
   await at(page, 10, 9, 'down');
   await use(page, 1);
   await patch(page, "s.seed = 'pupuk'");
@@ -252,8 +252,9 @@ test('kualitas: dirawat sempurna ★4+, ditelantarkan ★1-2', async ({ page }) 
   await use(page, 1);
   await use(page, 3);
   await sleep(page);
+  await patch(page, "s.plots['10,10'].watered = true"); // tile A again; tile B stays dry
   await sleep(page);
-  for (let d = 0; d < 2; d++) {
+  for (let d = 0; d < 3; d++) {
     await patch(page, "s.plots['12,10'].watered = true");
     await sleep(page);
   }
@@ -322,7 +323,7 @@ test('sawit terbuka di level 12 dan berbuah ulang', async ({ page }) => {
   await use(page, 4);
   const s = await state(page);
   expect(Object.keys(s.produce)[0]).toMatch(/^sawit/);
-  expect(s.plots['10,10'].crop).toMatchObject({ id: 'sawit', growth: 9 }); // stays and fruits again in 5 days
+  expect(s.plots['10,10'].crop).toMatchObject({ id: 'sawit', growth: 7 }); // stays and fruits again in 7 days
   noErrors(errors);
 });
 

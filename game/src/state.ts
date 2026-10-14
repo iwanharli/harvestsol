@@ -399,8 +399,7 @@ export interface FestivalResult {
 /** Hand in the entry, rank it against the villagers, and pay out rewards. */
 export function enterFestival(s: GameState, items: string[]): FestivalResult {
   const theme = festivalTheme(s.day);
-  const entry = items.slice(0, FESTIVAL_MAX_ITEMS);
-  for (const id of entry) add(s.produce, id, -1);
+  const entry = items.slice(0, FESTIVAL_MAX_ITEMS); // shown to the judges, then handed back
   const yours = festivalScore(entry, theme.id);
 
   // villagers get stronger as the year goes on
