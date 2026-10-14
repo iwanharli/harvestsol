@@ -541,6 +541,56 @@ export function makeTextures(scene: Phaser.Scene) {
     px(c, 1, 42, '#4a2f1a', 38, 4);
   }, true);
 
+  // ---------- living room & reading room (house renovations) ----------
+  canvas(scene, 'in-sofa', 48, 28, (c) => {
+    px(c, 2, 0, '#2f6f8f', 44, 12); // back
+    px(c, 3, 1, '#4f8faf', 42, 4);
+    px(c, 0, 8, '#2f6f8f', 6, 16); // arms
+    px(c, 42, 8, '#2f6f8f', 6, 16);
+    px(c, 5, 12, '#3f7f9f', 38, 10); // seat
+    px(c, 5, 12, '#5f9fbf', 38, 2);
+    px(c, 23, 12, '#2f6f8f', 1, 10);
+    px(c, 8, 4, '#f2c94c', 8, 7); // cushions
+    px(c, 32, 4, '#e2434b', 8, 7);
+    px(c, 2, 24, '#5a3a22', 3, 4); px(c, 43, 24, '#5a3a22', 3, 4);
+  }, true);
+  canvas(scene, 'in-coffee', 32, 16, (c) => {
+    px(c, 0, 2, '#6b4224', 32, 8);
+    px(c, 0, 2, '#8d5a34', 32, 3);
+    px(c, 2, 10, '#5a3a22', 3, 6); px(c, 27, 10, '#5a3a22', 3, 6);
+    px(c, 10, 0, '#f4f1e8', 6, 3); // a cup
+    px(c, 20, 0, '#3f7fbf', 7, 3); // a book
+  }, true);
+  canvas(scene, 'in-floorlamp', TILE, 36, (c) => {
+    px(c, 7, 10, '#3a3a46', 2, 24);
+    px(c, 4, 33, '#3a3a46', 8, 3);
+    px(c, 2, 0, '#f2dc94', 12, 10);
+    px(c, 3, 1, '#fff3c4', 5, 8);
+  }, true);
+  canvas(scene, 'in-aquarium', 40, 40, (c) => {
+    px(c, 2, 22, '#6b4224', 36, 18); // stand
+    px(c, 3, 23, '#8d5a34', 34, 16);
+    px(c, 0, 0, '#5f6f7d', 40, 24); // tank
+    px(c, 2, 2, '#4aa3df', 36, 20);
+    px(c, 2, 2, '#8fd0f5', 36, 3);
+    px(c, 2, 18, '#e6cf9a', 36, 4); // sand
+    px(c, 8, 12, '#4f9a3f', 2, 6); px(c, 30, 10, '#4f9a3f', 2, 8);
+    px(c, 14, 9, '#e88a2d', 5, 3); px(c, 19, 10, '#e88a2d', 1, 1); // fish
+    px(c, 24, 14, '#f2c94c', 4, 2);
+  }, true);
+  canvas(scene, 'in-armchair', 24, 24, (c) => {
+    px(c, 2, 0, '#8a3a5a', 20, 10);
+    px(c, 0, 6, '#8a3a5a', 5, 14); px(c, 19, 6, '#8a3a5a', 5, 14);
+    px(c, 4, 10, '#a84d72', 16, 8);
+    px(c, 2, 20, '#5a3a22', 3, 4); px(c, 19, 20, '#5a3a22', 3, 4);
+  }, true);
+  canvas(scene, 'in-rug2', 72, 48, (c) => {
+    px(c, 0, 0, '#2f6f8f', 72, 48);
+    px(c, 3, 3, '#e8e2d0', 66, 42);
+    px(c, 7, 7, '#4f8faf', 58, 34);
+    for (let x = 12; x < 62; x += 10) for (let y = 12; y < 38; y += 10) px(c, x, y, '#e8e2d0', 3, 3);
+  });
+
   // ---------- Toko Mebel interior ----------
   canvas(scene, 'shop-floor', TILE, TILE, (c) => {
     px(c, 0, 0, '#8d5a34', TILE, TILE);
