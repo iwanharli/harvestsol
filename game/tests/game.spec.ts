@@ -367,6 +367,7 @@ test('save lama (musim subtropis) dikonversi ke tropis', async ({ page }) => {
   const errors = await start(page);
   await page.evaluate(() => {
     const s = JSON.parse(JSON.stringify(window.game.registry.get('state')));
+    window.game.destroy(true); // stop the game so it does not save over the old-format save on unload
     s.produce = { lobak: 3, 'kentang@3': 1, 'sup-lobak': 1 };
     s.seeds = { stroberi: 2 };
     s.seed = 'stroberi';
@@ -428,5 +429,29 @@ test('tenaga maksimal naik di level tonggak dan dari Jamu Kuat', async ({ page }
   expect(s.friendship.sari).toBe(10);
   expect(s.staminaRewards.jamu).toBe(true);
   expect(s.stamina).toBe(120);
+  noErrors(errors);
+});
+
+test('posisi pemain tetap setelah halaman di-refresh', async ({ page }) => {
+  const errors = await start(page);
+  await at(page, 20, 12, 'left');
+  await page.waitForTimeout(1300); // standing still → position saved
+  await page.reload();
+  await page.waitForFunction(() => window.game?.scene?.getScene('ui')?.sys.isActive());
+  const p = await page.evaluate(() => {
+    const f = window.game.scene.getScene('farm');
+    return { x: Math.floor(f.player.x / 16), y: Math.floor((f.player.y - 4) / 16), dir: f.dir };
+  });
+  expect(p).toEqual({ x: 20, y: 12, dir: 'left' });
+
+  // inside the house too (close the welcome window the reload brought back)
+  await page.evaluate(() => window.game.scene.getScene('ui').closeModal());
+  await at(page, 5, 6, 'up');
+  await press(page, 'Space');
+  await page.waitForTimeout(700);
+  await page.reload();
+  await page.waitForFunction(() => window.game?.scene?.getScene('ui')?.sys.isActive());
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(() => window.game.registry.get('indoors'))).toBe(true);
   noErrors(errors);
 });

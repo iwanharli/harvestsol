@@ -116,6 +116,16 @@ export class FarmScene extends Phaser.Scene {
 
     this.playerShadow = this.shadow(0, 0, 12);
     this.player = this.add.image(5.5 * TILE, 7 * TILE, 'player-down-0').setOrigin(0.5, 1);
+    // pick up where the player left off (outside or in the house)
+    const pos = this.state.pos;
+    if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y)) {
+      this.player.setPosition(pos.x, pos.y);
+      this.dir = pos.dir ?? 'down';
+    }
+    window.addEventListener('beforeunload', this.savePosition);
+    const unhook = () => window.removeEventListener('beforeunload', this.savePosition);
+    this.events.once('shutdown', unhook);
+    this.events.once('destroy', unhook);
     this.setupAmbient();
     this.syncAnimals();
     this.spawnVillagers();
@@ -457,6 +467,7 @@ export class FarmScene extends Phaser.Scene {
       this.dir = dir;
       this.setPlayerFrame(0);
       this.updateIndoors();
+      this.savePosition(); // entering or leaving the house
       cam.fadeIn(260, 10, 10, 20);
       this.busy = false;
     });
@@ -849,6 +860,11 @@ export class FarmScene extends Phaser.Scene {
     }
 
     this.player.setDepth(this.player.y);
+    // remember the position once the player stops moving (cheap: at most once per second)
+    if (!vx && !vy && this.time.now - this.lastPosSave > 1000) {
+      const p = this.state.pos;
+      if (!p || p.x !== this.player.x || p.y !== this.player.y || p.dir !== this.dir) this.savePosition();
+    }
     const [cx, cy] = this.facingTile();
     this.cursor.setPosition(cx * TILE, cy * TILE);
   }
@@ -873,6 +889,16 @@ export class FarmScene extends Phaser.Scene {
   }
 
   // ---------- actions ----------
+
+  private lastPosSave = 0;
+
+  /** Store where the player stands; called on stop, on sleep, and when the page closes. */
+  private savePosition = () => {
+    if (!this.player || !this.sys.isActive()) return; // never write from a stopped game
+    this.state.pos = { x: Math.round(this.player.x), y: Math.round(this.player.y), dir: this.dir };
+    this.lastPosSave = this.time.now;
+    save(this.state);
+  };
 
   private toast(msg: string) {
     this.game.events.emit('toast', msg);
@@ -1334,6 +1360,7 @@ export class FarmScene extends Phaser.Scene {
       const report = endDay(this.state, passedOut === true);
       this.player.setPosition((ROOM.x + 2.5) * TILE, (ROOM.y + 4) * TILE - 2); // wake up beside the bed
       this.dir = 'down';
+      this.state.pos = { x: Math.round(this.player.x), y: Math.round(this.player.y), dir: 'down' };
       // refresh drawn plots (some may have reverted to grass) and all current ones
       for (const k of new Set([...this.soilImgs.keys(), ...this.propImgs.keys(), ...Object.keys(this.state.plots)]))
         this.refreshPlot(k);
