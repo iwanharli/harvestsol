@@ -254,6 +254,8 @@ export const NPC_LINES: Record<string, string[]> = {
 export const ZONES: { name: string; x0: number; y0: number; x1: number; y1: number }[] = [
   { name: 'Rumah', x0: 100, y0: 4, x1: 113, y1: 13 }, // the farmhouse interior (east of the map)
   { name: 'Toko Mebel', x0: 160, y0: 4, x1: 171, y1: 12 },
+  { name: 'Rumah', x0: 220, y0: 4, x1: 239, y1: 15 },
+  { name: 'Rumah', x0: 290, y0: 4, x1: 315, y1: 17 },
   { name: 'Ladang', x0: 0, y0: 0, x1: 33, y1: 21 },
   { name: 'Perkampungan Warga', x0: 34, y0: 0, x1: 63, y1: 23 },
   { name: 'Hutan Kecil', x0: 44, y0: 24, x1: 63, y1: 39 },
@@ -400,3 +402,23 @@ export const BIG_BED_BONUS = 15;
 export const ALARM_WAKE_MIN = 5 * 60;
 export const TROPHY_BONUS = 0.05;
 export const TROPHY_BONUS_MAX = 5;
+
+// ---------- house renovation ----------
+
+export interface HouseTier {
+  name: string;
+  w: number; // interior size in tiles
+  h: number;
+  x: number; // where this interior lives in world tiles (far apart so rooms never show each other)
+  price: number;
+  level: number;
+  perk: string;
+}
+
+export const HOUSE_TIERS: HouseTier[] = [
+  { name: 'Rumah Kecil', w: 14, h: 10, x: 100, price: 0, level: 1, perk: 'Kamar, dapur, dan meja makan.' },
+  { name: 'Rumah Sedang', w: 20, h: 12, x: 220, price: 12000, level: 5, perk: 'Ruang keluarga dengan sofa: istirahat sekali sehari +20 tenaga.' },
+  { name: 'Rumah Besar', w: 26, h: 14, x: 290, price: 35000, level: 10, perk: 'Dapur besar: setiap masak jadi 2 porsi. Ruang baca dan akuarium.' },
+];
+export const SOFA_STAMINA = 20;
+export const SOFA_MINUTES = 30;

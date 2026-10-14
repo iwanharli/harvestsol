@@ -470,7 +470,7 @@ test('toko mebel: masuk, beli kulkas dari pajangan, simpan bahan, masak dari kul
   await press(page, 'Space');
   expect(await page.evaluate(() => window.game.registry.get('modal'))).toBe(true);
   await page.waitForTimeout(150);
-  await page.mouse.click(673, 358); // "Beli" on the kulkas row
+  await page.mouse.click(673, 371); // "Beli" on the kulkas row
   await page.waitForTimeout(150);
   let s = await state(page);
   expect(s.furniture.kulkas).toBe(true);
@@ -500,5 +500,43 @@ test('jam dinding bangun 05:00, kasur besar +15 tenaga', async ({ page }) => {
   const s = await state(page);
   expect(s.minutes).toBe(5 * 60);
   expect(s.stamina).toBe(115);
+  noErrors(errors);
+});
+
+test('renovasi rumah: lebih luas, sofa +20 tenaga, dapur besar 2 porsi', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, 's.level = 5; s.coins = 15000; s.stamina = 50');
+  await page.evaluate(() => window.game.events.emit('open-mebel'));
+  await page.waitForTimeout(150);
+  await page.mouse.click(436, 87); // "Renovasi Rumah" tab
+  await page.waitForTimeout(150);
+  await page.mouse.click(673, 304); // "Renovasi" on Rumah Sedang
+  await page.waitForTimeout(150);
+  let s = await state(page);
+  expect(s.houseTier).toBe(1);
+  expect(s.coins).toBe(3000);
+  await press(page, 'Escape');
+
+  // the door now leads into the bigger house
+  await at(page, 5, 6, 'up');
+  await press(page, 'Space');
+  await page.waitForTimeout(700);
+  const inside = await page.evaluate(() => Math.floor(window.game.scene.getScene('farm').player.x / 16));
+  expect(inside).toBeGreaterThanOrEqual(220);
+
+  await at(page, 237, 9, 'up'); // facing the sofa
+  await press(page, 'Space');
+  s = await state(page);
+  expect(s.stamina).toBe(70);
+  await press(page, 'Space'); // only once a day
+  expect((await state(page)).stamina).toBe(70);
+
+  // Rumah Besar: cooking makes two portions
+  await patch(page, "s.houseTier = 2; s.level = 10; s.produce = { kangkung: 2 }");
+  await page.evaluate(() => window.game.events.emit('open-kitchen'));
+  await page.waitForTimeout(150);
+  await page.mouse.click(308, 176); // "Masak" on Tumis Kangkung
+  await page.waitForTimeout(150);
+  expect((await state(page)).produce).toEqual({ 'tumis-kangkung': 2 });
   noErrors(errors);
 });

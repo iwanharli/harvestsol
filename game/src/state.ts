@@ -19,6 +19,9 @@ import {
   ALARM_WAKE_MIN,
   BIG_BED_BONUS,
   COOK_MINUTES,
+  HOUSE_TIERS,
+  SOFA_MINUTES,
+  SOFA_STAMINA,
   FRIDGE_SLOTS,
   TROPHY_BONUS,
   TROPHY_BONUS_MAX,
@@ -102,6 +105,8 @@ export interface GameState {
   fishCaught: Record<string, number>; // fish id → best stars caught (the fish book)
   staminaRewards: Record<string, boolean>; // one-off max-stamina rewards already granted
   furniture: Record<string, boolean>; // bought furniture ids
+  houseTier: number; // index into HOUSE_TIERS
+  sofaDay: number; // last day the sofa rest was used
   fridge: Record<string, number>; // kulkas contents (same keys as produce)
   pos?: { x: number; y: number; dir: 'down' | 'up' | 'left' | 'right' }; // where the player stands (world px) // last day the player chatted with each villager
   stats: { harvested: number; earned: number; requestsDone: number };
@@ -141,6 +146,8 @@ export function newGame(): GameState {
     fishCaught: {},
     staminaRewards: {},
     furniture: {},
+    houseTier: 0,
+    sofaDay: 0,
     fridge: {},
     stats: { harvested: 0, earned: 0, requestsDone: 0 },
   };
@@ -195,6 +202,8 @@ function migrate(s: GameState): GameState {
   s.fishCaught ??= {};
   s.staminaRewards ??= {};
   s.furniture ??= {};
+  s.houseTier ??= 0;
+  s.sofaDay ??= 0;
   s.fridge ??= {};
   s.stats.requestsDone ??= 0;
   return s;
@@ -501,11 +510,12 @@ export function cook(s: GameState, dishId: string): string | null {
     // the rest comes out of the kulkas (returned to the bag if cooking fails)
     for (const [k, q] of Object.entries(takeFrom(s.fridge, id, n - fromBag))) add(taken, k, q);
   }
-  if (!canAdd(s, 'produce', dish.id)) {
+  const portions = s.houseTier >= 2 ? 2 : 1; // Rumah Besar's big kitchen
+  if (!canAdd(s, 'produce', dish.id, portions)) {
     for (const [k, q] of Object.entries(taken)) add(s.produce, k, q); // put everything back
     return 'Tas penuh! Kosongkan satu slot dulu.';
   }
-  add(s.produce, dish.id, 1);
+  add(s.produce, dish.id, portions);
   s.minutes += COOK_MINUTES;
   return null;
 }
@@ -647,5 +657,26 @@ export function buyFurniture(s: GameState, id: string, price: number, level: num
   if (s.coins < price) return `Uang tidak cukup (butuh ${price.toLocaleString('id-ID')} G).`;
   s.coins -= price;
   s.furniture[id] = true;
+  return null;
+}
+
+// ---------- renovation & sofa ----------
+
+export function upgradeHouse(s: GameState): string | null {
+  const next = HOUSE_TIERS[s.houseTier + 1];
+  if (!next) return 'Rumah sudah paling besar.';
+  if (s.level < next.level) return `${next.name} terbuka di Level ${next.level}.`;
+  if (s.coins < next.price) return `Uang tidak cukup (butuh ${next.price.toLocaleString('id-ID')} G).`;
+  s.coins -= next.price;
+  s.houseTier++;
+  return null;
+}
+
+/** Rest on the sofa once a day for a little stamina (may go above the maximum, like a nap). */
+export function restOnSofa(s: GameState): string | null {
+  if (s.sofaDay === s.day) return 'Sudah istirahat di sofa hari ini.';
+  s.sofaDay = s.day;
+  s.stamina += SOFA_STAMINA;
+  s.minutes += SOFA_MINUTES;
   return null;
 }
