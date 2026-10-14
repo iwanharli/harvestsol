@@ -87,7 +87,8 @@ export interface GameState {
   festival: { enteredDay: number; points: number; trophies: Record<string, number> };
   nextRequestId: number;
   friendship: Record<string, number>;
-  talkedDay: Record<string, number>; // last day the player chatted with each villager
+  talkedDay: Record<string, number>;
+  fishCaught: Record<string, number>; // fish id → best stars caught (the fish book) // last day the player chatted with each villager
   stats: { harvested: number; earned: number; requestsDone: number };
 }
 
@@ -122,6 +123,7 @@ export function newGame(): GameState {
     nextRequestId: 1,
     friendship: {},
     talkedDay: {},
+    fishCaught: {},
     stats: { harvested: 0, earned: 0, requestsDone: 0 },
   };
 }
@@ -172,6 +174,7 @@ function migrate(s: GameState): GameState {
   s.nextRequestId ??= 1;
   s.friendship ??= {};
   s.talkedDay ??= {};
+  s.fishCaught ??= {};
   s.stats.requestsDone ??= 0;
   return s;
 }

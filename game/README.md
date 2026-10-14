@@ -30,6 +30,7 @@ Buka `?reset` di URL untuk menghapus save lokal. Kontrol sentuh (joystick + tomb
 | Ganti benih | Q | Klik slot benih saat sudah terpilih |
 | Buka tas (inventory) | I | Klik panel Tas kanan atas |
 | Kalender & prakiraan cuaca 7 hari | K | Klik jam di tengah atas |
+| Buku Ikan | J | - |
 | Semua suara nyala/mati | M | - |
 | Musik nyala/mati | N | - |
 | Tutup jendela | Esc | Tombol di jendela |
@@ -49,7 +50,7 @@ Item di toko (masuk slot 3, ganti dengan Q):
 
 **Festival mingguan** (hari ke-7, 14, 21, 28 tiap musim, 09:00–18:00, di panggung alun-alun): serahkan sampai 5 hasil panen. Skor = harga jual (tanaman tema ×2) + 40 per jenis berbeda. Juara 1–3 mendapat koin, XP, piala, dan Poin Festival (dasar pembagian pool hadiah di fase 3 whitepaper). Datangi panggung di hari lain untuk melihat tema festival berikutnya.
 
-**Memancing**: beli Pancing di toko (Peralatan, 500 G, Lv 2). Hadapkan pemain ke air (kolam atau danau, paling enak dari ujung dermaga), tekan Spasi, tunggu tanda "!", lalu tekan Spasi lagi dengan cepat. Danau punya Ikan Lele dan Ikan Emas yang langka.
+**Memancing**: beli Pancing di toko (Peralatan, 500 G, Lv 2). Hadapkan pemain ke air (kolam atau danau, paling enak dari ujung dermaga), tekan Spasi, tunggu tanda "!", lalu tekan Spasi lagi secepatnya: makin cepat reaksimu, makin tinggi kualitas ikannya (★1–5). Ada 13 jenis ikan; tiap jenis punya tempat (kolam/danau), jam, musim, dan sebagian butuh hujan (misalnya Belut hanya saat hujan malam, Arwana malam di musim Kemarau). Lihat semuanya di **Buku Ikan (J)**: ikan yang belum tertangkap tampil sebagai siluet dengan petunjuknya.
 
 **Musim tropis** (28 hari per musim): Tanam (awal hujan), Hujan, Panen (pancaroba), dan Kemarau. Tanaman: Kangkung, Timun, Terong, Tomat, Ubi, Padi, Cabai, Singkong, Jagung, Kedelai, Semangka, dan **Sawit (Lv 12)**: benih mahal, tumbuh 14 hari di semua musim, lalu berbuah lagi tiap 5 hari tanpa ditanam ulang.
 

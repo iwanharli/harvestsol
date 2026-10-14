@@ -134,10 +134,6 @@ export const GOLDEN_EGG_AFFECTION = 8;
 export const PRODUCTS: { id: string; name: string; sellPrice: number }[] = [
   { id: 'telur', name: 'Telur', sellPrice: 50 },
   { id: 'telur-emas', name: 'Telur Emas', sellPrice: 150 },
-  { id: 'ikan-nila', name: 'Ikan Nila', sellPrice: 45 },
-  { id: 'ikan-mas', name: 'Ikan Mas', sellPrice: 60 },
-  { id: 'ikan-lele', name: 'Ikan Lele', sellPrice: 80 },
-  { id: 'ikan-emas', name: 'Ikan Emas', sellPrice: 300 },
 ];
 
 // ---------- cooking ----------
@@ -179,7 +175,7 @@ export const stars = (n: number) => '★'.repeat(n);
 /** Name and price of anything that can sit in the produce bag (crops, quality crops, products, dishes). */
 export function produceById(key: string): { id: string; name: string; sellPrice: number } {
   const id = baseId(key);
-  const base = PRODUCTS.find((p) => p.id === id) ?? dishById(id) ?? cropById(id);
+  const base = PRODUCTS.find((p) => p.id === id) ?? FISH.find((f) => f.id === id) ?? dishById(id) ?? cropById(id);
   const q = starsOf(key);
   if (q <= 1) return base;
   return { id: key, name: `${base.name} ${stars(q)}`, sellPrice: Math.round(base.sellPrice * QUALITY_MULT[q]) };
@@ -257,22 +253,75 @@ export const zoneAt = (x: number, y: number) => ZONES.find((z) => x >= z.x0 && x
 
 // ---------- fishing ----------
 
-export const XP_FISH = 5;
 export const RUN_MULT = 1.7;
 
-/** Catch weights per water body; the lake holds bigger and rarer fish. */
-export const FISH_TABLE: Record<'kolam' | 'danau', [string, number][]> = {
-  kolam: [['ikan-nila', 70], ['ikan-mas', 30]],
-  danau: [['ikan-nila', 35], ['ikan-mas', 32], ['ikan-lele', 28], ['ikan-emas', 5]],
-};
+// ---------- fish ----------
 
-export function rollFish(where: 'kolam' | 'danau', rainy = false, rand = Math.random) {
-  // rain brings the catfish and the golden fish out (double weight)
-  const table = FISH_TABLE[where].map(([id, w]) => [id, rainy && (id === 'ikan-lele' || id === 'ikan-emas') ? w * 2 : w] as [string, number]);
-  let n = rand() * table.reduce((a, [, w]) => a + w, 0);
-  for (const [id, w] of table) if ((n -= w) < 0) return id;
-  return table[0][0];
+export type Water = 'kolam' | 'danau';
+
+export interface FishDef {
+  id: string;
+  name: string;
+  sellPrice: number;
+  where: Water[];
+  seasons?: Season[]; // undefined = every season
+  hours: [number, number]; // bites from..until (24h clock, until is exclusive)
+  weight: number; // relative chance among the fish that can bite right now
+  rain?: 'bonus' | 'only'; // rain doubles the chance, or is required
+  colors: [string, string, string]; // body, light, dark
+  shape?: 'fish' | 'eel' | 'shrimp' | 'long';
 }
+
+export const FISH: FishDef[] = [
+  { id: 'ikan-nila', name: 'Ikan Nila', sellPrice: 45, where: ['kolam', 'danau'], hours: [6, 24], weight: 40, colors: ['#8a9aa8', '#b8c6d2', '#5f6f7d'] },
+  { id: 'ikan-mas', name: 'Ikan Mas', sellPrice: 60, where: ['kolam', 'danau'], hours: [6, 20], weight: 30, colors: ['#e88a2d', '#f4b66a', '#b8651c'] },
+  { id: 'ikan-betok', name: 'Ikan Betok', sellPrice: 55, where: ['kolam'], hours: [6, 12], weight: 22, colors: ['#7a8a5a', '#a0b07a', '#556040'] },
+  { id: 'ikan-lele', name: 'Ikan Lele', sellPrice: 80, where: ['danau'], seasons: ['Tanam', 'Hujan'], hours: [18, 24], weight: 26, rain: 'bonus', colors: ['#5a5248', '#7d746a', '#3b352f'] },
+  { id: 'ikan-belut', name: 'Belut', sellPrice: 100, where: ['kolam'], seasons: ['Tanam', 'Hujan'], hours: [18, 24], weight: 16, rain: 'only', colors: ['#6a5a3a', '#8f7a52', '#4a3f2a'], shape: 'eel' },
+  { id: 'ikan-gabus', name: 'Ikan Gabus', sellPrice: 95, where: ['danau'], seasons: ['Hujan', 'Panen'], hours: [6, 18], weight: 18, colors: ['#4f5a4a', '#6f7a68', '#353d32'], shape: 'long' },
+  { id: 'ikan-patin', name: 'Ikan Patin', sellPrice: 110, where: ['danau'], seasons: ['Panen', 'Kemarau'], hours: [6, 18], weight: 15, colors: ['#9aa6b2', '#c8d2dc', '#6a7682'] },
+  { id: 'ikan-gurame', name: 'Ikan Gurame', sellPrice: 130, where: ['danau'], hours: [9, 17], weight: 14, colors: ['#b8a07a', '#d8c4a0', '#8a7452'] },
+  { id: 'ikan-bawal', name: 'Ikan Bawal', sellPrice: 120, where: ['danau'], seasons: ['Kemarau'], hours: [12, 24], weight: 12, colors: ['#5a6a7a', '#8a9aaa', '#3a4a5a'] },
+  { id: 'ikan-udang', name: 'Udang Galah', sellPrice: 150, where: ['danau'], seasons: ['Hujan'], hours: [18, 24], weight: 10, rain: 'bonus', colors: ['#5f8fb0', '#8fbfdf', '#3f6f90'], shape: 'shrimp' },
+  { id: 'ikan-koi', name: 'Ikan Koi', sellPrice: 250, where: ['kolam'], seasons: ['Panen'], hours: [10, 16], weight: 5, colors: ['#f4f1e8', '#ffffff', '#e2434b'] },
+  { id: 'ikan-emas', name: 'Ikan Emas', sellPrice: 300, where: ['danau'], hours: [6, 24], weight: 3, rain: 'bonus', colors: ['#f2c94c', '#fff3a8', '#c99a2e'] },
+  { id: 'ikan-arwana', name: 'Ikan Arwana', sellPrice: 600, where: ['danau'], seasons: ['Kemarau'], hours: [18, 24], weight: 2, colors: ['#d9b45a', '#f2dc94', '#a8843a'], shape: 'long' },
+];
+
+export const fishById = (id: string) => FISH.find((f) => f.id === id);
+
+/** Fish that can bite here and now (any-season fish always count; rain-only fish need rain). */
+export function fishAvailable(where: Water, season: Season, hour: number, rainy: boolean) {
+  return FISH.filter(
+    (f) =>
+      f.where.includes(where) &&
+      (!f.seasons || f.seasons.includes(season)) &&
+      hour >= f.hours[0] &&
+      hour < f.hours[1] &&
+      (f.rain !== 'only' || rainy),
+  );
+}
+
+export function rollFish(where: Water, season: Season, hour: number, rainy: boolean, rand = Math.random): string {
+  const pool = fishAvailable(where, season, hour, rainy).map((f) => [f.id, f.rain && rainy ? f.weight * 2 : f.weight] as const);
+  if (!pool.length) return 'ikan-nila';
+  let n = rand() * pool.reduce((a, [, w]) => a + w, 0);
+  for (const [id, w] of pool) if ((n -= w) < 0) return id;
+  return pool[0][0];
+}
+
+/** Stars from how fast the player reacted to the bite (ms), plus a little level-based luck. */
+export function fishStars(reactionMs: number, level: number, rand = Math.random) {
+  let q = 1;
+  if (reactionMs < 550) q++;
+  if (reactionMs < 380) q++;
+  if (reactionMs < 240) q++;
+  if (rand() < 0.08 + level * 0.015) q++;
+  return Math.min(5, q);
+}
+
+/** XP for a catch grows with how valuable the fish is. */
+export const fishXp = (id: string) => 4 + Math.round((fishById(id)?.sellPrice ?? 45) / 40);
 
 /** Tools that must be bought once before they can be used. */
 export const BUYABLE_TOOLS: { id: Tool; name: string; price: number; level: number; desc: string }[] = [

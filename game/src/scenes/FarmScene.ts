@@ -7,7 +7,8 @@ import {
   NPC_HOMES,
   RUN_MULT,
   isWet,
-  XP_FISH,
+  fishStars,
+  fishXp,
   needsPurchase,
   rollFish,
   NPC_LINES,
@@ -91,6 +92,7 @@ export class FarmScene extends Phaser.Scene {
   private zone = '';
   private fishing?: {
     stage: 'wait' | 'bite';
+    biteAt?: number;
     where: 'kolam' | 'danau';
     bobber: Phaser.GameObjects.Image;
     alert: Phaser.GameObjects.Image;
@@ -946,6 +948,7 @@ export class FarmScene extends Phaser.Scene {
     const f = this.fishing;
     if (!f) return;
     f.stage = 'bite';
+    f.biteAt = this.time.now;
     f.alert.setVisible(true);
     this.tweens.add({ targets: f.bobber, y: f.bobber.y + 3, duration: 90, yoyo: true, repeat: 3 });
     play('click');
@@ -957,15 +960,22 @@ export class FarmScene extends Phaser.Scene {
     const f = this.fishing;
     if (!f) return;
     if (f.stage === 'wait') return this.endFishing('Terlalu cepat! Ikannya kabur.', true);
-    const id = rollFish(f.where, isWet(this.state.weather));
-    const fish = produceById(id);
-    if (!canAdd(this.state, 'produce', id)) return this.endFishing(`Tas penuh! ${fish.name} dilepas lagi.`, true);
-    add(this.state.produce, id, 1);
+    const s = this.state;
+    const id = rollFish(f.where, seasonOf(s.day), s.minutes / 60, isWet(s.weather));
+    // quicker reaction to the bite = better quality
+    const q = fishStars(this.time.now - (f.biteAt ?? this.time.now), s.level);
+    const key = qualityKey(id, q);
+    const fish = produceById(key);
+    if (!canAdd(s, 'produce', key)) return this.endFishing(`Tas penuh! ${fish.name} dilepas lagi.`, true);
+    add(s.produce, key, 1);
+    const first = !s.fishCaught[id];
+    s.fishCaught[id] = Math.max(s.fishCaught[id] ?? 0, q);
     const [tx, ty] = [Math.floor(f.bobber.x / TILE), Math.floor(f.bobber.y / TILE)];
     this.flyIcon(tx, ty, `icon-${id}`);
-    play('harvest');
-    this.xp(XP_FISH, tx, ty);
-    this.endFishing(`Dapat ${fish.name}! (${fish.sellPrice} G)`);
+    this.starBurst(tx, ty, q);
+    play(q >= 4 || first ? 'quest' : 'harvest');
+    this.xp(fishXp(id), tx, ty);
+    this.endFishing(`${first ? 'Ikan baru! ' : ''}Dapat ${fish.name} (${fish.sellPrice} G)`);
   }
 
   private endFishing(msg: string, failed = false) {
