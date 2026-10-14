@@ -911,8 +911,13 @@ export class UIScene extends Phaser.Scene {
     const cap = bagCapacity(s);
     const used = slotsUsed(s);
     const { c, x, y } = this.openModal(W, H, `Tas · ${BAG_TIERS[s.bagTier].name}`, 'inventory');
+
+    // capacity: "9/12 slot" with a thin bar under it
     const full = used >= cap;
-    c.add(this.add.text(x + W - 28, y + 24, `${used}/${cap} slot`, txt(15, full ? C.red : C.secondary)).setOrigin(1, 0));
+    c.add(this.add.text(x + W - 28, y + 20, `${used}/${cap} slot`, txt(13, full ? C.red : C.secondary)).setOrigin(1, 0));
+    const capBar = this.add.graphics();
+    drawBar(capBar, x + W - 128, y + 40, 100, used / cap, full ? HEX.red : HEX.blue);
+    c.add(capBar);
 
     type Slot = { bag: 'produce' | 'seeds' | 'other'; id: string; icon: string; qty: number | string };
     // one slot per stack of up to STACK_MAX
@@ -935,39 +940,37 @@ export class UIScene extends Phaser.Scene {
         : [];
 
     // tabs
-    const tabs: { id: InvTab; name: string }[] = [
-      { id: 'semua', name: 'Semua' },
-      { id: 'panen', name: 'Hasil Panen' },
-      { id: 'benih', name: 'Benih & Alat' },
-      ...(livestock.length ? [{ id: 'ternak' as const, name: 'Ternak' }] : []),
+    const tabs: { id: InvTab; name: string; empty: string }[] = [
+      { id: 'semua', name: 'Semua', empty: 'Tas masih kosong' },
+      { id: 'panen', name: 'Hasil Panen', empty: 'Belum ada hasil panen' },
+      { id: 'benih', name: 'Benih & Alat', empty: 'Belum ada benih atau alat · beli di toko' },
+      ...(livestock.length ? [{ id: 'ternak' as const, name: 'Ternak', empty: 'Belum ada ternak' }] : []),
     ];
     if (!tabs.some((t) => t.id === this.invTab)) this.invTab = 'semua';
+    const tab = tabs.find((t) => t.id === this.invTab)!;
     c.add(
-      segmented(this, x + 24, y + 54, tabs.map((t) => t.name), tabs.findIndex((t) => t.id === this.invTab), (i) => {
+      segmented(this, x + 24, y + 54, tabs.map((t) => t.name), tabs.indexOf(tab), (i) => {
         play('click');
         this.invTab = tabs[i].id;
         this.openInventory();
       }, 112),
     );
 
-    // which slots to draw: "Semua" shows the whole bag, including empty and locked slots
+    // every tab shows a full grid: items first, then empty slots, then locked ones ("Semua")
     type Cell = Slot | 'empty' | 'locked';
-    let cells: Cell[];
-    if (this.invTab === 'semua') {
-      const items: Cell[] = [...produce, ...seeds];
-      cells = [...items];
-      for (let i = items.length; i < BAG_MAX_SLOTS; i++) cells.push(i < cap ? 'empty' : 'locked');
-    } else cells = this.invTab === 'panen' ? produce : this.invTab === 'benih' ? seeds : livestock;
+    const items: Slot[] = this.invTab === 'semua' ? [...produce, ...seeds] : this.invTab === 'panen' ? produce : this.invTab === 'benih' ? seeds : livestock;
+    const COLS = 6; // 6 x 5 = BAG_MAX_SLOTS
+    const cells: Cell[] = [...items];
+    for (let i = items.length; i < BAG_MAX_SLOTS; i++) cells.push(this.invTab === 'semua' && i >= cap ? 'locked' : 'empty');
 
-    const all = [...produce, ...seeds, ...livestock];
-    if (!this.invSel || !all.some((sl) => sl.bag === this.invSel!.bag && sl.id === this.invSel!.id)) {
-      const first = cells.find((cl): cl is Slot => typeof cl !== 'string');
+    // the detail card follows the open tab: keep the selection only if it is shown here
+    if (!this.invSel || !items.some((sl) => sl.bag === this.invSel!.bag && sl.id === this.invSel!.id)) {
+      const first = items[0];
       this.invSel = first ? { bag: first.bag, id: first.id } : undefined;
     }
 
-    const SZ = 50, GAP = 8, COLS = 6;
+    const SZ = 50, GAP = 8;
     const gx = x + 28, gy = y + 98;
-    if (!cells.length) c.add(this.add.text(gx, gy + 6, 'Kosong.', txt(14, C.tertiary, false)));
     cells.forEach((cl, i) => {
       const sx = gx + (i % COLS) * (SZ + GAP);
       const sy = gy + Math.floor(i / COLS) * (SZ + GAP);
@@ -983,16 +986,28 @@ export class UIScene extends Phaser.Scene {
         return;
       }
       const on = this.invSel?.bag === cl.bag && this.invSel.id === cl.id;
-      const active = cl.bag === 'seeds' && s.seed === cl.id;
-      card(g, sx, sy, SZ, SZ, on ? 'selected' : 'normal', 12);
-      c.add(this.add.image(sx + SZ / 2, sy + SZ / 2 - 2, cl.icon).setScale(2.5));
-      c.add(this.add.text(sx + SZ - 4, sy + SZ - 2, `${cl.qty}`, { ...txt(11, C.secondary), stroke: '#ffffff', strokeThickness: 3 }).setOrigin(1, 1));
-      if (cl.bag === 'produce') {
-        const sb = this.starBadge(sx + 3, sy + 2, cl.id, 10);
-        if (sb) c.add(sb);
+      const draw = (hover: boolean) => {
+        g.clear();
+        card(g, sx, sy, SZ, SZ, on ? 'selected' : 'normal', 12);
+        if (hover && !on) g.lineStyle(1.5, HEX.blue, 0.45).strokeRoundedRect(sx, sy, SZ, SZ, 12);
+      };
+      draw(false);
+      c.add(this.add.image(sx + SZ / 2, sy + SZ / 2 - 3, cl.icon).setScale(2));
+      // quantity pill, bottom-right
+      const q = this.add.text(sx + SZ - 6, sy + SZ - 5, `${cl.qty}`, txt(10, C.secondary)).setOrigin(1, 1);
+      const qg = this.add.graphics();
+      qg.fillStyle(0x767680, 0.14).fillRoundedRect(q.x - q.width - 4, q.y - q.height - 1, q.width + 8, q.height + 2, (q.height + 2) / 2);
+      c.add([qg, q]);
+      if (cl.bag === 'produce' && starsOf(cl.id) > 1) {
+        const st = this.add.text(sx + 6, sy + 5, `★${starsOf(cl.id)}`, txt(9, '#a86f00'));
+        const sg = this.add.graphics();
+        sg.fillStyle(0xffd60a, 0.3).fillRoundedRect(st.x - 3, st.y - 1, st.width + 6, st.height + 2, (st.height + 2) / 2);
+        c.add([sg, st]);
       }
-      if (active) c.add(this.add.circle(sx + 8, sy + 8, 3, HEX.blue));
+      if (cl.bag === 'seeds' && s.seed === cl.id) c.add(this.add.circle(sx + SZ - 8, sy + 8, 3.5, HEX.blue)); // equipped in slot 3
       const z = this.add.zone(sx, sy, SZ, SZ).setOrigin(0).setInteractive({ useHandCursor: true });
+      z.on('pointerover', () => draw(true));
+      z.on('pointerout', () => draw(false));
       z.on('pointerdown', () => {
         play('click');
         this.invSel = { bag: cl.bag, id: cl.id };
@@ -1000,24 +1015,66 @@ export class UIScene extends Phaser.Scene {
       });
       c.add(z);
     });
+    if (!items.length) {
+      const gw = COLS * (SZ + GAP) - GAP;
+      const m = this.add.text(gx + gw / 2, gy + SZ + GAP / 2, tab.empty, txt(13, C.secondary, false)).setOrigin(0.5);
+      const mg = this.add.graphics();
+      mg.fillStyle(0xffffff, 0.92).fillRoundedRect(m.x - m.width / 2 - 14, m.y - 15, m.width + 28, 30, 15);
+      mg.lineStyle(1, HEX.hairline, 0.08).strokeRoundedRect(m.x - m.width / 2 - 14, m.y - 15, m.width + 28, 30, 15);
+      c.add([mg, m]);
+    }
 
     // right: detail card
     const dx = x + W - 250, dy = y + 98, dw = 222, dh = 284;
     const g = this.add.graphics();
     card(g, dx, dy, dw, dh, 'normal', 18);
-    well(g, dx + dw / 2, dy + 50, 36);
     c.add(g);
     const sel = this.invSel;
     if (!sel) {
-      c.add(this.add.text(dx + dw / 2, dy + 130, 'Pilih slot untuk\nmelihat detail', { ...txt(14, C.tertiary, false), align: 'center' }).setOrigin(0.5));
+      well(g, dx + dw / 2, dy + 92, 32, true);
+      c.add(this.add.image(dx + dw / 2, dy + 92, 'icon-tas').setScale(3).setAlpha(0.5));
+      c.add(this.add.text(dx + dw / 2, dy + 150, 'Pilih barang untuk\nmelihat detailnya', { ...txt(13, C.tertiary, false), align: 'center' }).setOrigin(0.5, 0));
     } else {
       const d = this.describe(sel.bag, sel.id);
-      c.add(this.add.image(dx + dw / 2, dy + 50, d.icon).setScale(4));
-      c.add(this.add.text(dx + dw / 2, dy + 94, d.name, txt(17)).setOrigin(0.5, 0));
-      c.add(this.add.text(dx + 14, dy + 122, d.lines.join('\n'), { ...txt(13, INK, false), lineSpacing: 4, wordWrap: { width: dw - 28 } }));
-      const dish = sel.bag === 'produce' ? dishById(sel.id) : undefined;
+      well(g, dx + dw / 2, dy + 46, 32);
+      c.add(this.add.image(dx + dw / 2, dy + 46, d.icon).setScale(3.5));
+      c.add(this.add.text(dx + dw / 2, dy + 86, d.name, txt(16)).setOrigin(0.5, 0));
+      // category chip
+      const kind =
+        sel.bag === 'other' ? 'Ternak'
+        : sel.bag === 'seeds' ? (ITEMS.some((i) => i.id === sel.id) ? 'Alat' : 'Benih')
+        : dishById(baseId(sel.id)) ? 'Masakan'
+        : baseId(sel.id).startsWith('ikan') ? 'Ikan'
+        : baseId(sel.id).startsWith('telur') ? 'Produk Ternak'
+        : 'Hasil Panen';
+      const chip = this.add.text(dx + dw / 2, dy + 116, kind, txt(11, C.blue)).setOrigin(0.5);
+      const cg = this.add.graphics();
+      cg.fillStyle(HEX.blueSoft, 1).fillRoundedRect(chip.x - chip.width / 2 - 10, chip.y - 10, chip.width + 20, 20, 10);
+      c.add([cg, chip]);
+
+      // label/value rows; lines without a colon become small notes
+      const action = sel.bag === 'seeds' || (sel.bag === 'produce' && !!dishById(baseId(sel.id)));
+      const bottom = dy + dh - (action ? 58 : 14);
+      let ry = dy + 136;
+      for (const line of d.lines) {
+        if (ry > bottom - 18) break;
+        const i = line.indexOf(':');
+        if (i > 0) {
+          if (ry > dy + 136) g.fillStyle(HEX.hairline, 0.07).fillRect(dx + 14, ry - 3, dw - 28, 1);
+          c.add(this.add.text(dx + 14, ry, line.slice(0, i), txt(12, C.secondary, false)));
+          const v = this.add.text(dx + dw - 14, ry, line.slice(i + 1).trim(), { ...txt(12, INK), align: 'right', wordWrap: { width: dw - 100 } }).setOrigin(1, 0);
+          c.add(v);
+          ry += Math.max(20, v.height + 4);
+        } else {
+          const n = this.add.text(dx + 14, ry, line, { ...txt(11, C.tertiary, false), wordWrap: { width: dw - 28 } });
+          c.add(n);
+          ry += n.height + 4;
+        }
+      }
+
+      const dish = sel.bag === 'produce' ? dishById(baseId(sel.id)) : undefined;
       if (dish) {
-        this.button(c, dx + 22, dy + dh - 48, `Makan (+${dish.stamina} tenaga)`, () => {
+        this.button(c, dx + 14, dy + dh - 48, `Makan (+${dish.stamina} tenaga)`, () => {
           const err = eat(s, dish.id);
           if (err) {
             play('error');
@@ -1027,40 +1084,52 @@ export class UIScene extends Phaser.Scene {
           save(s);
           this.toast(`Nyam! ${dish.name}, tenaga ${s.stamina}/${STAMINA_MAX}.`);
           this.openInventory();
-        }, dw - 44, s.stamina >= STAMINA_MAX);
+        }, dw - 28, s.stamina >= STAMINA_MAX);
       }
       if (sel.bag === 'seeds') {
         const active = s.seed === sel.id;
-        this.button(c, dx + 22, dy + dh - 48, active ? 'Sedang dipakai' : 'Pakai (slot 3)', () => {
+        this.button(c, dx + 14, dy + dh - 48, active ? 'Sedang dipakai' : 'Pakai (slot 3)', () => {
           s.seed = sel.id;
           s.tool = 'benih';
           save(s);
           this.toast(`Slot 3: ${itemName(sel.id)}`);
           this.openInventory();
-        }, dw - 44, active);
+        }, dw - 28, active);
       }
     }
 
-    // footer: wallet, collection, upgrade
+    // footer: capsules for wallet and collection
     const value = Object.entries(s.produce).reduce((a, [id, q]) => a + produceById(id).sellPrice * q, 0);
     const t = s.festival.trophies;
+    const caps = [
+      { icon: 'ic-coin', text: `${s.coins.toLocaleString('id-ID')} G`, color: C.orange },
+      { icon: '', text: `Nilai panen ${value.toLocaleString('id-ID')} G`, color: INK },
+      { icon: '', text: `Poin Festival ${s.festival.points}`, color: C.purple },
+      { icon: '', text: `Piala ${t.emas ?? 0} · ${t.perak ?? 0} · ${t.perunggu ?? 0}`, color: INK },
+    ];
     const fy = y + 386;
+    const objs = caps.map((cp) => this.add.text(0, fy + 15, cp.text, txt(12, cp.color)).setOrigin(0, 0.5));
+    const widths = caps.map((cp, i) => objs[i].width + 24 + (cp.icon ? 18 : 0));
+    let fx = x + W / 2 - (widths.reduce((a, b) => a + b, 0) + 8 * (caps.length - 1)) / 2;
     const fg = this.add.graphics();
-    fg.fillStyle(0x767680, 0.08).fillRoundedRect(x + 24, fy, W - 48, 30, 10);
     c.add(fg);
-    const footer = [
-      `${s.coins.toLocaleString('id-ID')} G`,
-      `Nilai panen ${value.toLocaleString('id-ID')} G`,
-      `Poin Festival ${s.festival.points}`,
-      `Piala 🥇${t.emas ?? 0} 🥈${t.perak ?? 0} 🥉${t.perunggu ?? 0}`,
-    ].join('   ·   ');
-    c.add(this.add.text(x + W / 2, fy + 15, footer, txt(13, C.secondary)).setOrigin(0.5));
+    caps.forEach((cp, i) => {
+      fg.fillStyle(0x767680, 0.1).fillRoundedRect(fx, fy, widths[i], 30, 15);
+      let tx = fx + 12;
+      if (cp.icon) {
+        c.add(this.add.image(tx + 7, fy + 15, cp.icon).setScale(1));
+        tx += 18;
+      }
+      objs[i].setX(tx);
+      c.add(objs[i]);
+      fx += widths[i] + 8;
+    });
 
     const next = BAG_TIERS[s.bagTier + 1];
     const by = y + H - 52;
     if (next) {
       const blocked = s.level < next.level || s.coins < next.price;
-      const label = s.level < next.level ? `🔒 ${next.name} · Level ${next.level}` : `Upgrade → ${next.slots} slot · ${next.price.toLocaleString('id-ID')} G`;
+      const label = s.level < next.level ? `${next.name} · butuh Level ${next.level}` : `Upgrade → ${next.slots} slot · ${next.price.toLocaleString('id-ID')} G`;
       this.button(c, x + 24, by, label, () => {
         const err = upgradeBag(s);
         if (err) {
