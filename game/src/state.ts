@@ -95,7 +95,8 @@ export interface GameState {
   friendship: Record<string, number>;
   talkedDay: Record<string, number>;
   fishCaught: Record<string, number>; // fish id → best stars caught (the fish book)
-  staminaRewards: Record<string, boolean>; // one-off max-stamina rewards already granted // last day the player chatted with each villager
+  staminaRewards: Record<string, boolean>; // one-off max-stamina rewards already granted
+  pos?: { x: number; y: number; dir: 'down' | 'up' | 'left' | 'right' }; // where the player stands (world px) // last day the player chatted with each villager
   stats: { harvested: number; earned: number; requestsDone: number };
 }
 
