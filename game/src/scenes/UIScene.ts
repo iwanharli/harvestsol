@@ -30,7 +30,8 @@ import {
 import type { FarmScene } from './FarmScene';
 import { openShop } from '../ui/windows/shop';
 import { openInventory } from '../ui/windows/bag';
-import { openHouse } from '../ui/windows/house';
+import { openKitchen } from '../ui/windows/house';
+import { openWardrobe } from '../ui/windows/wardrobe';
 import { openBoard } from '../ui/windows/board';
 import { openFestival } from '../ui/windows/festival';
 import { openCalendar } from '../ui/windows/calendar';
@@ -143,7 +144,11 @@ export class UIScene extends Phaser.Scene {
       ['open-shop', () => openShop(this)],
       ['open-board', () => openBoard(this)],
       ['open-festival', () => openFestival(this)],
-      ['open-house', () => openHouse(this)],
+      ['open-kitchen', () => openKitchen(this)],
+      ['open-calendar', () => openCalendar(this)],
+      ['open-fishbook', () => openFishBook(this)],
+      ['open-wardrobe', () => openWardrobe(this)],
+      ['indoors', (inside: boolean) => this.applyIndoors(inside)],
       ['area', (name: string) => this.areaBanner(name)],
       ['level-up', (lv: number[]) => this.queueLevelUp(lv)],
       ['ask-sleep', () => askSleep(this)],
@@ -171,6 +176,7 @@ export class UIScene extends Phaser.Scene {
     if (touch) this.buildTouchControls();
 
     this.refresh();
+    if (this.registry.get('indoors')) this.applyIndoors(true);
     // once per session: a resize rebuilds this scene and must not greet again
     if (this.state.day === 1 && this.state.stats.harvested === 0 && !this.registry.get('welcomed')) {
       this.registry.set('welcomed', true);
@@ -341,6 +347,12 @@ export class UIScene extends Phaser.Scene {
   }
 
   /** Close any open window (used before the HUD is rebuilt on resize). */
+  /** The open window's container (for windows that build their own rows before the buttons). */
+  modalLayerOrThrow() {
+    if (!this.modalLayer) throw new Error('no window open');
+    return this.modalLayer;
+  }
+
   closeAll() {
     this.closeModal(false);
   }
@@ -561,6 +573,12 @@ export class UIScene extends Phaser.Scene {
   }
 
   /** Switch rain, snow, gloom and lightning to match today's weather. */
+  private applyIndoors(inside: boolean) {
+    for (const o of [this.rain, this.snow, this.gloom, this.flash]) o?.setVisible(!inside);
+    const w = this.state.weather;
+    setRain(inside ? 0 : w === 'badai' ? 2 : isWet(w) ? 1 : 0);
+  }
+
   private applyWeather() {
     const w = this.state.weather;
     if (w === this.shownWeather) return;
@@ -574,6 +592,7 @@ export class UIScene extends Phaser.Scene {
     if (w === 'kabut') this.gloom!.setFillStyle(0x9a7040, 0.45); // thick brownish haze
     else this.gloom!.setFillStyle(0x24304a, w === 'badai' ? 0.3 : wet ? 0.16 : 0);
     setRain(w === 'badai' ? 2 : wet ? 1 : 0);
+    if (this.registry.get('indoors')) this.applyIndoors(true); // the house keeps the weather out
     this.lightning?.remove();
     this.lightning = undefined;
     if (w === 'badai') {

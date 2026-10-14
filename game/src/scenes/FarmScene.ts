@@ -57,7 +57,11 @@ type Dir = 'down' | 'up' | 'left' | 'right';
 const DIR_VEC: Record<Dir, [number, number]> = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] };
 const SPEED = 62; // world px per second
 
-type Spot = 'door' | 'shop' | 'bin' | 'pond' | 'board' | 'coop' | 'stage' | 'house';
+type Spot = 'door' | 'shop' | 'bin' | 'pond' | 'board' | 'coop' | 'stage' | 'house' | 'bed' | 'stove' | 'tv' | 'shelf' | 'wardrobe';
+
+/** The farmhouse interior lives in empty world space east of the map (tiles), so all systems just work inside. */
+const ROOM = { x: 100, y: 4, w: 14, h: 10 };
+const inRoom = (tx: number, ty: number) => tx >= ROOM.x && tx < ROOM.x + ROOM.w && ty >= ROOM.y && ty < ROOM.y + ROOM.h;
 
 export class FarmScene extends Phaser.Scene {
   private state!: GameState;
@@ -108,6 +112,7 @@ export class FarmScene extends Phaser.Scene {
   create() {
     this.state = this.registry.get('state');
     this.buildMap();
+    this.buildRoom();
 
     this.playerShadow = this.shadow(0, 0, 12);
     this.player = this.add.image(5.5 * TILE, 7 * TILE, 'player-down-0').setOrigin(0.5, 1);
@@ -363,6 +368,133 @@ export class FarmScene extends Phaser.Scene {
     for (const [x, y] of [[12, 5], [21, 18], [52, 34], [56, 30]]) this.deco('stump', x, y);
   }
 
+  // ---------- farmhouse interior ----------
+
+  private roomGlass!: Phaser.GameObjects.Graphics;
+  private roomNight!: Phaser.GameObjects.Rectangle;
+  private roomLamp!: Phaser.GameObjects.Image;
+  private indoors = false;
+
+  private buildRoom() {
+    const X = (lx: number) => (ROOM.x + lx) * TILE;
+    const Y = (ly: number) => (ROOM.y + ly) * TILE;
+    const spot = (lx: number, ly: number, what: Spot | null) => {
+      this.blocked.add(plotKey(ROOM.x + lx, ROOM.y + ly));
+      if (what) this.spots.set(plotKey(ROOM.x + lx, ROOM.y + ly), what);
+    };
+    // floor, wallpapered back wall (two tiles tall), side walls
+    for (let ly = 2; ly < ROOM.h; ly++) for (let lx = 0; lx < ROOM.w; lx++) this.add.image(X(lx), Y(ly), 'in-floor').setOrigin(0).setDepth(-10);
+    for (let lx = 0; lx < ROOM.w; lx++) {
+      this.add.image(X(lx), Y(0), 'in-wall').setOrigin(0).setDepth(-9);
+      spot(lx, 0, null);
+      spot(lx, 1, null);
+    }
+    for (let ly = 0; ly < ROOM.h; ly++) {
+      this.add.image(X(0) - 4, Y(ly), 'in-wall-side').setOrigin(0).setDepth(Y(ROOM.h));
+      this.add.image(X(ROOM.w), Y(ly), 'in-wall-side').setOrigin(0).setDepth(Y(ROOM.h));
+    }
+    this.add.rectangle(X(0) - 4, Y(ROOM.h), X(6) - X(0) + 4, 4, 0x5a3a22).setOrigin(0).setDepth(Y(ROOM.h)); // front wall, left of the door
+    this.add.rectangle(X(8), Y(ROOM.h), X(ROOM.w) - X(8) + 4, 4, 0x5a3a22).setOrigin(0).setDepth(Y(ROOM.h)); // and right of it
+
+    // windows with glass that follows the sky, a calendar between them
+    this.roomGlass = this.add.graphics().setDepth(-8.6);
+    for (const lx of [3.5, 9.5]) this.add.image(X(lx), Y(0) + 4, 'in-window').setOrigin(0.5, 0).setDepth(-8.5);
+    this.add.image(X(6.5), Y(0) + 6, 'in-calendar').setOrigin(0.5, 0).setDepth(-8.5);
+
+    // furniture along the back wall
+    const put = (key: string, lx: number, lyBottom: number, origin = 0.5) =>
+      this.add.image(X(lx), Y(lyBottom), key).setOrigin(origin, 1).setDepth(Y(lyBottom));
+    put('in-bed', 1, 5);
+    for (const [lx, ly] of [[0, 2], [1, 2], [0, 3], [1, 3], [0, 4], [1, 4]]) spot(lx, ly, 'bed');
+    put('in-tv', 4, 4);
+    for (const lx of [3, 4]) spot(lx, 2, 'tv'), spot(lx, 3, 'tv');
+    put('in-shelf', 6, 4);
+    for (const lx of [5, 6]) spot(lx, 2, 'shelf'), spot(lx, 3, 'shelf');
+    put('in-stove', 9.5, 4);
+    for (const lx of [8, 9, 10]) spot(lx, 2, 'stove'), spot(lx, 3, 'stove');
+    put('in-wardrobe', 13, 5);
+    for (const [lx, ly] of [[12, 2], [13, 2], [12, 3], [13, 3], [12, 4], [13, 4]]) spot(lx, ly, 'wardrobe');
+
+    // dining corner on a rug, plants, doormat
+    this.add.image(X(7), Y(7), 'in-rug').setOrigin(0.5, 0.5).setDepth(-9);
+    put('in-table', 7, 7);
+    spot(6, 6, null);
+    spot(7, 6, null);
+    put('in-chair', 5.5, 7);
+    spot(5, 6, null);
+    put('in-chair', 8.5, 7).setFlipX(true);
+    spot(8, 6, null);
+    for (const [lx, ly] of [[0, 9], [13, 9]]) {
+      put('in-plant', lx + 0.5, ly + 1);
+      spot(lx, ly, null);
+    }
+    this.add.image(X(7), Y(ROOM.h) - 1, 'in-mat').setOrigin(0.5, 1).setDepth(-8.5);
+
+    // lighting: a hanging lamp over the table, and evening dimming
+    this.roomLamp = this.add.image(X(7), Y(4) + 4, 'in-lamp').setOrigin(0.5, 0).setDepth(Y(ROOM.h) + 1);
+    this.roomNight = this.add.rectangle(X(0) - 8, Y(0), X(ROOM.w) - X(0) + 16, Y(ROOM.h) - Y(0) + 8, 0x1b1530, 0).setOrigin(0).setDepth(9500);
+    this.lamps.push(this.add.image(X(7), Y(5) + 2, 'glow').setScale(2.4).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0));
+  }
+
+  /** Step through the farmhouse door. */
+  private enterHouse() {
+    this.moveTo((ROOM.x + 7) * TILE, (ROOM.y + 9) * TILE - 2, 'up');
+  }
+
+  private leaveHouse() {
+    this.moveTo(4.5 * TILE + 8, 7 * TILE - 2, 'down');
+  }
+
+  /** Fade, move the player, fade back. */
+  private moveTo(x: number, y: number, dir: Dir) {
+    if (this.busy) return;
+    this.busy = true;
+    this.moveTarget = undefined;
+    const cam = this.cameras.main;
+    cam.fadeOut(220, 10, 10, 20);
+    cam.once('camerafadeoutcomplete', () => {
+      this.player.setPosition(x, y);
+      this.dir = dir;
+      this.setPlayerFrame(0);
+      this.updateIndoors();
+      cam.fadeIn(260, 10, 10, 20);
+      this.busy = false;
+    });
+  }
+
+  /** Inside, the camera frames the room; outside, it follows the player across the map. */
+  private updateIndoors() {
+    const tx = Math.floor(this.player.x / TILE);
+    const ty = Math.floor((this.player.y - 4) / TILE);
+    const inside = inRoom(tx, ty);
+    if (inside === this.indoors) return;
+    this.indoors = inside;
+    const cam = this.cameras.main;
+    if (inside) {
+      cam.stopFollow();
+      cam.removeBounds();
+      cam.centerOn((ROOM.x + ROOM.w / 2) * TILE, (ROOM.y + ROOM.h / 2) * TILE + 6);
+    } else {
+      cam.setBounds(0, 0, MAP_W * TILE, MAP_H * TILE);
+      cam.startFollow(this.player, true, 0.15, 0.15);
+    }
+    this.registry.set('indoors', inside);
+    this.game.events.emit('indoors', inside);
+  }
+
+  /** Window glass follows the sky; the room dims gently at night while the lamp glows. */
+  private updateRoomLight(darkness: number) {
+    const hr = this.state.minutes / 60;
+    const sky = hr < 7 ? 0xf2b07a : hr < 17 ? 0x9fd8f5 : hr < 19.5 ? 0xf0905a : 0x1d2a4a;
+    this.roomGlass.clear().fillStyle(sky, 1);
+    for (const lx of [3.5, 9.5]) {
+      const cx = (ROOM.x + lx) * TILE;
+      this.roomGlass.fillRect(cx - 14, ROOM.y * TILE + 6, 28, 18); // matches the window's glass opening
+    }
+    this.roomNight.setFillStyle(0x1b1530, darkness * 0.28);
+    this.roomLamp.setTint(darkness > 0.3 ? 0xffffff : 0xd8d0c0);
+  }
+
   /** A 4x4-tile building with its top-left corner at tile (x, y). */
   private building(tex: string, x: number, y: number) {
     this.shadow((x + 2) * TILE, (y + 4) * TILE - 1, 70);
@@ -500,6 +632,14 @@ export class FarmScene extends Phaser.Scene {
 
   private updateAmbient(dt: number) {
     const s = this.state;
+    this.updateIndoors();
+    this.updateRoomLight(this.darkness());
+    // stepping onto the doormat leaves the house
+    if (this.indoors && !this.busy) {
+      const tx = Math.floor(this.player.x / TILE) - ROOM.x;
+      const ty = Math.floor((this.player.y - 1) / TILE) - ROOM.y;
+      if (ty >= ROOM.h - 1 && (tx === 6 || tx === 7) && this.dir === 'down') this.leaveHouse();
+    }
     this.boardBubble.setVisible(
       s.level >= FEATURE_LEVEL.board && s.requests.some((r) => countBase(s, r.crop) >= r.qty),
     );
@@ -539,7 +679,8 @@ export class FarmScene extends Phaser.Scene {
   private isBlocked(wx: number, wy: number) {
     const tx = Math.floor(wx / TILE);
     const ty = Math.floor(wy / TILE);
-    if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return true;
+    const outside = tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H;
+    if (outside && !inRoom(tx, ty)) return true;
     return this.blocked.has(plotKey(tx, ty));
   }
 
@@ -746,7 +887,15 @@ export class FarmScene extends Phaser.Scene {
     const s = this.state;
     const k = plotKey(tx, ty);
     const spot = this.spots.get(k);
-    if (spot === 'door') return this.game.events.emit(s.level >= FEATURE_LEVEL.kitchen ? 'open-house' : 'ask-sleep');
+    if (spot === 'door') return this.enterHouse();
+    if (spot === 'bed') return this.game.events.emit('ask-sleep');
+    if (spot === 'stove') {
+      if (s.level < FEATURE_LEVEL.kitchen) return this.fail(`Dapur terbuka di Level ${FEATURE_LEVEL.kitchen}.`);
+      return this.game.events.emit('open-kitchen');
+    }
+    if (spot === 'tv') return this.game.events.emit('open-calendar');
+    if (spot === 'shelf') return this.game.events.emit('open-fishbook');
+    if (spot === 'wardrobe') return this.game.events.emit('open-wardrobe');
     if (spot === 'shop') return this.game.events.emit('open-shop');
     if (spot === 'bin') return this.ship();
     if (spot === 'board') {
@@ -1183,7 +1332,7 @@ export class FarmScene extends Phaser.Scene {
     cam.fadeOut(500, 10, 10, 30);
     cam.once('camerafadeoutcomplete', () => {
       const report = endDay(this.state, passedOut === true);
-      this.player.setPosition(5.5 * TILE, 7 * TILE);
+      this.player.setPosition((ROOM.x + 2.5) * TILE, (ROOM.y + 4) * TILE - 2); // wake up beside the bed
       this.dir = 'down';
       // refresh drawn plots (some may have reverted to grass) and all current ones
       for (const k of new Set([...this.soilImgs.keys(), ...this.propImgs.keys(), ...Object.keys(this.state.plots)]))
