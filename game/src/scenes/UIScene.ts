@@ -36,6 +36,7 @@ import {
 } from '../data';
 import { play, setRain, unlockAudio } from '../sfx';
 import { startMusic } from '../music';
+import { C, HEX, bar as drawBar, card, glass, segmented, txt, well } from '../ui/theme';
 import {
   add,
   bagCapacity,
@@ -65,18 +66,10 @@ import type { FarmScene } from './FarmScene';
 type ShopTab = 'benih' | 'alat' | 'ternak';
 type InvTab = 'semua' | 'panen' | 'benih' | 'ternak';
 
-const FONT = '"Trebuchet MS", "Segoe UI", sans-serif';
-const INK = '#3b2a1a';
-const PAPER = 0xf6e7c1;
-const WOOD = 0x8a5a2e;
-const WOOD_DARK = 0x5a3a22;
+const INK = C.ink;
 
-const txt = (size: number, color = INK, bold = true): Phaser.Types.GameObjects.Text.TextStyle => ({
-  fontFamily: FONT,
-  fontSize: `${size}px`,
-  color,
-  fontStyle: bold ? 'bold' : 'normal',
-});
+/** Buttons that dismiss or postpone get the quiet secondary style. */
+const SECONDARY = new Set(['Tutup', 'Batal', 'Nanti', 'Belum']);
 
 export class UIScene extends Phaser.Scene {
   private state!: GameState;
@@ -92,6 +85,7 @@ export class UIScene extends Phaser.Scene {
   private seedIcon!: Phaser.GameObjects.Image;
   private toastText!: Phaser.GameObjects.Text;
   private toastTimer?: Phaser.Time.TimerEvent;
+  private toastBg!: Phaser.GameObjects.Graphics;
   private modalLayer?: Phaser.GameObjects.Container;
   private pendingLevels: number[] = [];
   private modalKind = '';
@@ -117,18 +111,18 @@ export class UIScene extends Phaser.Scene {
 
     // top-left: date, time, coins, bars
     this.panel(12, 12, 250, 124);
-    this.dateText = this.add.text(28, 22, '', txt(15, '#6b5030'));
-    this.levelText = this.add.text(246, 22, '', txt(15, '#6b3fa0')).setOrigin(1, 0);
-    this.coinText = this.add.text(28, 42, '', txt(20, '#8a6a10'));
+    this.dateText = this.add.text(28, 22, '', txt(15, C.secondary));
+    this.levelText = this.add.text(246, 22, '', txt(15, C.purple)).setOrigin(1, 0);
+    this.coinText = this.add.text(28, 42, '', txt(20, C.orange));
     this.bars = this.add.graphics();
     this.buildClock();
 
     // top-right: bag
     this.panel(W - 232, 12, 220, 112);
     this.bagTitle = this.add.text(W - 216, 22, 'Tas', txt(16));
-    this.add.text(W - 28, 24, '[I] buka', txt(12, '#8a7a60', false)).setOrigin(1, 0);
+    this.add.text(W - 28, 24, '[I] buka', txt(12, C.tertiary, false)).setOrigin(1, 0);
     this.bagMini = this.add.container(0, 0);
-    this.bagText = this.add.text(W - 216, 96, '', txt(11, '#6b5030', false));
+    this.bagText = this.add.text(W - 216, 96, '', txt(11, C.secondary, false));
     const bagHit = this.add.zone(W - 232, 12, 220, 112).setOrigin(0).setInteractive({ useHandCursor: true });
     bagHit.on('pointerdown', () => {
       if (this.registry.get('modal')) return;
@@ -144,7 +138,7 @@ export class UIScene extends Phaser.Scene {
       const y = H - slotW - 14;
       const frame = this.add.graphics();
       const icon = this.add.image(x + slotW / 2, y + 26, `tool-${t.id}`).setScale(2.5);
-      this.add.text(x + 5, y + 2, t.key, txt(12, '#7a5a3a'));
+      this.add.text(x + 5, y + 2, t.key, txt(12, C.tertiary));
       const label = this.add.text(x + slotW / 2, y + slotW - 6, t.name, txt(11)).setOrigin(0.5, 1);
       const hit = this.add.zone(x, y, slotW, slotW).setOrigin(0).setInteractive({ useHandCursor: true });
       hit.on('pointerdown', () => {
@@ -156,8 +150,9 @@ export class UIScene extends Phaser.Scene {
       if (t.id === 'benih') this.seedIcon = this.add.image(x + slotW - 12, y + 12, 'icon-kangkung').setScale(1.2);
     });
 
+    this.toastBg = this.add.graphics().setDepth(199).setAlpha(0);
     this.toastText = this.add
-      .text(W / 2, H - 100, '', { ...txt(16, '#ffffff'), stroke: '#2b1a0c', strokeThickness: 4, align: 'center' })
+      .text(W / 2, H - 100, '', { ...txt(14, C.white), align: 'center', wordWrap: { width: 640 } })
       .setOrigin(0.5, 1)
       .setAlpha(0)
       .setDepth(200);
@@ -208,11 +203,7 @@ export class UIScene extends Phaser.Scene {
   // ---------- HUD ----------
 
   private panel(x: number, y: number, w: number, h: number) {
-    const g = this.add.graphics();
-    g.fillStyle(WOOD_DARK, 1).fillRoundedRect(x, y + 3, w, h, 10);
-    g.fillStyle(WOOD, 1).fillRoundedRect(x, y, w, h, 10);
-    g.fillStyle(PAPER, 1).fillRoundedRect(x + 5, y + 5, w - 10, h - 10, 7);
-    return g;
+    return glass(this.add.graphics(), x, y, w, h, 16, { alpha: 0.8, shadow: 10 });
   }
 
   private refreshClock() {
@@ -232,33 +223,30 @@ export class UIScene extends Phaser.Scene {
 
     const g = this.bars.clear();
     const bar = (y: number, frac: number, color: number, label: string) => {
-      g.fillStyle(0x5a3a22, 1).fillRoundedRect(84, y, 160, 12, 4);
-      g.fillStyle(color, 1).fillRoundedRect(86, y + 2, Math.max(0, 156 * frac), 8, 3);
-      this.children.getByName(label)?.destroy();
-      this.add.text(28, y - 3, label, txt(13)).setName(label);
+      drawBar(g, 86, y + 2, 158, frac, color);
+      if (!this.children.getByName(label)) this.add.text(28, y - 2, label, txt(12, C.secondary)).setName(label); // created once
     };
-    bar(76, s.stamina / STAMINA_MAX, 0xe8a33c, 'Tenaga');
-    bar(94, s.water / WATER_CAN_MAX, 0x4aa3df, 'Air');
-    bar(112, s.xp / xpToNext(s.level), 0x9b6bd6, 'XP');
+    bar(76, s.stamina / STAMINA_MAX, HEX.orange, 'Tenaga');
+    bar(94, s.water / WATER_CAN_MAX, HEX.blue, 'Air');
+    bar(112, s.xp / xpToNext(s.level), HEX.purple, 'XP');
     this.levelText.setText(`Lv ${s.level}`);
 
     // HUD bag: a row of mini slots plus one status line
     const W = this.scale.width;
     this.bagMini.removeAll(true);
     const used = slotsUsed(s), cap = bagCapacity(s);
-    this.bagTitle.setText(`Tas ${used}/${cap}`).setColor(used >= cap ? '#c0392b' : INK);
+    this.bagTitle.setText(`Tas ${used}/${cap}`).setColor(used >= cap ? C.red : INK);
     const produce = Object.entries(s.produce);
-    if (!produce.length) this.bagMini.add(this.add.text(W - 216, 54, 'Hasil panen kosong', txt(13, '#8a7a60', false)));
+    if (!produce.length) this.bagMini.add(this.add.text(W - 216, 54, 'Hasil panen kosong', txt(13, C.tertiary, false)));
     produce.slice(0, 5).forEach(([id, q], i) => {
       const sx = W - 216 + i * 38;
       const g = this.add.graphics();
-      g.fillStyle(0xf3e4bd, 1).fillRoundedRect(sx, 46, 34, 34, 6);
-      g.lineStyle(1.5, 0xd9c08c, 1).strokeRoundedRect(sx, 46, 34, 34, 6);
+      card(g, sx, 46, 34, 34, 'muted', 9);
       this.bagMini.add([g, this.add.image(sx + 17, 63, `icon-${baseId(id)}`).setScale(1.6), this.add.text(sx + 33, 80, `${q}`, txt(11)).setOrigin(1, 1)]);
       const badge = this.starBadge(sx + 2, 47, id, 9);
       if (badge) this.bagMini.add(badge);
     });
-    if (produce.length > 5) this.bagMini.add(this.add.text(W - 26, 63, `+${produce.length - 5}`, txt(12, '#8a7a60')).setOrigin(1, 0.5));
+    if (produce.length > 5) this.bagMini.add(this.add.text(W - 26, 63, `+${produce.length - 5}`, txt(12, C.tertiary)).setOrigin(1, 0.5));
     const status: string[] = [];
     const ship = Object.values(s.shipping).reduce((a, b) => a + b, 0);
     if (ship) status.push(`Kirim: ${ship}`);
@@ -276,9 +264,8 @@ export class UIScene extends Phaser.Scene {
       const y = this.scale.height - 78;
       const on = s.tool === t.id;
       frame.clear();
-      frame.fillStyle(WOOD_DARK, 1).fillRoundedRect(x, y + 3, 64, 64, 9);
-      frame.fillStyle(on ? 0xf2c94c : WOOD, 1).fillRoundedRect(x, y, 64, 64, 9);
-      frame.fillStyle(PAPER, 1).fillRoundedRect(x + 4, y + 4, 56, 56, 7);
+      glass(frame, x, y, 64, 64, 16, { alpha: on ? 0.96 : 0.72, shadow: on ? 10 : 6 });
+      if (on) frame.lineStyle(2.5, HEX.blue, 1).strokeRoundedRect(x, y, 64, 64, 16);
       if (t.id === 'benih') {
         // an empty selection jumps to something still in the bag, or shows an empty sack
         if (!s.seeds[s.seed] && Object.keys(s.seeds).length) s.seed = Object.keys(s.seeds)[0];
@@ -305,11 +292,21 @@ export class UIScene extends Phaser.Scene {
   toast(msg: string) {
     this.placeToast();
     this.toastText.setText(msg).setAlpha(1);
+    // dark rounded pill behind the message
+    const w = this.toastText.width + 36;
+    const h = this.toastText.height + 18;
+    const x = this.toastText.x - w / 2;
+    const y = this.toastText.y - this.toastText.height - 9;
+    this.toastBg.clear();
+    this.toastBg.fillStyle(0x000000, 0.12).fillRoundedRect(x, y + 3, w, h, Math.min(h / 2, 20));
+    this.toastBg.fillStyle(0x1d1d1f, 0.86).fillRoundedRect(x, y, w, h, Math.min(h / 2, 20));
+    this.toastBg.setAlpha(1);
     this.toastTimer?.remove();
     this.toastTimer = this.time.delayedCall(2200, () =>
-      this.tweens.add({ targets: this.toastText, alpha: 0, duration: 300 }),
+      this.tweens.add({ targets: [this.toastText, this.toastBg], alpha: 0, duration: 300 }),
     );
   }
+
 
   // ---------- modals ----------
 
@@ -331,17 +328,15 @@ export class UIScene extends Phaser.Scene {
     this.touchLayer?.setVisible(false);
     const { width: W, height: H } = this.scale;
     const c = this.add.container(0, 0).setDepth(100);
-    const dim = this.add.rectangle(0, 0, W, H, 0x000000, 0.45).setOrigin(0).setInteractive();
+    const dim = this.add.rectangle(0, 0, W, H, 0x101418, 0.25).setOrigin(0).setInteractive();
     c.add(dim);
+    this.blurWorld(true);
+    this.hideHud(true);
     const x = (W - w) / 2;
     const y = (H - h) / 2;
     this.modalBox = { top: y, bottom: y + h + 4 };
-    const bg = this.add.graphics();
-    bg.fillStyle(WOOD_DARK, 1).fillRoundedRect(x, y + 4, w, h, 12);
-    bg.fillStyle(WOOD, 1).fillRoundedRect(x, y, w, h, 12);
-    bg.fillStyle(PAPER, 1).fillRoundedRect(x + 6, y + 6, w - 12, h - 12, 9);
-    c.add(bg);
-    c.add(this.add.text(W / 2, y + 18, title, txt(22)).setOrigin(0.5, 0));
+    c.add(glass(this.add.graphics(), x, y, w, h, 24, { alpha: 0.9, shadow: 28 }));
+    c.add(this.add.text(W / 2, y + 20, title, txt(20)).setOrigin(0.5, 0));
     this.modalLayer = c;
     return { c, x, y };
   }
@@ -350,10 +345,45 @@ export class UIScene extends Phaser.Scene {
     if (!this.modalLayer) return;
     this.modalLayer.destroy();
     this.modalLayer = undefined;
+    this.blurWorld(false);
+    this.hideHud(false);
     this.registry.set('modal', false);
     this.touchLayer?.setVisible(true);
     this.refresh();
     if (showPending && this.pendingLevels.length) this.showLevelUp();
+  }
+
+  private hiddenHud: Phaser.GameObjects.GameObject[] = [];
+
+  /** While a window is open the HUD steps back so the window is the only thing in focus. */
+  private hideHud(hide: boolean) {
+    if (hide) {
+      if (this.hiddenHud.length) return;
+      const keep = new Set<unknown>([this.gloom, this.rain, this.snow, this.flash, this.toastText, this.toastBg, this.modalLayer]);
+      for (const o of this.children.list) {
+        const v = o as unknown as { visible?: boolean; setVisible?: (b: boolean) => void };
+        if (!keep.has(o) && v.visible && v.setVisible && (o as unknown as { depth: number }).depth < 100) {
+          v.setVisible(false);
+          this.hiddenHud.push(o);
+        }
+      }
+    } else {
+      for (const o of this.hiddenHud) (o as unknown as { setVisible: (b: boolean) => void }).setVisible(true);
+      this.hiddenHud = [];
+    }
+  }
+
+  private worldBlur?: Phaser.Filters.Blur;
+
+  /** Frosted-glass effect: blur the farm camera while a window is open. */
+  private blurWorld(on: boolean) {
+    const filters = this.farm.cameras.main.filters;
+    if (!filters) return; // canvas renderer: no filters, the dim layer still works
+    if (on && !this.worldBlur) this.worldBlur = filters.external.addBlur(1, 2, 2, 1.4);
+    else if (!on && this.worldBlur) {
+      filters.external.remove(this.worldBlur);
+      this.worldBlur = undefined;
+    }
   }
 
   private queueLevelUp(levels: number[]) {
@@ -369,20 +399,25 @@ export class UIScene extends Phaser.Scene {
     const h = 190 + Math.max(1, lines.length) * 22;
     const { c, x, y } = this.openModal(420, h, `Naik ke Level ${top}!`);
     play('quest');
-    c.add(this.add.text(x + 210, y + 56, lines.length ? 'Sekarang terbuka:' : 'Terus bertani untuk membuka fitur baru.', txt(15, '#6b3fa0')).setOrigin(0.5, 0));
-    lines.forEach((l, i) => c.add(this.add.text(x + 210, y + 86 + i * 22, `★ ${l}`, txt(15, INK, false)).setOrigin(0.5, 0)));
+    c.add(this.add.text(x + 210, y + 56, lines.length ? 'Sekarang terbuka:' : 'Terus bertani untuk membuka fitur baru.', txt(14, C.purple)).setOrigin(0.5, 0));
+    lines.forEach((l, i) => c.add(this.add.text(x + 210, y + 86 + i * 22, l, txt(15, INK, false)).setOrigin(0.5, 0)));
     this.button(c, x + 150, y + h - 52, 'Hore!', () => this.closeModal(), 120);
   }
 
   private button(c: Phaser.GameObjects.Container, x: number, y: number, label: string, onClick: () => void, w = 110, locked = false) {
     const g = this.add.graphics();
+    const secondary = SECONDARY.has(label);
     const draw = (hover: boolean) => {
       g.clear();
-      g.fillStyle(WOOD_DARK, 1).fillRoundedRect(x, y + 3, w, 34, 8);
-      g.fillStyle(locked ? (hover ? 0xd8cfbb : 0xcfc4ad) : hover ? 0xf2c94c : 0xe0b24a, 1).fillRoundedRect(x, y, w, 34, 8);
+      if (locked) g.fillStyle(0x767680, 0.12).fillRoundedRect(x, y, w, 34, 17);
+      else if (secondary) g.fillStyle(0x767680, hover ? 0.2 : 0.12).fillRoundedRect(x, y, w, 34, 17);
+      else {
+        g.fillStyle(HEX.blue, 0.25).fillRoundedRect(x, y + 2, w, 34, 17);
+        g.fillStyle(hover ? 0x0077ed : HEX.blue, 1).fillRoundedRect(x, y, w, 34, 17);
+      }
     };
     draw(false);
-    const t = this.add.text(x + w / 2, y + 17, label, txt(15, locked ? '#7a6a55' : INK)).setOrigin(0.5);
+    const t = this.add.text(x + w / 2, y + 17, label, txt(14, locked ? C.disabled : secondary ? C.ink : C.white)).setOrigin(0.5);
     const z = this.add.zone(x, y, w, 34).setOrigin(0).setInteractive({ useHandCursor: true });
     z.on('pointerover', () => draw(true));
     z.on('pointerout', () => draw(false));
@@ -547,28 +582,17 @@ export class UIScene extends Phaser.Scene {
 
     const W = 620, H = 360;
     const { c, x, y } = this.openModal(W, H, `Toko · musim ${seasonOf(s.day)}`);
-    const coin = this.add.text(x + W - 28, y + 24, '', txt(16, '#8a6a10')).setOrigin(1, 0);
+    const coin = this.add.text(x + W - 28, y + 24, '', txt(16, C.orange)).setOrigin(1, 0);
     c.add(coin);
 
     // tabs
-    tabs.forEach((t, i) => {
-      const tx = x + 28 + i * 124;
-      const on = t.id === this.shopTab;
-      const g = this.add.graphics();
-      g.fillStyle(on ? WOOD : 0xe6d3a6, 1).fillRoundedRect(tx, y + 56, 116, 30, { tl: 8, tr: 8, bl: 0, br: 0 });
-      c.add(g);
-      c.add(this.add.text(tx + 58, y + 71, t.name, txt(14, on ? '#fff6dc' : '#6b5030')).setOrigin(0.5));
-      const z = this.add.zone(tx, y + 56, 116, 30).setOrigin(0).setInteractive({ useHandCursor: true });
-      z.on('pointerdown', () => {
+    c.add(
+      segmented(this, x + 28, y + 56, tabs.map((t) => t.name), tabs.findIndex((t) => t.id === this.shopTab), (i) => {
         play('click');
-        this.shopTab = t.id;
+        this.shopTab = tabs[i].id;
         this.openShop();
-      });
-      c.add(z);
-    });
-    const shelf = this.add.graphics();
-    shelf.fillStyle(WOOD, 1).fillRect(x + 28, y + 86, W - 56, 3);
-    c.add(shelf);
+      }, 124),
+    );
 
     // card grid
     const cols = 4, cw = 134, ch = 176, gap = 10;
@@ -580,18 +604,16 @@ export class UIScene extends Phaser.Scene {
       const cy = y + 100;
       const locked = it.level > s.level;
       const g = this.add.graphics();
-      g.fillStyle(WOOD_DARK, 1).fillRoundedRect(cx, cy + 3, cw, ch, 9);
-      g.fillStyle(locked ? 0xe2dccd : 0xfffaea, 1).fillRoundedRect(cx, cy, cw, ch, 9);
-      g.lineStyle(2, locked ? 0xb9ad94 : 0xd9c08c, 1).strokeRoundedRect(cx, cy, cw, ch, 9);
-      g.fillStyle(locked ? 0xd2c9b4 : 0xf3e4bd, 1).fillCircle(cx + cw / 2, cy + 36, 26);
+      card(g, cx, cy, cw, ch, locked ? 'locked' : 'normal', 16);
+      well(g, cx + cw / 2, cy + 36, 26, locked);
       c.add(g);
       const icon = this.add.image(cx + cw / 2, cy + 36, `icon-${it.id}`).setScale(3);
-      if (locked) icon.setTint(0x8a8070).setAlpha(0.6);
+      if (locked) icon.setTint(0x9a9aa0).setAlpha(0.5);
       c.add(icon);
-      c.add(this.add.text(cx + cw / 2, cy + 70, it.name, txt(15, locked ? '#7a6a55' : INK)).setOrigin(0.5, 0));
-      c.add(this.add.text(cx + cw / 2, cy + 90, it.info, { ...txt(11, '#6b5030', false), align: 'center', wordWrap: { width: cw - 12 } }).setOrigin(0.5, 0));
+      c.add(this.add.text(cx + cw / 2, cy + 70, it.name, txt(15, locked ? C.disabled : INK)).setOrigin(0.5, 0));
+      c.add(this.add.text(cx + cw / 2, cy + 90, it.info, { ...txt(11, C.secondary, false), align: 'center', wordWrap: { width: cw - 12 } }).setOrigin(0.5, 0));
       if (locked) {
-        c.add(this.add.text(cx + cw / 2, cy + 130, `🔒 Level ${it.level}`, txt(14, '#7a6a55')).setOrigin(0.5));
+        c.add(this.add.text(cx + cw / 2, cy + 130, `Level ${it.level}`, txt(13, C.disabled)).setOrigin(0.5));
         const z = this.add.zone(cx, cy, cw, ch).setOrigin(0).setInteractive();
         z.on('pointerdown', () => {
           play('error');
@@ -600,10 +622,10 @@ export class UIScene extends Phaser.Scene {
         c.add(z);
         return;
       }
-      const owned = this.add.text(cx + cw - 8, cy + 6, '', txt(11, '#6b5030')).setOrigin(1, 0);
+      const owned = this.add.text(cx + cw - 8, cy + 6, '', txt(11, C.secondary)).setOrigin(1, 0);
       c.add(owned);
       refresh.push(() => owned.setText(it.owned() ? `punya ${it.owned()}` : ''));
-      c.add(this.add.text(cx + cw / 2, cy + 118, `${it.price} G`, txt(14, '#8a6a10')).setOrigin(0.5, 0));
+      c.add(this.add.text(cx + cw / 2, cy + 118, `${it.price} G`, txt(14, C.orange)).setOrigin(0.5, 0));
       const buttons: [number, number, number][] = it.unique ? [[1, 8, cw - 16]] : [[1, 8, cw / 2 - 10], [5, cw / 2 + 2, cw / 2 - 10]];
       for (const [n, bx, bw] of buttons) {
         const have = it.unique?.() ?? false;
@@ -647,15 +669,15 @@ export class UIScene extends Phaser.Scene {
       const ok = have >= r.qty;
       const left = r.until - s.day + 1;
       const g = this.add.graphics();
-      g.fillStyle(ok ? 0xe4f2c9 : 0xfbf3dc, 1).fillRoundedRect(x + 24, cy, 552, cardH, 8);
-      g.lineStyle(2, ok ? 0x6aa84f : 0xd9c08c, 1).strokeRoundedRect(x + 24, cy, 552, cardH, 8);
+      card(g, x + 24, cy, 552, cardH, ok ? 'ready' : 'normal', 16);
+      well(g, x + 58, cy + 37, 24);
       c.add(g);
       c.add(this.add.image(x + 58, cy + 37, `icon-${crop.id}`).setScale(2.5));
       const hearts = '♥'.repeat(Math.min(5, s.friendship[r.npc] ?? 0)) + '♡'.repeat(Math.max(0, 5 - (s.friendship[r.npc] ?? 0)));
       c.add(this.add.text(x + 92, cy + 8, `${npc.name}`, txt(16)));
-      c.add(this.add.text(x + 92 + npc.name.length * 9 + 10, cy + 10, hearts, txt(13, '#d9503f')));
+      c.add(this.add.text(x + 92 + npc.name.length * 9 + 10, cy + 10, hearts, txt(13, C.red)));
       c.add(this.add.text(x + 92, cy + 30, `Butuh ${r.qty} ${crop.name} (punya ${have})`, txt(14, INK, false)));
-      c.add(this.add.text(x + 92, cy + 50, `Hadiah ${r.reward} G · sisa ${left} hari · ${npc.role}`, txt(12, '#6b5030', false)));
+      c.add(this.add.text(x + 92, cy + 50, `Hadiah ${r.reward} G · sisa ${left} hari · ${npc.role}`, txt(12, C.secondary, false)));
       this.button(c, x + 440, cy + 20, ok ? 'Serahkan' : 'Belum cukup', () => {
         if (!deliverRequest(s, r.id)) {
           play('error');
@@ -683,22 +705,21 @@ export class UIScene extends Phaser.Scene {
     const left = { ...s.produce };
     this.festivalPick = this.festivalPick.filter((id) => (left[id] ?? 0) > 0 && (left[id]--, true));
 
-    c.add(this.add.text(x + W / 2, y + 52, `Pilih sampai ${FESTIVAL_MAX_ITEMS} hasil panen. ${theme.name} dihitung ×${FESTIVAL_THEME_MULT}, +${FESTIVAL_VARIETY_BONUS} per jenis berbeda.`, txt(13, '#6b5030', false)).setOrigin(0.5, 0));
+    c.add(this.add.text(x + W / 2, y + 52, `Pilih sampai ${FESTIVAL_MAX_ITEMS} hasil panen. ${theme.name} dihitung ×${FESTIVAL_THEME_MULT}, +${FESTIVAL_VARIETY_BONUS} per jenis berbeda.`, txt(13, C.secondary, false)).setOrigin(0.5, 0));
 
     // entry slots
     for (let i = 0; i < FESTIVAL_MAX_ITEMS; i++) {
       const sx = x + W / 2 - (FESTIVAL_MAX_ITEMS * 64 - 10) / 2 + i * 64;
       const sy = y + 84;
       const g = this.add.graphics();
-      g.fillStyle(0xf3e4bd, 1).fillRoundedRect(sx, sy, 54, 54, 8);
-      g.lineStyle(2, 0xd9c08c, 1).strokeRoundedRect(sx, sy, 54, 54, 8);
+      card(g, sx, sy, 54, 54, this.festivalPick[i] ? 'normal' : 'muted', 14);
       c.add(g);
       const id = this.festivalPick[i];
       if (!id) continue;
       c.add(this.add.image(sx + 27, sy + 27, `icon-${baseId(id)}`).setScale(2.5));
       const sb = this.starBadge(sx + 3, sy + 2, id, 10);
       if (sb) c.add(sb);
-      if (baseId(id) === theme.id) c.add(this.add.text(sx + 50, sy + 4, '×2', txt(11, '#c0392b')).setOrigin(1, 0));
+      if (baseId(id) === theme.id) c.add(this.add.text(sx + 50, sy + 4, '×2', txt(11, C.red)).setOrigin(1, 0));
       const z = this.add.zone(sx, sy, 54, 54).setOrigin(0).setInteractive({ useHandCursor: true });
       z.on('pointerdown', () => {
         play('click');
@@ -708,7 +729,7 @@ export class UIScene extends Phaser.Scene {
       c.add(z);
     }
     const score = festivalScore(this.festivalPick, theme.id);
-    c.add(this.add.text(x + W / 2, y + 150, `Skor kamu: ${score}`, txt(18, '#6b3fa0')).setOrigin(0.5, 0));
+    c.add(this.add.text(x + W / 2, y + 150, `Skor kamu: ${score}`, txt(18, C.purple)).setOrigin(0.5, 0));
 
     // produce to choose from
     c.add(this.add.text(x + 32, y + 184, 'Tas kamu (klik untuk menambah):', txt(13)));
@@ -721,8 +742,7 @@ export class UIScene extends Phaser.Scene {
       const cx = x + 32 + (i % 8) * 68;
       const cy = y + 206 + Math.floor(i / 8) * 64;
       const g = this.add.graphics();
-      g.fillStyle(baseId(id) === theme.id ? 0xfde7c2 : 0xfffaea, 1).fillRoundedRect(cx, cy, 60, 56, 8);
-      g.lineStyle(2, baseId(id) === theme.id ? 0xe88a2d : 0xd9c08c, 1).strokeRoundedRect(cx, cy, 60, 56, 8);
+      card(g, cx, cy, 60, 56, baseId(id) === theme.id ? 'today' : 'normal', 14);
       c.add(g);
       c.add(this.add.image(cx + 30, cy + 24, `icon-${baseId(id)}`).setScale(2.2));
       const cb = this.starBadge(cx + 4, cy + 3, id, 10);
@@ -763,7 +783,7 @@ export class UIScene extends Phaser.Scene {
     play(r.place < 3 ? 'quest' : 'click');
     r.ranking.forEach((e, i) => {
       const ry = y + 60 + i * 24;
-      const col = e.you ? '#6b3fa0' : INK;
+      const col = e.you ? C.purple : INK;
       c.add(this.add.text(x + 60, ry, `${i + 1}. ${e.name}`, txt(15, col, e.you)));
       c.add(this.add.text(x + 360, ry, `${e.score}`, txt(15, col, e.you)).setOrigin(1, 0));
     });
@@ -774,9 +794,9 @@ export class UIScene extends Phaser.Scene {
       r.reward.trophy ? `Piala ${r.reward.trophy}` : '',
     ].filter(Boolean);
     const ry = y + 60 + r.ranking.length * 24 + 14;
-    c.add(this.add.text(x + 210, ry, rewards.join(' · '), txt(15, '#8a6a10')).setOrigin(0.5, 0));
-    c.add(this.add.text(x + 210, ry + 26, `Total Poin Festival: ${s.festival.points}`, txt(13, '#6b5030', false)).setOrigin(0.5, 0));
-    c.add(this.add.text(x + 210, ry + 46, 'Poin ini nanti menentukan bagian pool hadiah.', txt(12, '#8a7a60', false)).setOrigin(0.5, 0));
+    c.add(this.add.text(x + 210, ry, rewards.join(' · '), txt(15, C.orange)).setOrigin(0.5, 0));
+    c.add(this.add.text(x + 210, ry + 26, `Total Poin Festival: ${s.festival.points}`, txt(13, C.secondary, false)).setOrigin(0.5, 0));
+    c.add(this.add.text(x + 210, ry + 46, 'Poin ini nanti menentukan bagian pool hadiah.', txt(12, C.tertiary, false)).setOrigin(0.5, 0));
     this.button(c, x + 150, y + h - 52, 'Mantap!', () => this.closeModal(), 120);
     if (r.levels.length) this.queueLevelUp(r.levels);
   }
@@ -792,7 +812,7 @@ export class UIScene extends Phaser.Scene {
     const used = slotsUsed(s);
     const { c, x, y } = this.openModal(W, H, `Tas · ${BAG_TIERS[s.bagTier].name}`, 'inventory');
     const full = used >= cap;
-    c.add(this.add.text(x + W - 28, y + 24, `${used}/${cap} slot`, txt(15, full ? '#c0392b' : '#6b5030')).setOrigin(1, 0));
+    c.add(this.add.text(x + W - 28, y + 24, `${used}/${cap} slot`, txt(15, full ? C.red : C.secondary)).setOrigin(1, 0));
 
     type Slot = { bag: 'produce' | 'seeds' | 'other'; id: string; icon: string; qty: number | string };
     // one slot per stack of up to STACK_MAX
@@ -822,24 +842,13 @@ export class UIScene extends Phaser.Scene {
       ...(livestock.length ? [{ id: 'ternak' as const, name: 'Ternak' }] : []),
     ];
     if (!tabs.some((t) => t.id === this.invTab)) this.invTab = 'semua';
-    tabs.forEach((t, i) => {
-      const tx = x + 24 + i * 112;
-      const on = t.id === this.invTab;
-      const g = this.add.graphics();
-      g.fillStyle(on ? WOOD : 0xe6d3a6, 1).fillRoundedRect(tx, y + 54, 106, 28, { tl: 8, tr: 8, bl: 0, br: 0 });
-      c.add(g);
-      c.add(this.add.text(tx + 53, y + 68, t.name, txt(13, on ? '#fff6dc' : '#6b5030')).setOrigin(0.5));
-      const z = this.add.zone(tx, y + 54, 106, 28).setOrigin(0).setInteractive({ useHandCursor: true });
-      z.on('pointerdown', () => {
+    c.add(
+      segmented(this, x + 24, y + 54, tabs.map((t) => t.name), tabs.findIndex((t) => t.id === this.invTab), (i) => {
         play('click');
-        this.invTab = t.id;
+        this.invTab = tabs[i].id;
         this.openInventory();
-      });
-      c.add(z);
-    });
-    const rule = this.add.graphics();
-    rule.fillStyle(WOOD, 1).fillRect(x + 24, y + 82, W - 48, 3);
-    c.add(rule);
+      }, 112),
+    );
 
     // which slots to draw: "Semua" shows the whole bag, including empty and locked slots
     type Cell = Slot | 'empty' | 'locked';
@@ -858,35 +867,31 @@ export class UIScene extends Phaser.Scene {
 
     const SZ = 50, GAP = 8, COLS = 6;
     const gx = x + 28, gy = y + 98;
-    if (!cells.length) c.add(this.add.text(gx, gy + 6, 'Kosong.', txt(14, '#8a7a60', false)));
+    if (!cells.length) c.add(this.add.text(gx, gy + 6, 'Kosong.', txt(14, C.tertiary, false)));
     cells.forEach((cl, i) => {
       const sx = gx + (i % COLS) * (SZ + GAP);
       const sy = gy + Math.floor(i / COLS) * (SZ + GAP);
       const g = this.add.graphics();
       c.add(g);
       if (cl === 'locked') {
-        g.fillStyle(0xd6ccb5, 1).fillRoundedRect(sx, sy, SZ, SZ, 8);
-        g.lineStyle(1.5, 0xbfb398, 1).strokeRoundedRect(sx, sy, SZ, SZ, 8);
-        c.add(this.add.text(sx + SZ / 2, sy + SZ / 2, '🔒', txt(16, '#8a7a60', false)).setOrigin(0.5).setAlpha(0.6));
+        card(g, sx, sy, SZ, SZ, 'locked', 12);
+        g.fillStyle(0x8e8e93, 0.35).fillCircle(sx + SZ / 2, sy + SZ / 2, 3);
         return;
       }
       if (cl === 'empty') {
-        g.fillStyle(0xf8edd2, 1).fillRoundedRect(sx, sy, SZ, SZ, 8);
-        g.lineStyle(1.5, 0xe2d2ab, 1).strokeRoundedRect(sx, sy, SZ, SZ, 8);
+        card(g, sx, sy, SZ, SZ, 'muted', 12);
         return;
       }
       const on = this.invSel?.bag === cl.bag && this.invSel.id === cl.id;
       const active = cl.bag === 'seeds' && s.seed === cl.id;
-      g.fillStyle(WOOD_DARK, 1).fillRoundedRect(sx, sy + 2, SZ, SZ, 8);
-      g.fillStyle(on ? 0xfff3c4 : 0xf3e4bd, 1).fillRoundedRect(sx, sy, SZ, SZ, 8);
-      g.lineStyle(on ? 3 : 1.5, on ? 0xe0a030 : 0xd9c08c, 1).strokeRoundedRect(sx, sy, SZ, SZ, 8);
+      card(g, sx, sy, SZ, SZ, on ? 'selected' : 'normal', 12);
       c.add(this.add.image(sx + SZ / 2, sy + SZ / 2 - 2, cl.icon).setScale(2.2));
-      c.add(this.add.text(sx + SZ - 4, sy + SZ - 2, `${cl.qty}`, { ...txt(12), stroke: '#fffaea', strokeThickness: 3 }).setOrigin(1, 1));
+      c.add(this.add.text(sx + SZ - 4, sy + SZ - 2, `${cl.qty}`, { ...txt(11, C.secondary), stroke: '#ffffff', strokeThickness: 3 }).setOrigin(1, 1));
       if (cl.bag === 'produce') {
         const sb = this.starBadge(sx + 3, sy + 2, cl.id, 10);
         if (sb) c.add(sb);
       }
-      if (active) c.add(this.add.text(sx + 4, sy + 2, '★', txt(12, '#c0392b')));
+      if (active) c.add(this.add.circle(sx + 8, sy + 8, 3, HEX.blue));
       const z = this.add.zone(sx, sy, SZ, SZ).setOrigin(0).setInteractive({ useHandCursor: true });
       z.on('pointerdown', () => {
         play('click');
@@ -899,13 +904,12 @@ export class UIScene extends Phaser.Scene {
     // right: detail card
     const dx = x + W - 250, dy = y + 98, dw = 222, dh = 284;
     const g = this.add.graphics();
-    g.fillStyle(0xfffaea, 1).fillRoundedRect(dx, dy, dw, dh, 10);
-    g.lineStyle(2, 0xd9c08c, 1).strokeRoundedRect(dx, dy, dw, dh, 10);
-    g.fillStyle(0xf3e4bd, 1).fillCircle(dx + dw / 2, dy + 50, 36);
+    card(g, dx, dy, dw, dh, 'normal', 18);
+    well(g, dx + dw / 2, dy + 50, 36);
     c.add(g);
     const sel = this.invSel;
     if (!sel) {
-      c.add(this.add.text(dx + dw / 2, dy + 130, 'Pilih slot untuk\nmelihat detail', { ...txt(14, '#8a7a60', false), align: 'center' }).setOrigin(0.5));
+      c.add(this.add.text(dx + dw / 2, dy + 130, 'Pilih slot untuk\nmelihat detail', { ...txt(14, C.tertiary, false), align: 'center' }).setOrigin(0.5));
     } else {
       const d = this.describe(sel.bag, sel.id);
       c.add(this.add.image(dx + dw / 2, dy + 50, d.icon).setScale(4));
@@ -942,7 +946,7 @@ export class UIScene extends Phaser.Scene {
     const t = s.festival.trophies;
     const fy = y + 386;
     const fg = this.add.graphics();
-    fg.fillStyle(0xf3e4bd, 1).fillRoundedRect(x + 24, fy, W - 48, 30, 8);
+    fg.fillStyle(0x767680, 0.08).fillRoundedRect(x + 24, fy, W - 48, 30, 10);
     c.add(fg);
     const footer = [
       `${s.coins.toLocaleString('id-ID')} G`,
@@ -950,7 +954,7 @@ export class UIScene extends Phaser.Scene {
       `Poin Festival ${s.festival.points}`,
       `Piala 🥇${t.emas ?? 0} 🥈${t.perak ?? 0} 🥉${t.perunggu ?? 0}`,
     ].join('   ·   ');
-    c.add(this.add.text(x + W / 2, fy + 15, footer, txt(13, '#6b5030')).setOrigin(0.5));
+    c.add(this.add.text(x + W / 2, fy + 15, footer, txt(13, C.secondary)).setOrigin(0.5));
 
     const next = BAG_TIERS[s.bagTier + 1];
     const by = y + H - 52;
@@ -968,7 +972,7 @@ export class UIScene extends Phaser.Scene {
         this.toast(`${BAG_TIERS[s.bagTier].name}! Tas sekarang ${bagCapacity(s)} slot.`);
         this.openInventory();
       }, 300, blocked);
-    } else c.add(this.add.text(x + 24, by + 10, 'Tas sudah ukuran maksimal.', txt(13, '#6b5030', false)));
+    } else c.add(this.add.text(x + 24, by + 10, 'Tas sudah ukuran maksimal.', txt(13, C.secondary, false)));
     this.button(c, x + W - 144, by, 'Tutup', () => this.closeModal(), 120);
   }
 
@@ -1019,7 +1023,7 @@ export class UIScene extends Phaser.Scene {
   private areaBanner(name: string) {
     this.banner?.destroy(); // a newer area replaces the old banner
     const t = this.add
-      .text(this.scale.width / 2, 150, name, { ...txt(26, '#fffbe6'), stroke: '#3b2a1a', strokeThickness: 6 })
+      .text(this.scale.width / 2, 150, name, { ...txt(26, C.white), shadow: { offsetX: 0, offsetY: 2, color: 'rgba(0,0,0,0.45)', blur: 8, fill: true } })
       .setOrigin(0.5)
       .setAlpha(0)
       .setDepth(150);
@@ -1092,7 +1096,7 @@ export class UIScene extends Phaser.Scene {
   private starBadge(x: number, y: number, key: string, size: number) {
     const q = starsOf(key);
     if (q <= 1) return null;
-    return this.add.text(x, y, `★${q}`, { ...txt(size, '#e0a020'), stroke: '#fffaea', strokeThickness: 3 });
+    return this.add.text(x, y, `★${q}`, { ...txt(size, '#d99a00'), stroke: '#ffffff', strokeThickness: 3 });
   }
 
   // ---------- house & kitchen ----------
@@ -1109,27 +1113,25 @@ export class UIScene extends Phaser.Scene {
     const s = this.state;
     const W = 700, H = 490;
     const { c, x, y } = this.openModal(W, H, 'Dapur');
-    c.add(this.add.text(x + W - 28, y + 24, `Tenaga ${s.stamina}/${STAMINA_MAX}`, txt(14, '#6b5030')).setOrigin(1, 0));
+    c.add(this.add.text(x + W - 28, y + 24, `Tenaga ${s.stamina}/${STAMINA_MAX}`, txt(14, C.secondary)).setOrigin(1, 0));
     const cw = 212, ch = 118, gap = 10;
     DISHES.forEach((d, i) => {
       const cx = x + 20 + (i % 3) * (cw + gap);
       const cy = y + 58 + Math.floor(i / 3) * (ch + 8);
       const ready = Object.entries(d.ingredients).every(([id, n]) => countBase(s, id) >= n);
       const g = this.add.graphics();
-      g.fillStyle(WOOD_DARK, 1).fillRoundedRect(cx, cy + 2, cw, ch, 9);
-      g.fillStyle(ready ? 0xfffaea : 0xf3ead6, 1).fillRoundedRect(cx, cy, cw, ch, 9);
-      g.lineStyle(2, ready ? 0x6aa84f : 0xd9c08c, 1).strokeRoundedRect(cx, cy, cw, ch, 9);
-      g.fillStyle(0xf3e4bd, 1).fillCircle(cx + 32, cy + 38, 24);
+      card(g, cx, cy, cw, ch, ready ? 'ready' : 'normal', 16);
+      well(g, cx + 32, cy + 38, 24);
       c.add(g);
       c.add(this.add.image(cx + 32, cy + 38, `icon-${d.id}`).setScale(2.4));
       c.add(this.add.text(cx + 62, cy + 8, d.name, txt(14)));
       Object.entries(d.ingredients).forEach(([id, n], j) => {
         const have = countBase(s, id);
         c.add(
-          this.add.text(cx + 62, cy + 28 + j * 15, `${produceById(id).name} ${Math.min(have, n)}/${n}`, txt(12, have >= n ? '#3a7a36' : '#c0392b', false)),
+          this.add.text(cx + 62, cy + 28 + j * 15, `${produceById(id).name} ${Math.min(have, n)}/${n}`, txt(12, have >= n ? C.green : C.red, false)),
         );
       });
-      c.add(this.add.text(cx + 12, cy + ch - 26, `${d.sellPrice} G · +${d.stamina}⚡`, txt(12, '#8a6a10')));
+      c.add(this.add.text(cx + 12, cy + ch - 26, `${d.sellPrice} G · +${d.stamina}⚡`, txt(12, C.orange)));
       this.button(c, cx + cw - 96, cy + ch - 42, 'Masak', () => {
         const err = cook(s, d.id);
         if (err) {
@@ -1228,14 +1230,12 @@ export class UIScene extends Phaser.Scene {
     const W = this.scale.width;
     const w = 248, h = 46, x = W / 2 - w / 2, y = 10;
     const g = this.add.graphics();
-    g.fillStyle(WOOD_DARK, 1).fillRoundedRect(x, y + 3, w, h, 23);
-    g.fillStyle(WOOD, 1).fillRoundedRect(x, y, w, h, 23);
-    g.fillStyle(PAPER, 1).fillRoundedRect(x + 4, y + 4, w - 8, h - 8, 19);
-    g.fillStyle(0xd9c08c, 1).fillRect(x + 132, y + 12, 2, h - 24);
+    glass(g, x, y, w, h, h / 2, { alpha: 0.8, shadow: 10 });
+    g.fillStyle(HEX.hairline, 0.1).fillRect(x + 132, y + 12, 1, h - 24);
     this.clockIcon = this.add.image(x + 30, y + h / 2, 'wx-cerah').setScale(1.9);
-    this.timeText = this.add.text(x + 52, y + h / 2, '', txt(24, '#7a3e12')).setOrigin(0, 0.5);
+    this.timeText = this.add.text(x + 52, y + h / 2, '', txt(24, C.ink)).setOrigin(0, 0.5);
     this.clockDay = this.add.text(x + 146, y + 9, '', txt(14));
-    this.clockSub = this.add.text(x + 146, y + 27, '', txt(11, '#8a7a60', false));
+    this.clockSub = this.add.text(x + 146, y + 27, '', txt(11, C.secondary, false));
     const z = this.add.zone(x, y, w, h).setOrigin(0).setInteractive({ useHandCursor: true });
     z.on('pointerdown', () => {
       if (this.registry.get('modal')) return;
@@ -1251,7 +1251,7 @@ export class UIScene extends Phaser.Scene {
     const festival = isFestivalDay(s.day);
     this.clockSub
       .setText(`${WEEKDAYS[(s.day - 1) % 7]} · ${festival ? 'Festival!' : WEATHER_INFO[s.weather].name}`)
-      .setColor(festival ? '#c0392b' : '#8a7a60');
+      .setColor(festival ? C.red : C.tertiary);
   }
 
   private openCalendar() {
@@ -1263,7 +1263,7 @@ export class UIScene extends Phaser.Scene {
     const cw = 72, ch = 62, gap = 6;
     const gx = x + (W - (7 * cw + 6 * gap)) / 2;
     const gy = y + 84;
-    WEEKDAYS.forEach((d, i) => c.add(this.add.text(gx + i * (cw + gap) + cw / 2, gy - 20, d, txt(12, '#8a7a60')).setOrigin(0.5, 0)));
+    WEEKDAYS.forEach((d, i) => c.add(this.add.text(gx + i * (cw + gap) + cw / 2, gy - 20, d, txt(12, C.tertiary)).setOrigin(0.5, 0)));
 
     for (let d = 1; d <= DAYS_PER_SEASON; d++) {
       const abs = seasonStart + d - 1;
@@ -1274,21 +1274,20 @@ export class UIScene extends Phaser.Scene {
       const ahead = abs - s.day; // 1 = tomorrow
       const festival = d % FESTIVAL_EVERY === 0;
       const g = this.add.graphics();
-      g.fillStyle(isToday ? 0xfff3c4 : past ? 0xece2c9 : 0xfffaea, 1).fillRoundedRect(cx, cy, cw, ch, 8);
-      g.lineStyle(isToday ? 3 : 1.5, isToday ? 0xe0a030 : festival ? 0xd9503f : 0xd9c08c, 1).strokeRoundedRect(cx, cy, cw, ch, 8);
+      card(g, cx, cy, cw, ch, isToday ? 'today' : past ? 'muted' : festival ? 'alert' : 'normal', 12);
       c.add(g);
-      c.add(this.add.text(cx + 6, cy + 4, `${d}`, txt(13, past ? '#b5a88c' : INK)));
+      c.add(this.add.text(cx + 8, cy + 6, `${d}`, txt(13, past ? C.disabled : isToday ? C.blue : INK)));
       // weather: today and the forecast window; nothing for days we cannot see yet
       const wx = isToday ? s.weather : ahead >= 1 && ahead <= s.forecasts.length ? s.forecasts[ahead - 1] : null;
       if (wx) c.add(this.add.image(cx + cw - 20, cy + 20, `wx-${wx}`).setScale(1.6));
       if (festival) {
         c.add(this.add.image(cx + 14, cy + ch - 16, `icon-${festivalTheme(abs).id}`).setScale(1.3).setAlpha(past ? 0.5 : 1));
-        c.add(this.add.text(cx + cw - 5, cy + ch - 5, 'Festival', txt(10, past ? '#c9a0a0' : '#c0392b')).setOrigin(1, 1));
-      } else if (isToday) c.add(this.add.text(cx + cw - 5, cy + ch - 5, 'Hari ini', txt(10, '#b07a1a')).setOrigin(1, 1));
+        c.add(this.add.text(cx + cw - 5, cy + ch - 5, 'Festival', txt(10, past ? C.disabled : C.red)).setOrigin(1, 1));
+      } else if (isToday) c.add(this.add.text(cx + cw - 5, cy + ch - 5, 'Hari ini', txt(10, C.blue)).setOrigin(1, 1));
     }
     c.add(
       this.add
-        .text(x + W / 2, y + H - 72, 'Ikon cuaca = prakiraan 7 hari ke depan · Festival tiap hari ke-7 (ikon = tema ×2)', txt(11, '#8a7a60', false))
+        .text(x + W / 2, y + H - 72, 'Ikon cuaca = prakiraan 7 hari ke depan · Festival tiap hari ke-7 (ikon = tema ×2)', txt(11, C.tertiary, false))
         .setOrigin(0.5, 0),
     );
     this.button(c, x + W / 2 - 60, y + H - 50, 'Tutup', () => this.closeModal(), 120);
