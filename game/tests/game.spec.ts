@@ -278,3 +278,29 @@ test('permintaan warga memakai kualitas terendah dulu', async ({ page }) => {
   expect((await state(page)).produce).toEqual({ 'lobak@4': 2 });
   noErrors(errors);
 });
+
+test('hujan menyiram ladang otomatis', async ({ page }) => {
+  const errors = await start(page);
+  await at(page, 10, 9, 'down');
+  await use(page, 1);
+  await use(page, 3); // planted, not watered
+  await patch(page, "s.forecast = 'hujan'");
+  await sleep(page, true);
+  const s = await state(page);
+  expect(s.weather).toBe('hujan');
+  expect(s.plots['10,10'].watered).toBe(true);
+  noErrors(errors);
+});
+
+test('hari festival selalu cerah, badai berjalan tanpa error', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.day = 6; s.forecast = 'badai'");
+  await sleep(page, true);
+  expect((await state(page)).weather).toBe('cerah'); // day 7 = festival
+
+  await patch(page, "s.forecast = 'badai'");
+  await sleep(page, true);
+  expect((await state(page)).weather).toBe('badai');
+  await page.waitForTimeout(3000); // first lightning strike
+  noErrors(errors);
+});

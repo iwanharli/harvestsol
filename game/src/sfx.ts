@@ -1,6 +1,6 @@
 // Tiny synthesized sound effects (Web Audio), so the prototype needs no audio files.
 
-type Sfx = 'hoe' | 'water' | 'plant' | 'harvest' | 'coin' | 'click' | 'sleep' | 'error' | 'place' | 'quest' | 'cluck';
+type Sfx = 'hoe' | 'water' | 'plant' | 'harvest' | 'coin' | 'click' | 'sleep' | 'error' | 'place' | 'quest' | 'cluck' | 'thunder';
 
 let ctx: AudioContext | undefined;
 let master: GainNode | undefined;
@@ -130,8 +130,41 @@ export function play(name: Sfx) {
       tone(700, 0, 0.07, 'square', 0.08, 900);
       tone(620, 0.09, 0.09, 'square', 0.08, 820);
       break;
+    case 'thunder':
+      noise(0, 1.6, 90, 0.9, 0.7);
+      noise(0.05, 1.2, 160, 0.5, 0.5);
+      break;
     case 'error':
       tone(140, 0, 0.15, 'square', 0.1, 100);
       break;
   }
+}
+
+// ---------- rain ambience ----------
+
+let rainSrc: AudioBufferSourceNode | undefined;
+let rainGain: GainNode | undefined;
+
+/** 0 = dry, 1 = rain, 2 = storm. */
+export function setRain(level: 0 | 1 | 2) {
+  const c = audio();
+  if (!c || !master) return;
+  if (!rainSrc) {
+    const len = c.sampleRate * 2;
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    rainSrc = c.createBufferSource();
+    rainSrc.buffer = buf;
+    rainSrc.loop = true;
+    const f = c.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 2600;
+    f.Q.value = 0.4;
+    rainGain = c.createGain();
+    rainGain.gain.value = 0;
+    rainSrc.connect(f).connect(rainGain).connect(master);
+    rainSrc.start();
+  }
+  rainGain!.gain.setTargetAtTime([0, 0.07, 0.13][level], c.currentTime, 0.8);
 }

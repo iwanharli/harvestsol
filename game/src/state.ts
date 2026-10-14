@@ -11,6 +11,10 @@ import {
   AFFECTION_MAX,
   BAG_TIERS,
   COOK_MINUTES,
+  STORM_DAMAGE,
+  WEATHER_ODDS,
+  isWet,
+  type Weather,
   baseId,
   starsOf,
   dishById,
@@ -65,6 +69,8 @@ export interface GameState {
   tool: Tool;
   ownedTools: Tool[]; // bought tools (the starter tools are always available)
   bagTier: number; // index into BAG_TIERS
+  weather: Weather; // today
+  forecast: Weather; // tomorrow
   seed: string;
   seeds: Record<string, number>;
   produce: Record<string, number>;
@@ -97,6 +103,8 @@ export function newGame(): GameState {
     tool: 'cangkul',
     ownedTools: [],
     bagTier: 0,
+    weather: 'cerah',
+    forecast: rollWeather(2),
     seed: 'lobak',
     seeds: { lobak: 6 },
     produce: {},
@@ -120,6 +128,8 @@ function migrate(s: GameState): GameState {
   s.level ??= 1;
   s.ownedTools ??= [];
   s.bagTier ??= 0;
+  s.weather ??= 'cerah';
+  s.forecast ??= rollWeather(s.day + 1);
   s.xp ??= 0;
   s.requests ??= [];
   s.animals ??= [];
@@ -182,11 +192,12 @@ export interface DayReport {
   sprinkled: number;
   eggs: number;
   hungry: number;
+  stormDamage: number;
 }
 
 /** Advance to the next morning: sell shipped goods, grow watered crops, reset daily resources. */
 export function endDay(s: GameState, passedOut: boolean): DayReport {
-  const report: DayReport = { income: 0, sold: [], grown: 0, withered: 0, sprinkled: 0, eggs: 0, hungry: 0 };
+  const report: DayReport = { income: 0, sold: [], grown: 0, withered: 0, sprinkled: 0, eggs: 0, hungry: 0, stormDamage: 0 };
   for (const [id, qty] of Object.entries(s.shipping)) {
     const c = produceById(id);
     const total = c.sellPrice * qty;
@@ -217,6 +228,19 @@ export function endDay(s: GameState, passedOut: boolean): DayReport {
     p.watered = false;
     // untended empty soil slowly reverts to grass
     if (!p.crop && !p.fertilized && p.tilled && Math.random() < 0.1) delete s.plots[key];
+  }
+
+  // today's weather is yesterday's forecast; rain and storms water every tilled tile
+  s.weather = isFestivalDay(s.day) ? 'cerah' : s.forecast;
+  s.forecast = rollWeather(s.day + 1);
+  if (isWet(s.weather)) {
+    for (const p of Object.values(s.plots)) {
+      if (p.tilled) p.watered = true;
+      if (s.weather === 'badai' && p.crop && !p.crop.dead && Math.random() < STORM_DAMAGE) {
+        p.crop.dead = true;
+        report.stormDamage++;
+      }
+    }
   }
 
   // sprinklers water the 8 tilled tiles around them for the new day
@@ -463,4 +487,15 @@ export function harvestStars(s: GameState, crop: NonNullable<Plot['crop']>, fert
   let q = 1 + (missed === 0 ? 2 : missed === 1 ? 1 : 0) + (fertilized ? 1 : 0);
   if (rand() < 0.1 + s.level * 0.02) q++;
   return Math.min(5, q);
+}
+
+// ---------- weather ----------
+
+/** Weather for a day: festival days are always clear. */
+export function rollWeather(day: number, rand = Math.random): Weather {
+  if (isFestivalDay(day)) return 'cerah';
+  const odds = WEATHER_ODDS[seasonOf(day)];
+  let n = rand() * odds.reduce((a, [, w]) => a + w, 0);
+  for (const [w, weight] of odds) if ((n -= weight) < 0) return w;
+  return 'cerah';
 }
