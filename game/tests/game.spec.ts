@@ -21,13 +21,16 @@ test('tanam, siram, tumbuh, panen, kirim, dibayar', async ({ page }) => {
 
   await at(page, 10, 9, 'down');
   await use(page, 4);
-  expect((await state(page)).produce).toEqual({ lobak: 1 });
+  // watered every night → at least 3 stars
+  const keys = Object.keys((await state(page)).produce);
+  expect(keys).toHaveLength(1);
+  expect(keys[0]).toMatch(/^lobak@[345]$/);
 
   await at(page, 8, 7, 'up'); // shipping bin
   await press(page, 'Space');
-  expect((await state(page)).shipping).toEqual({ lobak: 1 });
+  expect(Object.keys((await state(page)).shipping)).toEqual(keys);
   await sleep(page);
-  expect((await state(page)).coins).toBe(300 + 45);
+  expect((await state(page)).coins).toBeGreaterThanOrEqual(300 + Math.round(45 * 1.5));
   noErrors(errors);
 });
 
@@ -224,5 +227,54 @@ test('memasak di dapur lalu makan untuk tenaga', async ({ page }) => {
   s = await state(page);
   expect(s.produce).toEqual({});
   expect(s.stamina).toBe(75);
+  noErrors(errors);
+});
+
+test('kualitas: dirawat sempurna ★4+, ditelantarkan ★1-2', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.level = 3; s.seeds = { lobak: 2, pupuk: 1 }");
+  // tile A (10,10): fertilizer + water every night
+  await at(page, 10, 9, 'down');
+  await use(page, 1);
+  await patch(page, "s.seed = 'pupuk'");
+  await use(page, 3);
+  await patch(page, "s.seed = 'lobak'");
+  await use(page, 3);
+  // tile B (12,10): planted, left dry for two nights
+  await at(page, 12, 9, 'down');
+  await use(page, 1);
+  await use(page, 3);
+  await patch(page, "s.plots['10,10'].watered = true");
+  await sleep(page);
+  await patch(page, "s.plots['10,10'].watered = true");
+  await sleep(page);
+  for (let d = 0; d < 3; d++) {
+    await patch(page, "s.plots['12,10'].watered = true");
+    await sleep(page);
+  }
+  let s = await state(page);
+  expect(s.plots['12,10'].crop.missed).toBe(2);
+
+  await at(page, 10, 9, 'down');
+  await use(page, 4);
+  await at(page, 12, 9, 'down');
+  await use(page, 4);
+  s = await state(page);
+  const stars = Object.keys(s.produce).map((k) => Number(k.split('@')[1] ?? 1)).sort();
+  expect(stars[0]).toBeLessThanOrEqual(2); // neglected
+  expect(stars[1]).toBeGreaterThanOrEqual(4); // fertilized and always watered
+  noErrors(errors);
+});
+
+test('permintaan warga memakai kualitas terendah dulu', async ({ page }) => {
+  const errors = await start(page);
+  await patch(
+    page,
+    "s.level = 2; s.produce = { lobak: 2, 'lobak@4': 2 }; s.requests = [{ id: 99, npc: 'sari', crop: 'lobak', qty: 2, reward: 100, until: 99 }]",
+  );
+  await at(page, 44, 7, 'up');
+  await press(page, 'Space');
+  await page.mouse.click(680, 265); // one request → shorter window, button sits lower
+  expect((await state(page)).produce).toEqual({ 'lobak@4': 2 });
   noErrors(errors);
 });

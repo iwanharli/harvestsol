@@ -11,6 +11,8 @@ import {
   AFFECTION_MAX,
   BAG_TIERS,
   COOK_MINUTES,
+  baseId,
+  starsOf,
   dishById,
   STACK_MAX,
   FESTIVAL_EVERY,
@@ -29,7 +31,7 @@ import {
 export interface Plot {
   tilled: boolean;
   watered: boolean;
-  crop?: { id: string; growth: number; dead?: boolean };
+  crop?: { id: string; growth: number; dead?: boolean; missed?: number }; // missed = nights without water
   fertilized?: boolean; // speed fertilizer: 2 growth per watered night, lasts until harvest
   sprinkler?: boolean; // a placed sprinkler occupies this tile
 }
@@ -208,6 +210,8 @@ export function endDay(s: GameState, passedOut: boolean): DayReport {
       } else if (p.watered && p.crop.growth < def.days) {
         p.crop.growth = Math.min(def.days, p.crop.growth + (p.fertilized ? 2 : 1));
         report.grown++;
+      } else if (p.crop.growth < def.days) {
+        p.crop.missed = (p.crop.missed ?? 0) + 1; // a dry night costs quality
       }
     }
     p.watered = false;
@@ -279,8 +283,8 @@ export function refreshRequests(s: GameState): GameState {
 /** Hand over produce for a request. Returns false if the player lacks the items. */
 export function deliverRequest(s: GameState, id: number): boolean {
   const r = s.requests.find((q) => q.id === id);
-  if (!r || (s.produce[r.crop] ?? 0) < r.qty) return false;
-  add(s.produce, r.crop, -r.qty);
+  if (!r || countBase(s, r.crop) < r.qty) return false;
+  takeBase(s, r.crop, r.qty);
   s.coins += r.reward;
   s.stats.earned += r.reward;
   s.stats.requestsDone++;
@@ -321,8 +325,9 @@ export function festivalTheme(day: number) {
 
 export function festivalScore(items: string[], themeId: string) {
   let score = 0;
-  for (const id of items) score += produceById(id).sellPrice * (id === themeId ? FESTIVAL_THEME_MULT : 1);
-  return score + new Set(items).size * FESTIVAL_VARIETY_BONUS;
+  // quality raises the price, the theme bonus applies to any quality of the theme crop
+  for (const key of items) score += produceById(key).sellPrice * (baseId(key) === themeId ? FESTIVAL_THEME_MULT : 1);
+  return score + new Set(items.map(baseId)).size * FESTIVAL_VARIETY_BONUS;
 }
 
 export interface FestivalResult {
@@ -404,10 +409,12 @@ export function cook(s: GameState, dishId: string): string | null {
   const dish = dishById(dishId);
   if (!dish) return 'Resep tidak dikenal.';
   for (const [id, n] of Object.entries(dish.ingredients))
-    if ((s.produce[id] ?? 0) < n) return `Bahan kurang: ${produceById(id).name}.`;
-  for (const [id, n] of Object.entries(dish.ingredients)) add(s.produce, id, -n);
+    if (countBase(s, id) < n) return `Bahan kurang: ${produceById(id).name}.`;
+  const taken: Record<string, number> = {};
+  for (const [id, n] of Object.entries(dish.ingredients))
+    for (const [k, q] of Object.entries(takeBase(s, id, n))) add(taken, k, q);
   if (!canAdd(s, 'produce', dish.id)) {
-    for (const [id, n] of Object.entries(dish.ingredients)) add(s.produce, id, n); // put everything back
+    for (const [k, q] of Object.entries(taken)) add(s.produce, k, q); // put everything back
     return 'Tas penuh! Kosongkan satu slot dulu.';
   }
   add(s.produce, dish.id, 1);
@@ -423,4 +430,37 @@ export function eat(s: GameState, dishId: string): string | null {
   add(s.produce, dishId, -1);
   s.stamina = Math.min(STAMINA_MAX, s.stamina + dish.stamina);
   return null;
+}
+
+// ---------- quality helpers ----------
+
+/** How many of a crop/product the bag holds, any quality. */
+export function countBase(s: GameState, id: string) {
+  let n = 0;
+  for (const [k, q] of Object.entries(s.produce)) if (baseId(k) === id) n += q;
+  return n;
+}
+
+/** Remove n of a crop/product, lowest quality first, so the best ones stay. Returns what was taken. */
+export function takeBase(s: GameState, id: string, n: number): Record<string, number> {
+  const taken: Record<string, number> = {};
+  const keys = Object.keys(s.produce)
+    .filter((k) => baseId(k) === id)
+    .sort((a, b) => starsOf(a) - starsOf(b));
+  for (const k of keys) {
+    if (n <= 0) break;
+    const q = Math.min(n, s.produce[k]);
+    add(s.produce, k, -q);
+    taken[k] = q;
+    n -= q;
+  }
+  return taken;
+}
+
+/** Stars for a crop at harvest: steady watering, fertilizer, and a little luck. */
+export function harvestStars(s: GameState, crop: NonNullable<Plot['crop']>, fertilized: boolean, rand = Math.random) {
+  const missed = crop.missed ?? 0;
+  let q = 1 + (missed === 0 ? 2 : missed === 1 ? 1 : 0) + (fertilized ? 1 : 0);
+  if (rand() < 0.1 + s.level * 0.02) q++;
+  return Math.min(5, q);
 }
