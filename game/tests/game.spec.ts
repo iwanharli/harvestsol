@@ -498,7 +498,8 @@ test('jam dinding bangun 05:00, kasur besar +15 tenaga', async ({ page }) => {
   await patch(page, "s.furniture = { jam: true, kasur: true }");
   await sleep(page);
   const s = await state(page);
-  expect(s.minutes).toBe(5 * 60);
+  expect(s.minutes).toBeGreaterThanOrEqual(5 * 60);
+  expect(s.minutes).toBeLessThan(5 * 60 + 5); // the clock may tick a moment after the report closes
   expect(s.stamina).toBe(115);
   noErrors(errors);
 });
