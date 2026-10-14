@@ -149,9 +149,22 @@ export const dishById = (id: string) => DISHES.find((d) => d.id === id);
 export const XP_COOK = 4;
 export const COOK_MINUTES = 30;
 
-/** Name and price of anything that can sit in the produce bag (crops or animal products). */
-export function produceById(id: string): { id: string; name: string; sellPrice: number } {
-  return PRODUCTS.find((p) => p.id === id) ?? dishById(id) ?? cropById(id);
+// ---------- crop quality ----------
+// Bag keys carry quality as "lobak@3" (3 stars). A plain "lobak" is 1 star (also old saves).
+
+export const QUALITY_MULT = [1, 1, 1.25, 1.5, 2, 3]; // indexed by stars
+export const baseId = (key: string) => key.split('@')[0];
+export const starsOf = (key: string) => Number(key.split('@')[1] ?? 1);
+export const qualityKey = (id: string, stars: number) => (stars > 1 ? `${id}@${stars}` : id);
+export const stars = (n: number) => '★'.repeat(n);
+
+/** Name and price of anything that can sit in the produce bag (crops, quality crops, products, dishes). */
+export function produceById(key: string): { id: string; name: string; sellPrice: number } {
+  const id = baseId(key);
+  const base = PRODUCTS.find((p) => p.id === id) ?? dishById(id) ?? cropById(id);
+  const q = starsOf(key);
+  if (q <= 1) return base;
+  return { id: key, name: `${base.name} ${stars(q)}`, sellPrice: Math.round(base.sellPrice * QUALITY_MULT[q]) };
 }
 
 export const XP_ANIMAL = { feed: 1, egg: 2, pet: 1 };

@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import {
   BAG_MAX_SLOTS,
+  baseId,
+  starsOf,
   DISHES,
   XP_COOK,
   dishById,
@@ -34,6 +36,7 @@ import {
   bagCapacity,
   canAdd,
   cook,
+  countBase,
   deliverRequest,
   eat,
   enterFestival,
@@ -235,13 +238,15 @@ export class UIScene extends Phaser.Scene {
       const g = this.add.graphics();
       g.fillStyle(0xf3e4bd, 1).fillRoundedRect(sx, 46, 34, 34, 6);
       g.lineStyle(1.5, 0xd9c08c, 1).strokeRoundedRect(sx, 46, 34, 34, 6);
-      this.bagMini.add([g, this.add.image(sx + 17, 63, `icon-${id}`).setScale(1.6), this.add.text(sx + 33, 80, `${q}`, txt(11)).setOrigin(1, 1)]);
+      this.bagMini.add([g, this.add.image(sx + 17, 63, `icon-${baseId(id)}`).setScale(1.6), this.add.text(sx + 33, 80, `${q}`, txt(11)).setOrigin(1, 1)]);
+      const badge = this.starBadge(sx + 2, 47, id, 9);
+      if (badge) this.bagMini.add(badge);
     });
     if (produce.length > 5) this.bagMini.add(this.add.text(W - 26, 63, `+${produce.length - 5}`, txt(12, '#8a7a60')).setOrigin(1, 0.5));
     const status: string[] = [];
     const ship = Object.values(s.shipping).reduce((a, b) => a + b, 0);
     if (ship) status.push(`Kirim: ${ship}`);
-    const ready = s.requests.filter((r) => (s.produce[r.crop] ?? 0) >= r.qty).length;
+    const ready = s.requests.filter((r) => countBase(s, r.crop) >= r.qty).length;
     if (ready) status.push(`Permintaan siap: ${ready}`);
     if (s.animals.length) status.push(`Pakan: ${s.feed}`);
     this.bagText.setText(status.join(' · '));
@@ -617,7 +622,7 @@ export class UIScene extends Phaser.Scene {
       const cy = y + 60 + i * (cardH + 10);
       const npc = npcById(r.npc);
       const crop = cropById(r.crop);
-      const have = s.produce[r.crop] ?? 0;
+      const have = countBase(s, r.crop);
       const ok = have >= r.qty;
       const left = r.until - s.day + 1;
       const g = this.add.graphics();
@@ -633,7 +638,7 @@ export class UIScene extends Phaser.Scene {
       this.button(c, x + 440, cy + 20, ok ? 'Serahkan' : 'Belum cukup', () => {
         if (!deliverRequest(s, r.id)) {
           play('error');
-          return this.toast(`Kurang ${r.qty - (s.produce[r.crop] ?? 0)} ${crop.name}.`);
+          return this.toast(`Kurang ${r.qty - countBase(s, r.crop)} ${crop.name}.`);
         }
         play('quest');
         const reached = gainXp(s, XP.request);
@@ -669,8 +674,10 @@ export class UIScene extends Phaser.Scene {
       c.add(g);
       const id = this.festivalPick[i];
       if (!id) continue;
-      c.add(this.add.image(sx + 27, sy + 27, `icon-${id}`).setScale(2.5));
-      if (id === theme.id) c.add(this.add.text(sx + 50, sy + 4, '×2', txt(11, '#c0392b')).setOrigin(1, 0));
+      c.add(this.add.image(sx + 27, sy + 27, `icon-${baseId(id)}`).setScale(2.5));
+      const sb = this.starBadge(sx + 3, sy + 2, id, 10);
+      if (sb) c.add(sb);
+      if (baseId(id) === theme.id) c.add(this.add.text(sx + 50, sy + 4, '×2', txt(11, '#c0392b')).setOrigin(1, 0));
       const z = this.add.zone(sx, sy, 54, 54).setOrigin(0).setInteractive({ useHandCursor: true });
       z.on('pointerdown', () => {
         play('click');
@@ -693,10 +700,12 @@ export class UIScene extends Phaser.Scene {
       const cx = x + 32 + (i % 8) * 68;
       const cy = y + 206 + Math.floor(i / 8) * 64;
       const g = this.add.graphics();
-      g.fillStyle(id === theme.id ? 0xfde7c2 : 0xfffaea, 1).fillRoundedRect(cx, cy, 60, 56, 8);
-      g.lineStyle(2, id === theme.id ? 0xe88a2d : 0xd9c08c, 1).strokeRoundedRect(cx, cy, 60, 56, 8);
+      g.fillStyle(baseId(id) === theme.id ? 0xfde7c2 : 0xfffaea, 1).fillRoundedRect(cx, cy, 60, 56, 8);
+      g.lineStyle(2, baseId(id) === theme.id ? 0xe88a2d : 0xd9c08c, 1).strokeRoundedRect(cx, cy, 60, 56, 8);
       c.add(g);
-      c.add(this.add.image(cx + 30, cy + 24, `icon-${id}`).setScale(2.2));
+      c.add(this.add.image(cx + 30, cy + 24, `icon-${baseId(id)}`).setScale(2.2));
+      const cb = this.starBadge(cx + 4, cy + 3, id, 10);
+      if (cb) c.add(cb);
       c.add(this.add.text(cx + 56, cy + 52, `${q}`, txt(12)).setOrigin(1, 1));
       const z = this.add.zone(cx, cy, 60, 56).setOrigin(0).setInteractive({ useHandCursor: true });
       z.on('pointerdown', () => {
@@ -769,7 +778,7 @@ export class UIScene extends Phaser.Scene {
     const stacksOf = (bag: 'produce' | 'seeds', rec: Record<string, number>) =>
       Object.entries(rec).flatMap(([id, q]) => {
         const out: Slot[] = [];
-        for (let left = q; left > 0; left -= STACK_MAX) out.push({ bag, id, icon: `icon-${id}`, qty: Math.min(STACK_MAX, left) });
+        for (let left = q; left > 0; left -= STACK_MAX) out.push({ bag, id, icon: `icon-${baseId(id)}`, qty: Math.min(STACK_MAX, left) });
         return out;
       });
     const produce = stacksOf('produce', s.produce);
@@ -852,6 +861,10 @@ export class UIScene extends Phaser.Scene {
       g.lineStyle(on ? 3 : 1.5, on ? 0xe0a030 : 0xd9c08c, 1).strokeRoundedRect(sx, sy, SZ, SZ, 8);
       c.add(this.add.image(sx + SZ / 2, sy + SZ / 2 - 2, cl.icon).setScale(2.2));
       c.add(this.add.text(sx + SZ - 4, sy + SZ - 2, `${cl.qty}`, { ...txt(12), stroke: '#fffaea', strokeThickness: 3 }).setOrigin(1, 1));
+      if (cl.bag === 'produce') {
+        const sb = this.starBadge(sx + 3, sy + 2, cl.id, 10);
+        if (sb) c.add(sb);
+      }
       if (active) c.add(this.add.text(sx + 4, sy + 2, '★', txt(12, '#c0392b')));
       const z = this.add.zone(sx, sy, SZ, SZ).setOrigin(0).setInteractive({ useHandCursor: true });
       z.on('pointerdown', () => {
@@ -958,10 +971,11 @@ export class UIScene extends Phaser.Scene {
       const lines = [`Jumlah: ${qty}`, `Jual: ${p.sellPrice} G / buah`, `Total: ${(p.sellPrice * qty).toLocaleString('id-ID')} G`];
       const dishInfo = dishById(id);
       if (dishInfo) lines.push(`Makan: +${dishInfo.stamina} tenaga`);
-      const want = s.requests.filter((r) => r.crop === id);
+      const want = s.requests.filter((r) => r.crop === baseId(id));
       if (want.length) lines.push(`Diminta: ${want.map((r) => `${npcById(r.npc).name} (${r.qty})`).join(', ')}`);
-      if (isFestivalDay(s.day) && festivalTheme(s.day).id === id) lines.push('Tema festival hari ini ×2!');
-      return { name: p.name, icon: `icon-${id}`, lines };
+      if (isFestivalDay(s.day) && festivalTheme(s.day).id === baseId(id)) lines.push('Tema festival hari ini ×2!');
+      if (starsOf(id) > 1) lines.splice(1, 0, `Kualitas: ${'★'.repeat(starsOf(id))}`);
+      return { name: p.name, icon: `icon-${baseId(id)}`, lines };
     }
     const item = ITEMS.find((i) => i.id === id);
     if (item) return { name: item.name, icon: `icon-${id}`, lines: [`Jumlah: ${s.seeds[id] ?? 0}`, `${item.desc[0].toUpperCase()}${item.desc.slice(1)}.`] };
@@ -1053,6 +1067,13 @@ export class UIScene extends Phaser.Scene {
     layer.add([btn, lbl]);
   }
 
+  /** Small gold "★3" badge for quality produce; null for plain (1-star) items. */
+  private starBadge(x: number, y: number, key: string, size: number) {
+    const q = starsOf(key);
+    if (q <= 1) return null;
+    return this.add.text(x, y, `★${q}`, { ...txt(size, '#e0a020'), stroke: '#fffaea', strokeThickness: 3 });
+  }
+
   // ---------- house & kitchen ----------
 
   private openHouse() {
@@ -1072,7 +1093,7 @@ export class UIScene extends Phaser.Scene {
     DISHES.forEach((d, i) => {
       const cx = x + 20 + (i % 3) * (cw + gap);
       const cy = y + 58 + Math.floor(i / 3) * (ch + 8);
-      const ready = Object.entries(d.ingredients).every(([id, n]) => (s.produce[id] ?? 0) >= n);
+      const ready = Object.entries(d.ingredients).every(([id, n]) => countBase(s, id) >= n);
       const g = this.add.graphics();
       g.fillStyle(WOOD_DARK, 1).fillRoundedRect(cx, cy + 2, cw, ch, 9);
       g.fillStyle(ready ? 0xfffaea : 0xf3ead6, 1).fillRoundedRect(cx, cy, cw, ch, 9);
@@ -1082,7 +1103,7 @@ export class UIScene extends Phaser.Scene {
       c.add(this.add.image(cx + 32, cy + 38, `icon-${d.id}`).setScale(2.4));
       c.add(this.add.text(cx + 62, cy + 8, d.name, txt(14)));
       Object.entries(d.ingredients).forEach(([id, n], j) => {
-        const have = s.produce[id] ?? 0;
+        const have = countBase(s, id);
         c.add(
           this.add.text(cx + 62, cy + 28 + j * 15, `${produceById(id).name} ${Math.min(have, n)}/${n}`, txt(12, have >= n ? '#3a7a36' : '#c0392b', false)),
         );

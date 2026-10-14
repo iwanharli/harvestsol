@@ -26,10 +26,14 @@ import {
   cropById,
   itemName,
   produceById,
+  qualityKey,
+  stars,
 } from '../data';
 import {
   add,
   canAdd,
+  countBase,
+  harvestStars,
   roomFor,
   dayOfSeason,
   endDay,
@@ -488,7 +492,7 @@ export class FarmScene extends Phaser.Scene {
   private updateAmbient(dt: number) {
     const s = this.state;
     this.boardBubble.setVisible(
-      s.level >= FEATURE_LEVEL.board && s.requests.some((r) => (s.produce[r.crop] ?? 0) >= r.qty),
+      s.level >= FEATURE_LEVEL.board && s.requests.some((r) => countBase(s, r.crop) >= r.qty),
     );
     this.coopLock.setVisible(s.level < FEATURE_LEVEL.coop);
     this.bunting.setVisible(isFestivalDay(s.day));
@@ -844,13 +848,17 @@ export class FarmScene extends Phaser.Scene {
         if (!crop || crop.dead) return;
         const def = cropById(crop.id);
         if (crop.growth < def.days) return this.fail(`${def.name} belum siap (${crop.growth}/${def.days} hari).`);
-        if (!canAdd(s, 'produce', def.id)) return this.fail('Tas penuh! Kirim atau jual hasil panen dulu.');
+        const q = harvestStars(s, crop, !!plot.fertilized);
+        const key = qualityKey(def.id, q);
+        if (!canAdd(s, 'produce', key)) return this.fail('Tas penuh! Kirim atau jual hasil panen dulu.');
         delete plot.crop;
         delete plot.fertilized;
-        add(s.produce, def.id, 1);
+        add(s.produce, key, 1);
         s.stats.harvested++;
         this.flyIcon(tx, ty, `icon-${def.id}`);
-        play('harvest');
+        this.starBurst(tx, ty, q);
+        if (q >= 3) this.toast(`${def.name} ${stars(q)}! Dijual ${produceById(key).sellPrice} G`);
+        play(q >= 4 ? 'quest' : 'harvest');
         this.xp(XP.harvestPerDay * def.days, tx, ty);
         break;
       }
@@ -1241,6 +1249,27 @@ export class FarmScene extends Phaser.Scene {
         alpha: 0,
         duration: 350,
         onComplete: () => d.destroy(),
+      });
+    }
+  }
+
+  /** Little gold stars popping out of a quality harvest. */
+  private starBurst(tx: number, ty: number, q: number) {
+    for (let i = 0; i < q; i++) {
+      const t = this.add
+        .text((tx + 0.5) * TILE, ty * TILE + 4, '★', { fontFamily: 'monospace', fontSize: '9px', color: '#f2c94c', stroke: '#5a3a22', strokeThickness: 2 })
+        .setOrigin(0.5)
+        .setResolution(4)
+        .setDepth(9004);
+      const a = -Math.PI / 2 + (i - (q - 1) / 2) * 0.45;
+      this.tweens.add({
+        targets: t,
+        x: t.x + Math.cos(a) * 14,
+        y: t.y + Math.sin(a) * 14,
+        alpha: 0,
+        duration: 800,
+        ease: 'Quad.Out',
+        onComplete: () => t.destroy(),
       });
     }
   }
