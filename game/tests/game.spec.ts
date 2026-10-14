@@ -146,9 +146,15 @@ test('pancing harus dibeli, lalu bisa dapat ikan', async ({ page }) => {
   await press(page, 'Space');
   await page.waitForFunction(() => window.game.scene.getScene('farm').fishing?.stage === 'bite', null, { timeout: 8000 });
   await press(page, 'Space');
-  const fish = Object.keys((await state(page)).produce);
+  const s = await state(page);
+  const fish = Object.keys(s.produce);
   expect(fish.length).toBe(1);
-  expect(fish[0]).toMatch(/^ikan-/);
+  expect(fish[0]).toMatch(/^ikan-[a-z]+(@[2-5])?$/); // a fish, maybe with quality
+  const id = fish[0].split('@')[0];
+  expect(s.fishCaught[id]).toBeGreaterThanOrEqual(1); // recorded in the fish book
+
+  await press(page, 'j');
+  expect(await page.evaluate(() => window.game.scene.getScene('ui').modalKind)).toBe('fishbook');
   noErrors(errors);
 });
 

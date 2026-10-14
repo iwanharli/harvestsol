@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CROPS, DISHES, TILE } from './data';
+import { CROPS, DISHES, FISH, TILE } from './data';
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -842,31 +842,55 @@ export function makeTextures(scene: Phaser.Scene) {
   }, true);
 
   // ---------- fish & fishing ----------
-  const fish: Record<string, [string, string, string]> = {
-    'ikan-nila': ['#8a9aa8', '#b8c6d2', '#5f6f7d'],
-    'ikan-mas': ['#e88a2d', '#f4b66a', '#b8651c'],
-    'ikan-lele': ['#5a5248', '#7d746a', '#3b352f'],
-    'ikan-emas': ['#f2c94c', '#fff3a8', '#c99a2e'],
-  };
-  for (const [id, [body, light, dark]] of Object.entries(fish)) {
-    canvas(scene, `icon-${id}`, TILE, TILE, (c) => {
-      for (let x = 2; x < 12; x++) {
-        const h = Math.round(Math.sin(((x - 2) / 10) * Math.PI) * 4);
-        px(c, x, 8 - h, body, 1, h * 2 + 1);
-        px(c, x, 8 - h, light, 1, 1);
-        px(c, x, 8 + h, dark, 1, 1);
+  for (const f of FISH) {
+    const [body, light, dark] = f.colors;
+    canvas(scene, `icon-${f.id}`, TILE, TILE, (c) => {
+      if (f.shape === 'eel') {
+        // long wavy body
+        for (let x = 1; x < 15; x++) {
+          const y = 8 + Math.round(Math.sin(x / 2.2) * 2);
+          px(c, x, y - 1, body, 1, 3);
+          px(c, x, y - 1, light, 1, 1);
+        }
+        px(c, 2, 6, '#2b2b2b');
+        return;
       }
-      px(c, 12, 5, dark, 1, 7);
-      px(c, 13, 4, dark, 2, 3);
-      px(c, 13, 10, dark, 2, 3);
-      px(c, 4, 7, '#2b2b2b');
-      if (id === 'ikan-lele') {
+      if (f.shape === 'shrimp') {
+        // curled body with feelers
+        for (let i = 0; i < 9; i++) {
+          const a = Math.PI * (0.15 + i / 10);
+          px(c, 8 + Math.round(Math.cos(a) * 5), 8 + Math.round(Math.sin(a) * 4), body, 2, 2);
+        }
+        px(c, 12, 5, light, 2, 2);
+        px(c, 13, 2, dark, 1, 3);
+        px(c, 11, 1, dark, 1, 3);
+        px(c, 3, 11, dark, 2, 2);
+        px(c, 12, 6, '#2b2b2b');
+        return;
+      }
+      const long = f.shape === 'long';
+      const x0 = long ? 1 : 2, x1 = long ? 13 : 12, h = long ? 3 : 4;
+      for (let x = x0; x < x1; x++) {
+        const hh = Math.round(Math.sin(((x - x0) / (x1 - x0)) * Math.PI) * h);
+        px(c, x, 8 - hh, body, 1, hh * 2 + 1);
+        px(c, x, 8 - hh, light, 1, 1);
+        px(c, x, 8 + hh, dark, 1, 1);
+      }
+      px(c, x1, 5, dark, 1, 7);
+      px(c, x1 + 1, 4, dark, 2, 3);
+      px(c, x1 + 1, 10, dark, 2, 3);
+      px(c, x0 + 2, 7, '#2b2b2b');
+      if (f.id === 'ikan-lele') {
         px(c, 1, 9, dark, 2, 1);
         px(c, 0, 10, dark, 1, 1);
       }
-      if (id === 'ikan-emas') {
-        px(c, 7, 2, '#ffffff');
-        px(c, 10, 13, '#ffffff');
+      if (f.id === 'ikan-koi') {
+        px(c, 6, 6, '#e2434b', 3, 2);
+        px(c, 9, 9, '#f2b53c', 2, 2);
+      }
+      if (f.id === 'ikan-emas' || f.id === 'ikan-arwana') {
+        px(c, 7, 3, '#ffffff');
+        px(c, 10, 12, '#ffffff');
       }
     }, true);
   }
