@@ -541,3 +541,21 @@ test('renovasi rumah: lebih luas, sofa +20 tenaga, dapur besar 2 porsi', async (
   expect((await state(page)).produce).toEqual({ 'tumis-kangkung': 2 });
   noErrors(errors);
 });
+
+test('ukuran jendela toko tetap saat pindah tab', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, 's.level = 7; s.day = 85'); // Kemarau: the fullest seed tab
+  await page.evaluate(() => window.game.events.emit('open-shop'));
+  await page.waitForTimeout(150);
+  const box = () => page.evaluate(() => {
+    const m = window.game.scene.getScene('ui').modalBox;
+    return { top: Math.round(m.top), bottom: Math.round(m.bottom) };
+  });
+  const first = await box();
+  for (const cx of [386, 510, 262]) { // Peralatan, Ternak, back to Benih
+    await page.mouse.click(cx, first.top + 56 + 16);
+    await page.waitForTimeout(120);
+    expect(await box()).toEqual(first);
+  }
+  noErrors(errors);
+});
