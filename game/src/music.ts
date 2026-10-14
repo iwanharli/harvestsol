@@ -10,10 +10,10 @@ interface Mood {
 }
 
 const MOODS: Record<Season, Mood> = {
-  Semi: { bpm: 92, root: 60, minor: false, chords: [0, 4, 5, 3] }, // I V vi IV
-  Panas: { bpm: 104, root: 62, minor: false, chords: [0, 3, 4, 3] }, // I IV V IV
-  Gugur: { bpm: 84, root: 57, minor: true, chords: [0, 5, 2, 6] }, // i VI III VII
-  Dingin: { bpm: 70, root: 64, minor: false, chords: [0, 5, 3, 4] }, // I vi IV V
+  Tanam: { bpm: 92, root: 60, minor: false, chords: [0, 4, 5, 3] }, // bright: I V vi IV
+  Hujan: { bpm: 78, root: 57, minor: true, chords: [0, 5, 2, 6] }, // rainy and soft: i VI III VII
+  Panen: { bpm: 104, root: 62, minor: false, chords: [0, 3, 4, 3] }, // festive: I IV V IV
+  Kemarau: { bpm: 84, root: 64, minor: true, chords: [0, 3, 6, 4] }, // hot and hazy: i iv VII v
 };
 
 const MAJOR = [0, 2, 4, 5, 7, 9, 11];
@@ -30,7 +30,7 @@ try {
 
 let gain: GainNode | undefined;
 let timer: number | undefined;
-let season: Season = 'Semi';
+let season: Season = 'Tanam';
 let night = false;
 let festival = false;
 let step = 0; // eighth-note counter

@@ -5,8 +5,9 @@ export const MAP_H = 40;
 // Field where the player may till soil.
 export const FIELD = { x: 8, y: 8, w: 16, h: 9 };
 
-export type Season = 'Semi' | 'Panas' | 'Gugur' | 'Dingin';
-export const SEASONS: Season[] = ['Semi', 'Panas', 'Gugur', 'Dingin'];
+// Tropical Asian year: planting (early rains), the wet season, harvest (transition), dry season.
+export type Season = 'Tanam' | 'Hujan' | 'Panen' | 'Kemarau';
+export const SEASONS: Season[] = ['Tanam', 'Hujan', 'Panen', 'Kemarau'];
 export const DAYS_PER_SEASON = 28;
 
 export interface CropDef {
@@ -17,19 +18,36 @@ export interface CropDef {
   sellPrice: number;
   days: number; // watered days needed to mature
   level: number; // player level needed to buy the seed
+  regrow?: number; // perennial: after harvest it fruits again after this many watered days
+  allSeasons?: boolean; // grows in every season
   color: string; // produce colour used for procedural sprites
   leaf: string;
 }
 
 export const CROPS: CropDef[] = [
-  { id: 'lobak', name: 'Lobak', seasons: ['Semi'], seedPrice: 20, sellPrice: 45, days: 3, level: 1, color: '#f4f1e8', leaf: '#5fb04a' },
-  { id: 'kentang', name: 'Kentang', seasons: ['Semi'], seedPrice: 40, sellPrice: 95, days: 5, level: 2, color: '#c9955a', leaf: '#4f9a3f' },
-  { id: 'stroberi', name: 'Stroberi', seasons: ['Semi'], seedPrice: 90, sellPrice: 240, days: 8, level: 6, color: '#e2434b', leaf: '#3f8a3a' },
-  { id: 'tomat', name: 'Tomat', seasons: ['Panas'], seedPrice: 35, sellPrice: 80, days: 4, level: 2, color: '#e5533d', leaf: '#4a9a3d' },
-  { id: 'jagung', name: 'Jagung', seasons: ['Panas'], seedPrice: 60, sellPrice: 150, days: 7, level: 4, color: '#f2cf3c', leaf: '#6aa84f' },
-  { id: 'labu', name: 'Labu', seasons: ['Gugur'], seedPrice: 70, sellPrice: 190, days: 7, level: 5, color: '#e88a2d', leaf: '#4f8f3a' },
-  { id: 'ubi', name: 'Ubi', seasons: ['Gugur'], seedPrice: 30, sellPrice: 70, days: 4, level: 2, color: '#a0527d', leaf: '#5b9c46' },
+  { id: 'kangkung', name: 'Kangkung', seasons: ['Tanam', 'Hujan'], seedPrice: 15, sellPrice: 35, days: 2, level: 1, color: '#3f9a3f', leaf: '#5fb04a' },
+  { id: 'timun', name: 'Timun', seasons: ['Hujan', 'Panen'], seedPrice: 25, sellPrice: 60, days: 3, level: 2, color: '#7cbf4a', leaf: '#4f9a3f' },
+  { id: 'terong', name: 'Terong', seasons: ['Hujan'], seedPrice: 30, sellPrice: 75, days: 4, level: 2, color: '#6b3fa0', leaf: '#4a9a3d' },
+  { id: 'tomat', name: 'Tomat', seasons: ['Panen'], seedPrice: 35, sellPrice: 80, days: 4, level: 2, color: '#e5533d', leaf: '#4a9a3d' },
+  { id: 'ubi', name: 'Ubi', seasons: ['Panen', 'Kemarau'], seedPrice: 30, sellPrice: 70, days: 4, level: 2, color: '#a0527d', leaf: '#5b9c46' },
+  { id: 'padi', name: 'Padi', seasons: ['Tanam', 'Hujan'], seedPrice: 50, sellPrice: 130, days: 6, level: 3, color: '#e8c35a', leaf: '#7fb84a' },
+  { id: 'cabai', name: 'Cabai', seasons: ['Tanam', 'Kemarau'], seedPrice: 40, sellPrice: 105, days: 5, level: 3, color: '#d62828', leaf: '#3f8a3a' },
+  { id: 'singkong', name: 'Singkong', seasons: ['Kemarau'], seedPrice: 45, sellPrice: 115, days: 6, level: 3, color: '#a0703f', leaf: '#4f9a3f' },
+  { id: 'jagung', name: 'Jagung', seasons: ['Panen', 'Kemarau'], seedPrice: 60, sellPrice: 150, days: 7, level: 4, color: '#f2cf3c', leaf: '#6aa84f' },
+  { id: 'kedelai', name: 'Kedelai', seasons: ['Panen'], seedPrice: 40, sellPrice: 95, days: 5, level: 4, color: '#c9b16a', leaf: '#5b9c46' },
+  { id: 'semangka', name: 'Semangka', seasons: ['Kemarau'], seedPrice: 90, sellPrice: 260, days: 8, level: 6, color: '#3f8a3a', leaf: '#4f9a3f' },
+  // high-level perennial: expensive, slow, then fruits every few days in any season
+  { id: 'sawit', name: 'Sawit', seasons: ['Tanam', 'Hujan', 'Panen', 'Kemarau'], seedPrice: 2000, sellPrice: 300, days: 14, level: 12, regrow: 5, allSeasons: true, color: '#d9541e', leaf: '#2f7d3a' },
 ];
+
+/** Crop ids from the temperate first version, mapped to their tropical replacement. */
+export const LEGACY_CROPS: Record<string, string> = { lobak: 'kangkung', kentang: 'singkong', stroberi: 'semangka', labu: 'kedelai' };
+export const LEGACY_DISHES: Record<string, string> = {
+  'sup-lobak': 'tumis-kangkung',
+  'kentang-goreng': 'singkong-goreng',
+  'selai-stroberi': 'es-semangka',
+  'kolak-labu': 'kolak-ubi',
+};
 
 export const cropById = (id: string) => CROPS.find((c) => c.id === id)!;
 
@@ -70,11 +88,11 @@ export const itemName = (id: string) => ITEMS.find((i) => i.id === id)?.name ?? 
 
 // Villagers who post requests on the board.
 export const NPCS: { id: string; name: string; role: string }[] = [
-  { id: 'sari', name: 'Bu Sari', role: 'pemilik warung' },
-  { id: 'darto', name: 'Pak Darto', role: 'kepala desa' },
-  { id: 'rani', name: 'Mbak Rani', role: 'koki' },
-  { id: 'joyo', name: 'Kakek Joyo', role: 'nelayan tua' },
-  { id: 'dina', name: 'Dina', role: 'anak penjual roti' },
+  { id: 'sari', name: 'Bu Ratu Atit', role: 'pemilik warung keluarga' },
+  { id: 'darto', name: 'Pak Setya Nopanto', role: 'kepala desa' },
+  { id: 'rani', name: 'Pak Juliyari Batubata', role: 'juru masak dapur umum' },
+  { id: 'joyo', name: 'Pak Edi Lobstero', role: 'nelayan' },
+  { id: 'dina', name: 'Pak Sahrul Lempo', role: 'mantan pejabat pertanian' },
 ];
 export const npcById = (id: string) => NPCS.find((n) => n.id === id)!;
 export const REQUESTS_PER_DAY = 3;
@@ -134,15 +152,15 @@ export interface Dish {
 }
 
 export const DISHES: Dish[] = [
-  { id: 'sup-lobak', name: 'Sup Lobak', ingredients: { lobak: 2 }, sellPrice: 130, stamina: 25, color: '#f4f1e8' },
-  { id: 'kentang-goreng', name: 'Kentang Goreng', ingredients: { kentang: 2 }, sellPrice: 230, stamina: 30, color: '#f2cf3c' },
+  { id: 'tumis-kangkung', name: 'Tumis Kangkung', ingredients: { kangkung: 2 }, sellPrice: 105, stamina: 25, color: '#3f9a3f' },
+  { id: 'singkong-goreng', name: 'Singkong Goreng', ingredients: { singkong: 2 }, sellPrice: 300, stamina: 30, color: '#e8c35a' },
   { id: 'telur-dadar', name: 'Telur Dadar', ingredients: { telur: 2 }, sellPrice: 140, stamina: 30, color: '#f7d65a' },
   { id: 'ikan-bakar', name: 'Ikan Bakar', ingredients: { 'ikan-nila': 1 }, sellPrice: 75, stamina: 35, color: '#a0703f' },
-  { id: 'sambal-tomat', name: 'Sambal Tomat', ingredients: { tomat: 2 }, sellPrice: 210, stamina: 20, color: '#d9402f' },
+  { id: 'sambal-tomat', name: 'Sambal Tomat', ingredients: { tomat: 1, cabai: 1 }, sellPrice: 230, stamina: 20, color: '#d9402f' },
   { id: 'jagung-bakar', name: 'Jagung Bakar', ingredients: { jagung: 1 }, sellPrice: 190, stamina: 25, color: '#e8b830' },
-  { id: 'kolak-labu', name: 'Kolak Labu', ingredients: { labu: 1, ubi: 1 }, sellPrice: 340, stamina: 40, color: '#e88a2d' },
-  { id: 'selai-stroberi', name: 'Selai Stroberi', ingredients: { stroberi: 2 }, sellPrice: 600, stamina: 20, color: '#c0303b' },
-  { id: 'nasi-goreng', name: 'Nasi Goreng Spesial', ingredients: { telur: 1, kentang: 1, 'ikan-lele': 1 }, sellPrice: 320, stamina: 60, color: '#c98a4a' },
+  { id: 'kolak-ubi', name: 'Kolak Ubi', ingredients: { ubi: 2 }, sellPrice: 200, stamina: 40, color: '#c98a4a' },
+  { id: 'es-semangka', name: 'Es Semangka', ingredients: { semangka: 2 }, sellPrice: 650, stamina: 20, color: '#e2434b' },
+  { id: 'nasi-goreng', name: 'Nasi Goreng Spesial', ingredients: { telur: 1, padi: 1, 'ikan-lele': 1 }, sellPrice: 360, stamina: 60, color: '#c98a4a' },
 ];
 
 export const dishById = (id: string) => DISHES.find((d) => d.id === id);
@@ -150,7 +168,7 @@ export const XP_COOK = 4;
 export const COOK_MINUTES = 30;
 
 // ---------- crop quality ----------
-// Bag keys carry quality as "lobak@3" (3 stars). A plain "lobak" is 1 star (also old saves).
+// Bag keys carry quality as "padi@3" (3 stars). A plain "padi" is 1 star (also old saves).
 
 export const QUALITY_MULT = [1, 1, 1.25, 1.5, 2, 3]; // indexed by stars
 export const baseId = (key: string) => key.split('@')[0];
@@ -198,12 +216,33 @@ export const NPC_HOMES: { npc: string; x: number; y: number; tex: string }[] = [
   { npc: 'dina', x: 51, y: 18, tex: 'house-dina' },
 ];
 
+// Satire: every line pokes at a court-proven case (see README "Catatan satire").
 export const NPC_LINES: Record<string, string[]> = {
-  sari: ['Warungku selalu butuh sayur segar!', 'Kentangmu kemarin enak sekali.', 'Jangan lupa makan, petani juga butuh tenaga.'],
-  darto: ['Desa ini makin ramai sejak kamu datang.', 'Festival minggu ini jangan sampai terlewat.', 'Kakekmu dulu petani terbaik di sini.'],
-  rani: ['Aku sedang mencoba resep baru.', 'Bahan segar membuat masakan istimewa.', 'Telur emas? Wah, aku mau lihat!'],
-  joyo: ['Danau sedang tenang hari ini.', 'Dulu ikan di sini sebesar lenganku.', 'Duduklah di dermaga sore hari, indah sekali.'],
-  dina: ['Kak, ayamnya lucu ya!', 'Aku mau jadi petani juga nanti!', 'Ibu bilang roti hari ini laris.'],
+  sari: [
+    'Warung ini usaha keluarga. Adik, ipar, keponakan, semua kebagian jabatan.',
+    'Kalau ada sengketa harga, tenang, saya kenal orang di Mahkamah.',
+    'Alat kesehatan desa? Sudah... dianggarkan.',
+  ],
+  darto: [
+    'Desa butuh KTP elektronik baru. Anggarannya biar saya yang urus.',
+    'Hati-hati di jalan. Tiang lampu di sini suka tiba-tiba ada di depan mobil.',
+    'Hukuman bisa dikurangi kok, asal rajin mengajukan peninjauan kembali.',
+  ],
+  rani: [
+    'Satu paket sembako nilainya tiga ratus ribu. Yang sepuluh ribu... ongkos masak.',
+    'Masak untuk orang banyak itu berat, apalagi kalau dipotong sedikit-sedikit.',
+    'Telur emas? Wah, bisa jadi paket bantuan premium!',
+  ],
+  joyo: [
+    'Danau ini indah. Sayang tidak ada benih lobster untuk diekspor.',
+    'Lima tahun, jadi sembilan, lalu balik lima lagi. Ombak memang naik turun.',
+    'Duduk di dermaga sore hari itu tenang. Asal tidak ada yang datang dari KPK.',
+  ],
+  dina: [
+    'Saya ahli pertanian. Hasil panenmu boleh setor sedikit ke saya, ya.',
+    'Dulu bawahan saya rajin patungan buat keperluan saya. Loyal sekali.',
+    'Sawit? Bagus itu. Asal ada bagian untuk kementerian.',
+  ],
 };
 
 /** Named areas, shown as a banner when the player walks in. First match wins. */
@@ -255,21 +294,21 @@ export const BAG_MAX_SLOTS = BAG_TIERS[BAG_TIERS.length - 1].slots;
 
 // ---------- weather ----------
 
-export type Weather = 'cerah' | 'hujan' | 'badai' | 'salju';
+export type Weather = 'cerah' | 'hujan' | 'badai' | 'kabut';
 
 export const WEATHER_INFO: Record<Weather, { name: string; icon: string }> = {
   cerah: { name: 'Cerah', icon: '☀' },
   hujan: { name: 'Hujan', icon: '🌧' },
   badai: { name: 'Badai', icon: '⛈' },
-  salju: { name: 'Salju', icon: '❄' },
+  kabut: { name: 'Kabut Asap', icon: '🌫' },
 };
 
 /** Odds per season. */
 export const WEATHER_ODDS: Record<Season, [Weather, number][]> = {
-  Semi: [['cerah', 60], ['hujan', 32], ['badai', 8]],
-  Panas: [['cerah', 70], ['hujan', 20], ['badai', 10]],
-  Gugur: [['cerah', 55], ['hujan', 35], ['badai', 10]],
-  Dingin: [['cerah', 50], ['salju', 50]],
+  Tanam: [['cerah', 45], ['hujan', 45], ['badai', 10]],
+  Hujan: [['cerah', 25], ['hujan', 55], ['badai', 20]],
+  Panen: [['cerah', 60], ['hujan', 30], ['badai', 10]],
+  Kemarau: [['cerah', 72], ['kabut', 23], ['hujan', 5]],
 };
 
 export const FORECAST_DAYS = 7;

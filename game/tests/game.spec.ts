@@ -10,27 +10,27 @@ test('tanam, siram, tumbuh, panen, kirim, dibayar', async ({ page }) => {
   await use(page, 3);
   await use(page, 2);
   let s = await state(page);
-  expect(s.plots['10,10']).toMatchObject({ tilled: true, watered: true, crop: { id: 'lobak', growth: 0 } });
+  expect(s.plots['10,10']).toMatchObject({ tilled: true, watered: true, crop: { id: 'kangkung', growth: 0 } });
 
-  for (let d = 0; d < 3; d++) {
+  for (let d = 0; d < 2; d++) {
     await sleep(page);
     await patch(page, "s.plots['10,10'].watered = true");
   }
   s = await state(page);
-  expect(s.plots['10,10'].crop.growth).toBe(3);
+  expect(s.plots['10,10'].crop.growth).toBe(2);
 
   await at(page, 10, 9, 'down');
   await use(page, 4);
   // watered every night → at least 3 stars
   const keys = Object.keys((await state(page)).produce);
   expect(keys).toHaveLength(1);
-  expect(keys[0]).toMatch(/^lobak@[345]$/);
+  expect(keys[0]).toMatch(/^kangkung@[345]$/);
 
   await at(page, 8, 7, 'up'); // shipping bin
   await press(page, 'Space');
   expect(Object.keys((await state(page)).shipping)).toEqual(keys);
   await sleep(page);
-  expect((await state(page)).coins).toBeGreaterThanOrEqual(300 + Math.round(45 * 1.5));
+  expect((await state(page)).coins).toBeGreaterThanOrEqual(300 + Math.round(35 * 1.5));
   noErrors(errors);
 });
 
@@ -44,17 +44,17 @@ test('air penyiram tidak terisi saat tidur', async ({ page }) => {
 
 test('pupuk tumbuh 2x, sprinkler menyiram tetangga', async ({ page }) => {
   const errors = await start(page);
-  await patch(page, "s.level = 5; s.seeds = { lobak: 3, pupuk: 1, sprinkler: 1 }");
+  await patch(page, "s.level = 5; s.seeds = { kangkung: 3, pupuk: 1, sprinkler: 1 }");
   await at(page, 10, 9, 'down');
   await use(page, 1);
   await patch(page, "s.seed = 'pupuk'");
   await use(page, 3);
-  await patch(page, "s.seed = 'lobak'");
+  await patch(page, "s.seed = 'kangkung'");
   await use(page, 3);
   await use(page, 2);
   await at(page, 12, 9, 'down'); // planted but not watered
   await use(page, 1);
-  await patch(page, "s.seed = 'lobak'");
+  await patch(page, "s.seed = 'kangkung'");
   await use(page, 3);
   await at(page, 11, 9, 'down'); // sprinkler between them
   await patch(page, "s.seed = 'sprinkler'");
@@ -97,7 +97,7 @@ test('menyerahkan permintaan warga', async ({ page }) => {
 
 test('festival mingguan', async ({ page }) => {
   const errors = await start(page);
-  await patch(page, 's.day = 7; s.minutes = 600; s.level = 2; s.produce = { lobak: 4, kentang: 1 }');
+  await patch(page, 's.day = 7; s.minutes = 600; s.level = 2; s.produce = { kangkung: 4, padi: 1 }');
   await at(page, 50, 7, 'up'); // stage
   await press(page, 'Space');
   expect(await modalOpen(page)).toBe(true);
@@ -155,7 +155,7 @@ test('pancing harus dibeli, lalu bisa dapat ikan', async ({ page }) => {
 test('tas penuh menolak panen, lalu upgrade tas', async ({ page }) => {
   const errors = await start(page);
   // 12 stacks of 99 fill the starter bag
-  await patch(page, "s.seeds = {}; s.produce = { lobak: 12 * 99 }; s.plots['10,10'] = { tilled: true, watered: false, crop: { id: 'tomat', growth: 4 } }");
+  await patch(page, "s.seeds = {}; s.produce = { kangkung: 12 * 99 }; s.plots['10,10'] = { tilled: true, watered: false, crop: { id: 'tomat', growth: 4 } }");
   await at(page, 10, 9, 'down');
   await use(page, 4);
   let s = await state(page);
@@ -210,15 +210,15 @@ test('memasak di dapur lalu makan untuk tenaga', async ({ page }) => {
   expect((await page.evaluate(() => window.game.scene.getScene('ui').modalKind))).toBe('');
   await press(page, 'Escape');
 
-  await patch(page, 's.level = 3; s.stamina = 50; s.produce = { lobak: 2 }');
+  await patch(page, 's.level = 3; s.stamina = 50; s.produce = { kangkung: 2 }');
   await press(page, 'Space');
   await page.mouse.click(480, 288); // "Dapur"
   await page.waitForTimeout(100);
   await page.screenshot({ path: 'test-results/dapur.png' });
-  await page.mouse.click(308, 176); // "Masak" on Sup Lobak
+  await page.mouse.click(308, 176); // "Masak" on Tumis Kangkung
   await page.waitForTimeout(100);
   let s = await state(page);
-  expect(s.produce).toEqual({ 'sup-lobak': 1 });
+  expect(s.produce).toEqual({ 'tumis-kangkung': 1 });
   expect(s.minutes).toBeGreaterThanOrEqual(6 * 60 + 30);
 
   await press(page, 'Escape');
@@ -232,23 +232,22 @@ test('memasak di dapur lalu makan untuk tenaga', async ({ page }) => {
 
 test('kualitas: dirawat sempurna ★4+, ditelantarkan ★1-2', async ({ page }) => {
   const errors = await start(page);
-  await patch(page, "s.level = 3; s.seeds = { lobak: 2, pupuk: 1 }");
-  // tile A (10,10): fertilizer + water every night
+  await patch(page, "s.level = 3; s.seeds = { kangkung: 2, pupuk: 1 }");
+  // tile A (10,10): fertilizer + watered → mature after one night (2 growth)
   await at(page, 10, 9, 'down');
   await use(page, 1);
   await patch(page, "s.seed = 'pupuk'");
   await use(page, 3);
-  await patch(page, "s.seed = 'lobak'");
+  await patch(page, "s.seed = 'kangkung'");
   await use(page, 3);
-  // tile B (12,10): planted, left dry for two nights
+  await use(page, 2);
+  // tile B (12,10): left dry for two nights, then watered for two
   await at(page, 12, 9, 'down');
   await use(page, 1);
   await use(page, 3);
-  await patch(page, "s.plots['10,10'].watered = true");
   await sleep(page);
-  await patch(page, "s.plots['10,10'].watered = true");
   await sleep(page);
-  for (let d = 0; d < 3; d++) {
+  for (let d = 0; d < 2; d++) {
     await patch(page, "s.plots['12,10'].watered = true");
     await sleep(page);
   }
@@ -270,12 +269,12 @@ test('permintaan warga memakai kualitas terendah dulu', async ({ page }) => {
   const errors = await start(page);
   await patch(
     page,
-    "s.level = 2; s.produce = { lobak: 2, 'lobak@4': 2 }; s.requests = [{ id: 99, npc: 'sari', crop: 'lobak', qty: 2, reward: 100, until: 99 }]",
+    "s.level = 2; s.produce = { kangkung: 2, 'kangkung@4': 2 }; s.requests = [{ id: 99, npc: 'sari', crop: 'kangkung', qty: 2, reward: 100, until: 99 }]",
   );
   await at(page, 44, 7, 'up');
   await press(page, 'Space');
   await page.mouse.click(680, 265); // one request → shorter window, button sits lower
-  expect((await state(page)).produce).toEqual({ 'lobak@4': 2 });
+  expect((await state(page)).produce).toEqual({ 'kangkung@4': 2 });
   noErrors(errors);
 });
 
@@ -302,5 +301,41 @@ test('hari festival selalu cerah, badai berjalan tanpa error', async ({ page }) 
   await sleep(page, true);
   expect((await state(page)).weather).toBe('badai');
   await page.waitForTimeout(3000); // first lightning strike
+  noErrors(errors);
+});
+
+test('sawit terbuka di level 12 dan berbuah ulang', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.seeds = { sawit: 1 }; s.seed = 'sawit'");
+  await at(page, 10, 9, 'down');
+  await use(page, 1);
+  await use(page, 3);
+  expect((await state(page)).plots['10,10'].crop.id).toBe('sawit'); // planting needs no level, buying does
+
+  await patch(page, "s.level = 12; s.plots['10,10'].crop.growth = 14");
+  await use(page, 4);
+  const s = await state(page);
+  expect(Object.keys(s.produce)[0]).toMatch(/^sawit/);
+  expect(s.plots['10,10'].crop).toMatchObject({ id: 'sawit', growth: 9 }); // stays and fruits again in 5 days
+  noErrors(errors);
+});
+
+test('save lama (musim subtropis) dikonversi ke tropis', async ({ page }) => {
+  const errors = await start(page);
+  await page.evaluate(() => {
+    const s = JSON.parse(JSON.stringify(window.game.registry.get('state')));
+    s.produce = { lobak: 3, 'kentang@3': 1, 'sup-lobak': 1 };
+    s.seeds = { stroberi: 2 };
+    s.seed = 'stroberi';
+    s.forecasts = ['salju', 'cerah', 'cerah', 'cerah', 'cerah', 'cerah', 'cerah'];
+    localStorage.setItem('cropfarm-save-v1', JSON.stringify(s));
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => window.game?.scene?.getScene('ui')?.sys.isActive());
+  const s = await state(page);
+  expect(s.produce).toEqual({ kangkung: 3, 'singkong@3': 1, 'tumis-kangkung': 1 });
+  expect(s.seeds).toEqual({ semangka: 2 });
+  expect(s.seed).toBe('semangka');
+  expect(s.forecasts[0]).toBe('cerah');
   noErrors(errors);
 });

@@ -11,6 +11,8 @@ import {
   AFFECTION_MAX,
   BAG_TIERS,
   COOK_MINUTES,
+  LEGACY_CROPS,
+  LEGACY_DISHES,
   FORECAST_DAYS,
   STORM_DAMAGE,
   WEATHER_ODDS,
@@ -106,8 +108,8 @@ export function newGame(): GameState {
     bagTier: 0,
     weather: 'cerah',
     forecasts: Array.from({ length: FORECAST_DAYS }, (_, i) => rollWeather(2 + i)),
-    seed: 'lobak',
-    seeds: { lobak: 6 },
+    seed: 'kangkung',
+    seeds: { kangkung: 6 },
     produce: {},
     shipping: {},
     plots: {},
@@ -125,7 +127,33 @@ export function newGame(): GameState {
 }
 
 /** Fill in fields added after a save was written, so old saves keep working. */
+/** Rename keys of a bag record (keeps quality suffixes like "@3"). */
+function renameKeys(rec: Record<string, number>, map: (id: string) => string) {
+  const out: Record<string, number> = {};
+  for (const [k, q] of Object.entries(rec)) {
+    const [id, stars] = k.split('@');
+    const key = stars ? `${map(id)}@${stars}` : map(id);
+    out[key] = (out[key] ?? 0) + q;
+  }
+  return out;
+}
+
+/** The first version used temperate crops, dishes and snow; convert them to the tropical set. */
+function migrateTropical(s: GameState) {
+  const map = (id: string) => LEGACY_CROPS[id] ?? LEGACY_DISHES[id] ?? id;
+  s.produce = renameKeys(s.produce, map);
+  s.seeds = renameKeys(s.seeds, map);
+  s.shipping = renameKeys(s.shipping, map);
+  for (const p of Object.values(s.plots)) if (p.crop) p.crop.id = map(p.crop.id);
+  for (const r of s.requests ?? []) r.crop = map(r.crop);
+  s.seed = map(s.seed);
+  const snow = (w: string) => (w === 'salju' ? 'cerah' : w) as Weather;
+  if (s.weather) s.weather = snow(s.weather);
+  if (s.forecasts) s.forecasts = s.forecasts.map(snow);
+}
+
 function migrate(s: GameState): GameState {
+  migrateTropical(s);
   s.level ??= 1;
   s.ownedTools ??= [];
   s.bagTier ??= 0;
@@ -346,7 +374,7 @@ export function nextFestivalDay(day: number) {
 /** Theme crop of the festival on `day`: rotates through that season's crops. */
 export function festivalTheme(day: number) {
   const season = seasonOf(day);
-  const crops = CROPS.filter((c) => c.seasons.includes(season));
+  const crops = CROPS.filter((c) => c.seasons.includes(season) && !c.allSeasons);
   const week = Math.floor((dayOfSeason(day) - 1) / FESTIVAL_EVERY);
   return crops[week % crops.length];
 }
