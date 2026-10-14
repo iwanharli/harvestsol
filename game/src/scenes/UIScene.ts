@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import {
   BAG_MAX_SLOTS,
+  DAYS_PER_SEASON,
+  FESTIVAL_EVERY,
+  WEEKDAYS,
   WEATHER_INFO,
   isWet,
   baseId,
@@ -93,7 +96,9 @@ export class UIScene extends Phaser.Scene {
   private pendingLevels: number[] = [];
   private modalKind = '';
   private levelText!: Phaser.GameObjects.Text;
-  private weatherIcon!: Phaser.GameObjects.Text;
+  private clockIcon!: Phaser.GameObjects.Image;
+  private clockDay!: Phaser.GameObjects.Text;
+  private clockSub!: Phaser.GameObjects.Text;
   private lastMinute = -1;
 
   constructor() {
@@ -111,13 +116,12 @@ export class UIScene extends Phaser.Scene {
     this.buildWeather();
 
     // top-left: date, time, coins, bars
-    this.panel(12, 12, 250, 132);
-    this.dateText = this.add.text(28, 22, '', txt(17));
-    this.levelText = this.add.text(246, 23, '', txt(15, '#6b3fa0')).setOrigin(1, 0);
-    this.timeText = this.add.text(28, 46, '', txt(26, '#7a3e12'));
-    this.weatherIcon = this.add.text(112, 50, '', txt(20)).setOrigin(0, 0);
-    this.coinText = this.add.text(150, 52, '', txt(18, '#8a6a10'));
+    this.panel(12, 12, 250, 124);
+    this.dateText = this.add.text(28, 22, '', txt(15, '#6b5030'));
+    this.levelText = this.add.text(246, 22, '', txt(15, '#6b3fa0')).setOrigin(1, 0);
+    this.coinText = this.add.text(28, 42, '', txt(20, '#8a6a10'));
     this.bars = this.add.graphics();
+    this.buildClock();
 
     // top-right: bag
     this.panel(W - 232, 12, 220, 112);
@@ -176,6 +180,10 @@ export class UIScene extends Phaser.Scene {
     this.events.once('shutdown', () => handlers.forEach(([e, h]) => ev.off(e, h, this)));
 
     this.input.keyboard!.on('keydown-ESC', () => this.closeModal());
+    this.input.keyboard!.on('keydown-K', () => {
+      if (this.modalLayer && this.modalKind === 'calendar') return this.closeModal();
+      if (!this.registry.get('modal')) this.openCalendar();
+    });
     this.input.keyboard!.on('keydown-I', () => {
       if (this.modalLayer && this.modalKind === 'inventory') return this.closeModal();
       if (!this.registry.get('modal')) this.openInventory();
@@ -216,9 +224,9 @@ export class UIScene extends Phaser.Scene {
 
   refresh() {
     const s = this.state;
-    this.dateText.setText(`Tahun ${yearOf(s.day)} · ${seasonOf(s.day)} ${dayOfSeason(s.day)}${isFestivalDay(s.day) ? ' 🎉' : ''}`);
+    this.dateText.setText(`Tahun ${yearOf(s.day)}`);
     this.coinText.setText(`${s.coins.toLocaleString('id-ID')} G`);
-    this.weatherIcon.setText(WEATHER_INFO[s.weather].icon);
+    this.refreshClockPill();
     this.applyWeather();
     this.refreshClock();
 
@@ -229,9 +237,9 @@ export class UIScene extends Phaser.Scene {
       this.children.getByName(label)?.destroy();
       this.add.text(28, y - 3, label, txt(13)).setName(label);
     };
-    bar(84, s.stamina / STAMINA_MAX, 0xe8a33c, 'Tenaga');
-    bar(102, s.water / WATER_CAN_MAX, 0x4aa3df, 'Air');
-    bar(120, s.xp / xpToNext(s.level), 0x9b6bd6, 'XP');
+    bar(76, s.stamina / STAMINA_MAX, 0xe8a33c, 'Tenaga');
+    bar(94, s.water / WATER_CAN_MAX, 0x4aa3df, 'Air');
+    bar(112, s.xp / xpToNext(s.level), 0x9b6bd6, 'XP');
     this.levelText.setText(`Lv ${s.level}`);
 
     // HUD bag: a row of mini slots plus one status line
@@ -395,7 +403,7 @@ export class UIScene extends Phaser.Scene {
       'Gerak: WASD / panah, atau klik/tap tujuan',
       'Aksi: Spasi / E, atau klik petak di dekatmu',
       'Alat: 1 Cangkul · 2 Penyiram · 3 Benih · 4 Tangan · 5 Pancing',
-      'Lari: tahan Shift  ·  Tas: I  ·  Musik: N',
+      'Lari: Shift  ·  Tas: I  ·  Kalender: K  ·  Musik: N',
       'Ganti benih: Q  ·  Semua suara: M  ·  Tutup jendela: Esc',
       '',
       'Cangkul → tanam → siram setiap hari → panen.',
@@ -427,9 +435,9 @@ export class UIScene extends Phaser.Scene {
     lines.push('', `${r.grown} tanaman tumbuh semalam.`);
     if (r.withered) lines.push(`${r.withered} tanaman layu karena ganti musim.`);
     const w = WEATHER_INFO[s.weather];
-    lines.push(`Cuaca hari ini: ${w.icon} ${w.name}${isWet(s.weather) ? ', ladang tersiram otomatis' : ''}.`);
+    lines.push(`Cuaca hari ini: ${w.name}${isWet(s.weather) ? ', ladang tersiram otomatis' : ''}.`);
     if (r.stormDamage) lines.push(`Badai merusak ${r.stormDamage} tanaman.`);
-    lines.push(`Prakiraan besok: ${WEATHER_INFO[s.forecast].icon} ${WEATHER_INFO[s.forecast].name}.`);
+    lines.push(`Prakiraan besok: ${WEATHER_INFO[s.forecasts[0]].name}. Kalender cuaca: K.`);
     if (isFestivalDay(s.day)) lines.push(`🎉 Hari ini Festival! Tema ${festivalTheme(s.day).name} ×2, 09:00–18:00.`);
     else if (isFestivalDay(s.day + 1)) lines.push(`Besok festival. Siapkan ${festivalTheme(s.day + 1).name}!`);
     if (r.eggs) lines.push(`Ayam bertelur ${r.eggs} butir. Ambil di kandang.`);
@@ -1208,5 +1216,78 @@ export class UIScene extends Phaser.Scene {
       };
       this.lightning = this.time.delayedCall(2500, strike);
     }
+  }
+
+  // ---------- clock pill & calendar ----------
+
+  /** Compact pill at the top centre: weather, time, day. Click (or K) for the calendar. */
+  private buildClock() {
+    const W = this.scale.width;
+    const w = 248, h = 46, x = W / 2 - w / 2, y = 10;
+    const g = this.add.graphics();
+    g.fillStyle(WOOD_DARK, 1).fillRoundedRect(x, y + 3, w, h, 23);
+    g.fillStyle(WOOD, 1).fillRoundedRect(x, y, w, h, 23);
+    g.fillStyle(PAPER, 1).fillRoundedRect(x + 4, y + 4, w - 8, h - 8, 19);
+    g.fillStyle(0xd9c08c, 1).fillRect(x + 132, y + 12, 2, h - 24);
+    this.clockIcon = this.add.image(x + 30, y + h / 2, 'wx-cerah').setScale(1.9);
+    this.timeText = this.add.text(x + 52, y + h / 2, '', txt(24, '#7a3e12')).setOrigin(0, 0.5);
+    this.clockDay = this.add.text(x + 146, y + 9, '', txt(14));
+    this.clockSub = this.add.text(x + 146, y + 27, '', txt(11, '#8a7a60', false));
+    const z = this.add.zone(x, y, w, h).setOrigin(0).setInteractive({ useHandCursor: true });
+    z.on('pointerdown', () => {
+      if (this.registry.get('modal')) return;
+      play('click');
+      this.openCalendar();
+    });
+  }
+
+  private refreshClockPill() {
+    const s = this.state;
+    this.clockIcon.setTexture(`wx-${s.weather}`);
+    this.clockDay.setText(`${seasonOf(s.day)} ${dayOfSeason(s.day)}`);
+    const festival = isFestivalDay(s.day);
+    this.clockSub
+      .setText(`${WEEKDAYS[(s.day - 1) % 7]} · ${festival ? 'Festival!' : WEATHER_INFO[s.weather].name}`)
+      .setColor(festival ? '#c0392b' : '#8a7a60');
+  }
+
+  private openCalendar() {
+    const s = this.state;
+    const W = 572, H = 430;
+    const { c, x, y } = this.openModal(W, H, `Kalender · ${seasonOf(s.day)}, Tahun ${yearOf(s.day)}`, 'calendar');
+    const today = dayOfSeason(s.day);
+    const seasonStart = s.day - today + 1; // absolute day of the 1st of this season
+    const cw = 72, ch = 62, gap = 6;
+    const gx = x + (W - (7 * cw + 6 * gap)) / 2;
+    const gy = y + 84;
+    WEEKDAYS.forEach((d, i) => c.add(this.add.text(gx + i * (cw + gap) + cw / 2, gy - 20, d, txt(12, '#8a7a60')).setOrigin(0.5, 0)));
+
+    for (let d = 1; d <= DAYS_PER_SEASON; d++) {
+      const abs = seasonStart + d - 1;
+      const cx = gx + ((d - 1) % 7) * (cw + gap);
+      const cy = gy + Math.floor((d - 1) / 7) * (ch + gap);
+      const past = d < today;
+      const isToday = d === today;
+      const ahead = abs - s.day; // 1 = tomorrow
+      const festival = d % FESTIVAL_EVERY === 0;
+      const g = this.add.graphics();
+      g.fillStyle(isToday ? 0xfff3c4 : past ? 0xece2c9 : 0xfffaea, 1).fillRoundedRect(cx, cy, cw, ch, 8);
+      g.lineStyle(isToday ? 3 : 1.5, isToday ? 0xe0a030 : festival ? 0xd9503f : 0xd9c08c, 1).strokeRoundedRect(cx, cy, cw, ch, 8);
+      c.add(g);
+      c.add(this.add.text(cx + 6, cy + 4, `${d}`, txt(13, past ? '#b5a88c' : INK)));
+      // weather: today and the forecast window; nothing for days we cannot see yet
+      const wx = isToday ? s.weather : ahead >= 1 && ahead <= s.forecasts.length ? s.forecasts[ahead - 1] : null;
+      if (wx) c.add(this.add.image(cx + cw - 20, cy + 20, `wx-${wx}`).setScale(1.6));
+      if (festival) {
+        c.add(this.add.image(cx + 14, cy + ch - 16, `icon-${festivalTheme(abs).id}`).setScale(1.3).setAlpha(past ? 0.5 : 1));
+        c.add(this.add.text(cx + cw - 5, cy + ch - 5, 'Festival', txt(10, past ? '#c9a0a0' : '#c0392b')).setOrigin(1, 1));
+      } else if (isToday) c.add(this.add.text(cx + cw - 5, cy + ch - 5, 'Hari ini', txt(10, '#b07a1a')).setOrigin(1, 1));
+    }
+    c.add(
+      this.add
+        .text(x + W / 2, y + H - 72, 'Ikon cuaca = prakiraan 7 hari ke depan · Festival tiap hari ke-7 (ikon = tema ×2)', txt(11, '#8a7a60', false))
+        .setOrigin(0.5, 0),
+    );
+    this.button(c, x + W / 2 - 60, y + H - 50, 'Tutup', () => this.closeModal(), 120);
   }
 }

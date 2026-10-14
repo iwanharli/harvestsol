@@ -215,6 +215,38 @@ export function makeTextures(scene: Phaser.Scene) {
     }
   });
   canvas(scene, 'dot', 4, 4, (c) => px(c, 0, 0, '#ffffff', 4, 4));
+  // weather icons for the HUD and calendar
+  const cloud = (c: Ctx, base: string, light: string, dark: string, oy = 0) => {
+    disc(c, 6, 7 + oy, 4, base, light, dark);
+    disc(c, 10, 6 + oy, 4, base, light, dark);
+    px(c, 2, 8 + oy, base, 13, 3);
+    px(c, 3, 10 + oy, dark, 11, 1);
+  };
+  canvas(scene, 'wx-cerah', TILE, TILE, (c) => {
+    for (const [x, y, w, h] of [[7, 0, 2, 2], [7, 14, 2, 2], [0, 7, 2, 2], [14, 7, 2, 2], [2, 2, 2, 2], [12, 2, 2, 2], [2, 12, 2, 2], [12, 12, 2, 2]])
+      px(c, x, y, '#f2b53c', w, h);
+    disc(c, 8, 8, 4, '#f7c948', '#fff3a8', '#e09a2a');
+  }, true);
+  canvas(scene, 'wx-hujan', TILE, TILE, (c) => {
+    cloud(c, '#b8c4d0', '#e2e8ee', '#8a98a8', -1);
+    for (const x of [4, 8, 12]) px(c, x, 12, '#4aa3df', 1, 3);
+    for (const x of [6, 10]) px(c, x, 13, '#4aa3df', 1, 3);
+  }, true);
+  canvas(scene, 'wx-badai', TILE, TILE, (c) => {
+    cloud(c, '#6a7484', '#8f99a8', '#4a5260', -1);
+    px(c, 8, 10, '#f2c94c', 2, 2);
+    px(c, 7, 12, '#f2c94c', 2, 2);
+    px(c, 8, 13, '#f2c94c', 1, 3);
+    px(c, 4, 12, '#4aa3df', 1, 3);
+    px(c, 12, 12, '#4aa3df', 1, 3);
+  }, true);
+  canvas(scene, 'wx-salju', TILE, TILE, (c) => {
+    cloud(c, '#dfe6ee', '#ffffff', '#b8c4d0', -1);
+    for (const [x, y] of [[4, 13], [8, 12], [12, 13], [6, 15], [10, 15]]) {
+      px(c, x, y, '#ffffff');
+      px(c, x - 1, y, '#cfe3f5'); px(c, x + 1, y, '#cfe3f5');
+    }
+  }, true);
   canvas(scene, 'raindrop', 2, 14, (c) => {
     px(c, 0, 0, 'rgba(200,225,255,0.25)', 2, 6);
     px(c, 0, 6, 'rgba(210,232,255,0.6)', 2, 8);

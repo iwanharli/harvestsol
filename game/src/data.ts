@@ -272,5 +272,7 @@ export const WEATHER_ODDS: Record<Season, [Weather, number][]> = {
   Dingin: [['cerah', 50], ['salju', 50]],
 };
 
+export const FORECAST_DAYS = 7;
+export const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 export const STORM_DAMAGE = 0.07; // chance per growing crop to be ruined by a storm
 export const isWet = (w: Weather) => w === 'hujan' || w === 'badai';

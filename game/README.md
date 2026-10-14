@@ -29,6 +29,7 @@ Buka `?reset` di URL untuk menghapus save lokal. Kontrol sentuh (joystick + tomb
 | Lari | tahan Shift | Dorong joystick sampai penuh |
 | Ganti benih | Q | Klik slot benih saat sudah terpilih |
 | Buka tas (inventory) | I | Klik panel Tas kanan atas |
+| Kalender & prakiraan cuaca 7 hari | K | Klik jam di tengah atas |
 | Semua suara nyala/mati | M | - |
 | Musik nyala/mati | N | - |
 | Tutup jendela | Esc | Tombol di jendela |
@@ -50,7 +51,7 @@ Item di toko (masuk slot 3, ganti dengan Q):
 
 **Memancing**: beli Pancing di toko (Peralatan, 500 G, Lv 2). Hadapkan pemain ke air (kolam atau danau, paling enak dari ujung dermaga), tekan Spasi, tunggu tanda "!", lalu tekan Spasi lagi dengan cepat. Danau punya Ikan Lele dan Ikan Emas yang langka.
 
-**Cuaca**: Cerah, Hujan, Badai, atau Salju (Dingin), diundi tiap pagi; prakiraan besok ada di laporan pagi. Hujan dan badai menyiram semua tanah yang dicangkul (tidak mengurangi kualitas) dan membuat Lele/Ikan Emas 2× lebih sering. Badai merusak sekitar 7% tanaman, ada kilat dan petir, dan warga tinggal di rumah. Ayam berteduh di kandang saat tidak cerah. Hari festival selalu cerah.
+**Cuaca**: Cerah, Hujan, Badai, atau Salju (Dingin), diundi dengan prakiraan 7 hari ke depan (lihat Kalender, K). Ikon cuaca dan jam ada di tengah atas layar. Hujan dan badai menyiram semua tanah yang dicangkul (tidak mengurangi kualitas) dan membuat Lele/Ikan Emas 2× lebih sering. Badai merusak sekitar 7% tanaman, ada kilat dan petir, dan warga tinggal di rumah. Ayam berteduh di kandang saat tidak cerah. Hari festival selalu cerah.
 
 **Kualitas tanaman (★1–5)**: ditentukan saat panen. Disiram setiap malam tanpa bolong +★2 (bolong 1 malam +★1), pupuk +★1, ditambah sedikit keberuntungan (naik seiring level). Harga ×1 / ×1,25 / ×1,5 / ×2 / ×3. Kualitas berbeda memakai slot tas terpisah; festival memakai harga berkualitas; permintaan warga dan resep memakai kualitas terendah dulu.
 
