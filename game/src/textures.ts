@@ -822,6 +822,25 @@ export function makeTextures(scene: Phaser.Scene) {
     }, true);
   }
 
+  // ---------- small UI glyphs ----------
+  canvas(scene, 'ic-coin', TILE, TILE, (c) => {
+    disc(c, 8, 8, 6, '#f2c94c', '#fff3a8', '#c99a2e');
+    px(c, 7, 4, '#c99a2e', 2, 8);
+    px(c, 6, 5, '#c99a2e', 4, 1);
+    px(c, 6, 10, '#c99a2e', 4, 1);
+  }, true);
+  canvas(scene, 'ic-sprout', TILE, TILE, (c) => {
+    px(c, 7, 7, '#4f9a35', 2, 7);
+    disc(c, 5, 6, 3, '#5fb04a', '#8fd06a', '#3f8a3a');
+    disc(c, 11, 5, 3, '#5fb04a', '#8fd06a', '#3f8a3a');
+    px(c, 4, 13, '#8a5a34', 8, 2);
+  }, true);
+  canvas(scene, 'ic-warn', TILE, TILE, (c) => {
+    for (let i = 0; i < 7; i++) px(c, 7 - i, 2 + i * 2, '#ff9f0a', 2 + i * 2, 2);
+    px(c, 7, 6, '#1d1d1f', 2, 4);
+    px(c, 7, 11, '#1d1d1f', 2, 2);
+  }, true);
+
   // ---------- fish & fishing ----------
   const fish: Record<string, [string, string, string]> = {
     'ikan-nila': ['#8a9aa8', '#b8c6d2', '#5f6f7d'],
