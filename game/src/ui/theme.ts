@@ -3,6 +3,10 @@ import Phaser from 'phaser';
 // Minimal "glass" look inspired by Apple's UI: translucent white panels, hairline
 // borders, soft shadows, system font, one blue accent.
 
+/** Layout is designed for 960x540; the canvas renders at 2x for crisp text and glass. */
+export const VIEW = { w: 960, h: 540 };
+export const UI_SCALE = 2;
+
 export const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, sans-serif';
 
 export const C = {

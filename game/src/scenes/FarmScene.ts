@@ -49,6 +49,7 @@ import {
 } from '../state';
 import { play, toggleMute, unlockAudio } from '../sfx';
 import { duck, setMood, startMusic, toggleMusic } from '../music';
+import { UI_SCALE, VIEW } from '../ui/theme';
 
 type Dir = 'down' | 'up' | 'left' | 'right';
 const DIR_VEC: Record<Dir, [number, number]> = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] };
@@ -116,7 +117,7 @@ export class FarmScene extends Phaser.Scene {
     this.tweens.add({ targets: this.cursor, alpha: 0.45, duration: 600, yoyo: true, repeat: -1 });
 
     const cam = this.cameras.main;
-    cam.setZoom(2);
+    cam.setZoom(2 * UI_SCALE);
     cam.setBounds(0, 0, MAP_W * TILE, MAP_H * TILE);
     cam.startFollow(this.player, true, 0.15, 0.15);
     cam.setRoundPixels(true);
@@ -583,12 +584,15 @@ export class FarmScene extends Phaser.Scene {
     unlockAudio();
     startMusic();
     if (this.fishing) return this.reel();
+    // pointer position in the 960x540 layout space the HUD is designed in
+    const sx = p.x / UI_SCALE;
+    const sy = p.y / UI_SCALE;
     if (this.registry.get('touch')) {
       // the joystick and action button live in the bottom corners
-      const { width: W, height: H } = this.scale;
-      if ((p.x < 240 && p.y > H - 240) || (p.x > W - 220 && p.y > H - 220)) return;
+      const { w: W, h: H } = VIEW;
+      if ((sx < 240 && sy > H - 240) || (sx > W - 220 && sy > H - 220)) return;
     }
-    if (this.modal() || p.y > this.scale.height - 80) return; // bottom bar belongs to the HUD
+    if (this.modal() || sy > VIEW.h - 80) return; // bottom bar belongs to the HUD
     const tx = Math.floor(p.worldX / TILE);
     const ty = Math.floor(p.worldY / TILE);
     const [px, py] = this.feet();
