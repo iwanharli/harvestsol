@@ -227,8 +227,9 @@ export const FISH_TABLE: Record<'kolam' | 'danau', [string, number][]> = {
   danau: [['ikan-nila', 35], ['ikan-mas', 32], ['ikan-lele', 28], ['ikan-emas', 5]],
 };
 
-export function rollFish(where: 'kolam' | 'danau', rand = Math.random) {
-  const table = FISH_TABLE[where];
+export function rollFish(where: 'kolam' | 'danau', rainy = false, rand = Math.random) {
+  // rain brings the catfish and the golden fish out (double weight)
+  const table = FISH_TABLE[where].map(([id, w]) => [id, rainy && (id === 'ikan-lele' || id === 'ikan-emas') ? w * 2 : w] as [string, number]);
   let n = rand() * table.reduce((a, [, w]) => a + w, 0);
   for (const [id, w] of table) if ((n -= w) < 0) return id;
   return table[0][0];
@@ -251,3 +252,25 @@ export const BAG_TIERS: { name: string; slots: number; price: number; level: num
   { name: 'Ransel Besar', slots: 30, price: 12000, level: 6 },
 ];
 export const BAG_MAX_SLOTS = BAG_TIERS[BAG_TIERS.length - 1].slots;
+
+// ---------- weather ----------
+
+export type Weather = 'cerah' | 'hujan' | 'badai' | 'salju';
+
+export const WEATHER_INFO: Record<Weather, { name: string; icon: string }> = {
+  cerah: { name: 'Cerah', icon: '☀' },
+  hujan: { name: 'Hujan', icon: '🌧' },
+  badai: { name: 'Badai', icon: '⛈' },
+  salju: { name: 'Salju', icon: '❄' },
+};
+
+/** Odds per season. */
+export const WEATHER_ODDS: Record<Season, [Weather, number][]> = {
+  Semi: [['cerah', 60], ['hujan', 32], ['badai', 8]],
+  Panas: [['cerah', 70], ['hujan', 20], ['badai', 10]],
+  Gugur: [['cerah', 55], ['hujan', 35], ['badai', 10]],
+  Dingin: [['cerah', 50], ['salju', 50]],
+};
+
+export const STORM_DAMAGE = 0.07; // chance per growing crop to be ruined by a storm
+export const isWet = (w: Weather) => w === 'hujan' || w === 'badai';

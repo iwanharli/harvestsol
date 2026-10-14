@@ -6,6 +6,7 @@ import {
   MAP_H,
   NPC_HOMES,
   RUN_MULT,
+  isWet,
   XP_FISH,
   needsPurchase,
   rollFish,
@@ -504,10 +505,12 @@ export class FarmScene extends Phaser.Scene {
     for (const l of this.lamps) l.setAlpha(d * 0.85);
     this.lantern.setPosition(this.player.x, this.player.y - 6).setAlpha(d * 0.35);
     for (const f of this.fireflies) f.setAlpha(d > 0.6 ? (d - 0.6) * 2.2 : 0);
-    for (const b of this.butterflies) b.setAlpha(1 - Math.min(1, d * 2));
+    for (const b of this.butterflies) b.setAlpha(s.weather === 'cerah' ? 1 - Math.min(1, d * 2) : 0);
     const hour = this.state.minutes / 60;
-    setMood(seasonOf(s.day), hour >= 19 || hour < 6, isFestivalDay(s.day));
-    const home = this.state.minutes >= 20 * 60;
+    setMood(seasonOf(s.day), hour >= 19 || hour < 6, isFestivalDay(s.day), isWet(s.weather));
+    const home = this.state.minutes >= 20 * 60 || s.weather === 'badai';
+    const sheltered = s.weather !== 'cerah'; // chickens stay in the coop
+    for (const h of this.hens.values()) h.setVisible(!sheltered);
     for (const v of this.villagers.values()) v.setVisible(!home);
     const z = zoneAt(Math.floor(this.player.x / TILE), Math.floor((this.player.y - 4) / TILE));
     if (z && z !== this.zone) {
@@ -940,7 +943,7 @@ export class FarmScene extends Phaser.Scene {
     const f = this.fishing;
     if (!f) return;
     if (f.stage === 'wait') return this.endFishing('Terlalu cepat! Ikannya kabur.', true);
-    const id = rollFish(f.where);
+    const id = rollFish(f.where, isWet(this.state.weather));
     const fish = produceById(id);
     if (!canAdd(this.state, 'produce', id)) return this.endFishing(`Tas penuh! ${fish.name} dilepas lagi.`, true);
     add(this.state.produce, id, 1);
@@ -1059,7 +1062,7 @@ export class FarmScene extends Phaser.Scene {
     const cy = (ty + 0.5) * TILE;
     for (const a of this.state.animals) {
       const img = this.hens.get(a.id);
-      if (img && Phaser.Math.Distance.Between(img.x, img.y - 6, cx, cy) < 13) return a;
+      if (img?.visible && Phaser.Math.Distance.Between(img.x, img.y - 6, cx, cy) < 13) return a;
     }
     return undefined;
   }

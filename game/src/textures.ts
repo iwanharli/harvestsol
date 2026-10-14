@@ -215,6 +215,14 @@ export function makeTextures(scene: Phaser.Scene) {
     }
   });
   canvas(scene, 'dot', 4, 4, (c) => px(c, 0, 0, '#ffffff', 4, 4));
+  canvas(scene, 'raindrop', 2, 14, (c) => {
+    px(c, 0, 0, 'rgba(200,225,255,0.25)', 2, 6);
+    px(c, 0, 6, 'rgba(210,232,255,0.6)', 2, 8);
+  });
+  canvas(scene, 'snowflake', 4, 4, (c) => {
+    px(c, 1, 0, '#ffffff', 2, 4);
+    px(c, 0, 1, '#ffffff', 4, 2);
+  });
   canvas(scene, 'firefly', 8, 8, (c) => {
     const g = c.createRadialGradient(4, 4, 0, 4, 4, 4);
     g.addColorStop(0, 'rgba(240,255,170,1)');

@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import {
   BAG_MAX_SLOTS,
+  WEATHER_INFO,
+  isWet,
   baseId,
   starsOf,
   DISHES,
@@ -29,7 +31,7 @@ import {
   unlocksAt,
   xpToNext,
 } from '../data';
-import { play, unlockAudio } from '../sfx';
+import { play, setRain, unlockAudio } from '../sfx';
 import { startMusic } from '../music';
 import {
   add,
@@ -91,6 +93,7 @@ export class UIScene extends Phaser.Scene {
   private pendingLevels: number[] = [];
   private modalKind = '';
   private levelText!: Phaser.GameObjects.Text;
+  private weatherIcon!: Phaser.GameObjects.Text;
   private lastMinute = -1;
 
   constructor() {
@@ -105,11 +108,14 @@ export class UIScene extends Phaser.Scene {
     this.state = this.registry.get('state');
     const { width: W, height: H } = this.scale;
 
+    this.buildWeather();
+
     // top-left: date, time, coins, bars
     this.panel(12, 12, 250, 132);
     this.dateText = this.add.text(28, 22, '', txt(17));
     this.levelText = this.add.text(246, 23, '', txt(15, '#6b3fa0')).setOrigin(1, 0);
     this.timeText = this.add.text(28, 46, '', txt(26, '#7a3e12'));
+    this.weatherIcon = this.add.text(112, 50, '', txt(20)).setOrigin(0, 0);
     this.coinText = this.add.text(150, 52, '', txt(18, '#8a6a10'));
     this.bars = this.add.graphics();
 
@@ -212,6 +218,8 @@ export class UIScene extends Phaser.Scene {
     const s = this.state;
     this.dateText.setText(`Tahun ${yearOf(s.day)} · ${seasonOf(s.day)} ${dayOfSeason(s.day)}${isFestivalDay(s.day) ? ' 🎉' : ''}`);
     this.coinText.setText(`${s.coins.toLocaleString('id-ID')} G`);
+    this.weatherIcon.setText(WEATHER_INFO[s.weather].icon);
+    this.applyWeather();
     this.refreshClock();
 
     const g = this.bars.clear();
@@ -418,6 +426,10 @@ export class UIScene extends Phaser.Scene {
     } else lines.push('Tidak ada kiriman kemarin.');
     lines.push('', `${r.grown} tanaman tumbuh semalam.`);
     if (r.withered) lines.push(`${r.withered} tanaman layu karena ganti musim.`);
+    const w = WEATHER_INFO[s.weather];
+    lines.push(`Cuaca hari ini: ${w.icon} ${w.name}${isWet(s.weather) ? ', ladang tersiram otomatis' : ''}.`);
+    if (r.stormDamage) lines.push(`Badai merusak ${r.stormDamage} tanaman.`);
+    lines.push(`Prakiraan besok: ${WEATHER_INFO[s.forecast].icon} ${WEATHER_INFO[s.forecast].name}.`);
     if (isFestivalDay(s.day)) lines.push(`🎉 Hari ini Festival! Tema ${festivalTheme(s.day).name} ×2, 09:00–18:00.`);
     else if (isFestivalDay(s.day + 1)) lines.push(`Besok festival. Siapkan ${festivalTheme(s.day + 1).name}!`);
     if (r.eggs) lines.push(`Ayam bertelur ${r.eggs} butir. Ambil di kandang.`);
@@ -1124,5 +1136,77 @@ export class UIScene extends Phaser.Scene {
       }, 84, !ready);
     });
     this.button(c, x + W / 2 - 60, y + H - 46, 'Tutup', () => this.closeModal(), 120);
+  }
+
+  // ---------- weather ----------
+
+  private rain?: Phaser.GameObjects.Particles.ParticleEmitter;
+  private snow?: Phaser.GameObjects.Particles.ParticleEmitter;
+  private gloom?: Phaser.GameObjects.Rectangle;
+  private flash?: Phaser.GameObjects.Rectangle;
+  private lightning?: Phaser.Time.TimerEvent;
+  private shownWeather = '';
+
+  private buildWeather() {
+    const { width: W, height: H } = this.scale;
+    this.gloom = this.add.rectangle(0, 0, W, H, 0x24304a, 0).setOrigin(0);
+    this.rain = this.add.particles(0, 0, 'raindrop', {
+      x: { min: -60, max: W + 240 },
+      y: -20,
+      lifespan: 1100,
+      speedY: { min: 560, max: 660 },
+      speedX: { min: -190, max: -150 },
+      rotate: 17,
+      scale: { min: 1, max: 1.6 },
+      quantity: 3,
+      frequency: 16,
+      emitting: false,
+    });
+    this.snow = this.add.particles(0, 0, 'snowflake', {
+      x: { min: 0, max: W },
+      y: -10,
+      lifespan: 14000,
+      speedY: { min: 28, max: 60 },
+      speedX: { min: -24, max: 24 },
+      scale: { min: 0.6, max: 1.5 },
+      alpha: { min: 0.6, max: 1 },
+      quantity: 1,
+      frequency: 110,
+      emitting: false,
+    });
+    this.flash = this.add.rectangle(0, 0, W, H, 0xffffff, 0).setOrigin(0);
+  }
+
+  /** Switch rain, snow, gloom and lightning to match today's weather. */
+  private applyWeather() {
+    const w = this.state.weather;
+    if (w === this.shownWeather) return;
+    this.shownWeather = w;
+    const wet = isWet(w);
+    this.rain!.emitting = wet;
+    this.rain!.frequency = w === 'badai' ? 8 : 16;
+    this.snow!.emitting = w === 'salju';
+    if (w === 'salju') this.snow!.fastForward(9000); // start with flakes already filling the screen
+    if (wet) this.rain!.fastForward(1000);
+    this.gloom!.setFillStyle(0x24304a, w === 'badai' ? 0.3 : wet ? 0.16 : w === 'salju' ? 0.06 : 0);
+    setRain(w === 'badai' ? 2 : wet ? 1 : 0);
+    this.lightning?.remove();
+    this.lightning = undefined;
+    if (w === 'badai') {
+      const strike = () => {
+        this.flash!.setAlpha(0.6);
+        this.tweens.chain({
+          targets: this.flash,
+          tweens: [
+            { alpha: 0, duration: 90 },
+            { alpha: 0.45, duration: 40 },
+            { alpha: 0, duration: 220 },
+          ],
+        });
+        this.time.delayedCall(350, () => play('thunder'));
+        this.lightning = this.time.delayedCall(Phaser.Math.Between(5000, 12000), strike);
+      };
+      this.lightning = this.time.delayedCall(2500, strike);
+    }
   }
 }

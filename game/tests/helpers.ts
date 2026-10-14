@@ -66,8 +66,13 @@ export async function use(page: Page, slot: number) {
   await press(page, 'Space');
 }
 
-/** Sleep through the night and close the morning report. */
-export async function sleep(page: Page) {
+/**
+ * Sleep through the night and close the morning report.
+ * Tomorrow is forced clear so random rain cannot water plots behind a test's back;
+ * weather tests pass keepForecast to use the forecast they set.
+ */
+export async function sleep(page: Page, keepForecast = false) {
+  if (!keepForecast) await page.evaluate(() => (window.game.registry.get('state').forecast = 'cerah'));
   await page.evaluate(() => window.game.scene.getScene('farm').sleep());
   await page.waitForFunction(() => window.game.registry.get('modal') === true);
   await page.evaluate(() => (window.game.scene.getScene('ui') as any).closeModal());

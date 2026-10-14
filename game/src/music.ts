@@ -152,9 +152,9 @@ export function startMusic() {
 }
 
 /** Follow the game's season, time of day and festival days. */
-export function setMood(s: Season, isNight: boolean, isFestival: boolean) {
+export function setMood(s: Season, isNight: boolean, isFestival: boolean, isRainy = false) {
   season = s;
-  night = isNight;
+  night = isNight || isRainy;
   festival = isFestival;
 }
 
