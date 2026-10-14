@@ -100,7 +100,7 @@ export function showFestivalResult(ui: UIScene, r: FestivalResult) {
     c.add(ui.add.text(x + 360, ry, `${e.score}`, txt(15, col, e.you)).setOrigin(1, 0));
   });
   const rewards = [
-    r.reward.coins ? `+${r.reward.coins} G` : '',
+    r.reward.coins ? `+${r.reward.coins + r.bonusCoins} G${r.bonusCoins ? ' (Lemari Piala)' : ''}` : '',
     `+${r.reward.xp} XP`,
     r.reward.points ? `+${r.reward.points} Poin Festival` : '',
     r.reward.trophy ? `Piala ${r.reward.trophy}` : '',

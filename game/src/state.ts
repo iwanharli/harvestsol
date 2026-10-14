@@ -16,7 +16,12 @@ import {
   WATER_CAN_MAX,
   AFFECTION_MAX,
   BAG_TIERS,
+  ALARM_WAKE_MIN,
+  BIG_BED_BONUS,
   COOK_MINUTES,
+  FRIDGE_SLOTS,
+  TROPHY_BONUS,
+  TROPHY_BONUS_MAX,
   LEGACY_CROPS,
   LEGACY_DISHES,
   FORECAST_DAYS,
@@ -96,6 +101,8 @@ export interface GameState {
   talkedDay: Record<string, number>;
   fishCaught: Record<string, number>; // fish id → best stars caught (the fish book)
   staminaRewards: Record<string, boolean>; // one-off max-stamina rewards already granted
+  furniture: Record<string, boolean>; // bought furniture ids
+  fridge: Record<string, number>; // kulkas contents (same keys as produce)
   pos?: { x: number; y: number; dir: 'down' | 'up' | 'left' | 'right' }; // where the player stands (world px) // last day the player chatted with each villager
   stats: { harvested: number; earned: number; requestsDone: number };
 }
@@ -133,6 +140,8 @@ export function newGame(): GameState {
     talkedDay: {},
     fishCaught: {},
     staminaRewards: {},
+    furniture: {},
+    fridge: {},
     stats: { harvested: 0, earned: 0, requestsDone: 0 },
   };
 }
@@ -185,6 +194,8 @@ function migrate(s: GameState): GameState {
   s.talkedDay ??= {};
   s.fishCaught ??= {};
   s.staminaRewards ??= {};
+  s.furniture ??= {};
+  s.fridge ??= {};
   s.stats.requestsDone ??= 0;
   return s;
 }
@@ -302,8 +313,8 @@ export function endDay(s: GameState, passedOut: boolean): DayReport {
       }
   }
 
-  s.minutes = DAY_START_MIN;
-  s.stamina = passedOut ? Math.round(maxStamina(s) * 0.6) : maxStamina(s);
+  s.minutes = s.furniture?.jam ? ALARM_WAKE_MIN : DAY_START_MIN;
+  s.stamina = passedOut ? Math.round(maxStamina(s) * 0.6) : maxStamina(s) + (s.furniture?.kasur ? BIG_BED_BONUS : 0);
   // chickens: fed ones lay an egg and grow fonder, hungry ones sulk
   for (const a of s.animals) {
     if (a.fed) {
@@ -405,6 +416,7 @@ export interface FestivalResult {
   place: number; // 0-based
   reward: (typeof FESTIVAL_REWARDS)[number];
   levels: number[];
+  bonusCoins: number; // Lemari Piala
 }
 
 /** Hand in the entry, rank it against the villagers, and pay out rewards. */
@@ -425,13 +437,16 @@ export function enterFestival(s: GameState, items: string[]): FestivalResult {
   const place = ranking.findIndex((r) => r.you);
   const reward = FESTIVAL_REWARDS[place];
 
-  s.coins += reward.coins;
-  s.stats.earned += reward.coins;
+  const bonusCoins = s.furniture?.piala
+    ? Math.round(reward.coins * TROPHY_BONUS * Math.min(TROPHY_BONUS_MAX, s.festival.trophies.emas ?? 0))
+    : 0;
+  s.coins += reward.coins + bonusCoins;
+  s.stats.earned += reward.coins + bonusCoins;
   s.festival.points += reward.points;
   if (reward.trophy) s.festival.trophies[reward.trophy] = (s.festival.trophies[reward.trophy] ?? 0) + 1;
   s.festival.enteredDay = s.day;
   const levels = gainXp(s, reward.xp);
-  return { ranking, place, reward, levels };
+  return { ranking, place, reward, levels, bonusCoins };
 }
 
 // ---------- bag capacity ----------
@@ -478,10 +493,14 @@ export function cook(s: GameState, dishId: string): string | null {
   const dish = dishById(dishId);
   if (!dish) return 'Resep tidak dikenal.';
   for (const [id, n] of Object.entries(dish.ingredients))
-    if (countBase(s, id) < n) return `Bahan kurang: ${produceById(id).name}.`;
+    if (countIngredient(s, id) < n) return `Bahan kurang: ${produceById(id).name}.`;
   const taken: Record<string, number> = {};
-  for (const [id, n] of Object.entries(dish.ingredients))
-    for (const [k, q] of Object.entries(takeBase(s, id, n))) add(taken, k, q);
+  for (const [id, n] of Object.entries(dish.ingredients)) {
+    const fromBag = Math.min(n, countBase(s, id));
+    for (const [k, q] of Object.entries(takeBase(s, id, fromBag))) add(taken, k, q);
+    // the rest comes out of the kulkas (returned to the bag if cooking fails)
+    for (const [k, q] of Object.entries(takeFrom(s.fridge, id, n - fromBag))) add(taken, k, q);
+  }
   if (!canAdd(s, 'produce', dish.id)) {
     for (const [k, q] of Object.entries(taken)) add(s.produce, k, q); // put everything back
     return 'Tas penuh! Kosongkan satu slot dulu.';
@@ -570,4 +589,63 @@ export function checkStaminaRewards(s: GameState): string[] {
   if (close) grant('jamu', `Kamu dapat Jamu Kuat! Tenaga maksimal +${STAMINA_REWARD}.`);
   if (FISH.every((f) => s.fishCaught[f.id])) grant('fishbook', `Buku Ikan lengkap! Tenaga maksimal +${STAMINA_REWARD}.`);
   return out;
+}
+
+// ---------- kulkas ----------
+
+/** Ingredients the kitchen can use: the bag, plus the kulkas once it is bought. */
+export function countIngredient(s: GameState, id: string) {
+  let n = countBase(s, id);
+  if (s.furniture?.kulkas) for (const [k, q] of Object.entries(s.fridge)) if (baseId(k) === id) n += q;
+  return n;
+}
+
+/** Remove n of an item from a record, lowest quality first. */
+function takeFrom(rec: Record<string, number>, id: string, n: number): Record<string, number> {
+  const taken: Record<string, number> = {};
+  const keys = Object.keys(rec)
+    .filter((k) => baseId(k) === id)
+    .sort((a, b) => starsOf(a) - starsOf(b));
+  for (const k of keys) {
+    if (n <= 0) break;
+    const q = Math.min(n, rec[k]);
+    add(rec, k, -q);
+    taken[k] = q;
+    n -= q;
+  }
+  return taken;
+}
+
+export const fridgeSlotsUsed = (s: GameState) => Object.values(s.fridge).reduce((a, q) => a + Math.ceil(q / STACK_MAX), 0);
+
+/** Move a whole stack between the bag and the kulkas; returns an error message or null. */
+export function moveToFridge(s: GameState, key: string): string | null {
+  const q = s.produce[key] ?? 0;
+  if (!q) return null;
+  const cur = s.fridge[key] ?? 0;
+  const need = Math.ceil((cur + q) / STACK_MAX) - Math.ceil(cur / STACK_MAX);
+  if (fridgeSlotsUsed(s) + need > FRIDGE_SLOTS) return 'Kulkas penuh.';
+  add(s.produce, key, -q);
+  add(s.fridge, key, q);
+  return null;
+}
+
+export function moveFromFridge(s: GameState, key: string): string | null {
+  const q = s.fridge[key] ?? 0;
+  if (!q) return null;
+  const n = Math.min(q, roomFor(s, 'produce', key));
+  if (!n) return 'Tas penuh.';
+  add(s.fridge, key, -n);
+  add(s.produce, key, n);
+  return null;
+}
+
+/** Buy a piece of furniture; returns an error message or null. */
+export function buyFurniture(s: GameState, id: string, price: number, level: number): string | null {
+  if (s.furniture[id]) return 'Sudah dimiliki.';
+  if (s.level < level) return `Terbuka di Level ${level}.`;
+  if (s.coins < price) return `Uang tidak cukup (butuh ${price.toLocaleString('id-ID')} G).`;
+  s.coins -= price;
+  s.furniture[id] = true;
+  return null;
 }

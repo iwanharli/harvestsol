@@ -1,7 +1,7 @@
 import { DISHES, XP_COOK, produceById } from '../../data';
 import { play } from '../../sfx';
 import { C, card, txt, well } from '../theme';
-import { cook, countBase, gainXp, save, maxStamina } from '../../state';
+import { cook, countIngredient, gainXp, save, maxStamina } from '../../state';
 
 import type { UIScene } from '../../scenes/UIScene';
 
@@ -15,7 +15,7 @@ export function openKitchen(ui: UIScene) {
   DISHES.forEach((d, i) => {
     const cx = x + 20 + (i % 3) * (cw + gap);
     const cy = y + 58 + Math.floor(i / 3) * (ch + 8);
-    const ready = Object.entries(d.ingredients).every(([id, n]) => countBase(s, id) >= n);
+    const ready = Object.entries(d.ingredients).every(([id, n]) => countIngredient(s, id) >= n);
     const g = ui.add.graphics();
     card(g, cx, cy, cw, ch, ready ? 'ready' : 'normal', 16);
     well(g, cx + 32, cy + 38, 24);
@@ -23,7 +23,7 @@ export function openKitchen(ui: UIScene) {
     c.add(ui.add.image(cx + 32, cy + 38, `icon-${d.id}`).setScale(2.5));
     c.add(ui.add.text(cx + 62, cy + 8, d.name, txt(14)));
     Object.entries(d.ingredients).forEach(([id, n], j) => {
-      const have = countBase(s, id);
+      const have = countIngredient(s, id);
       c.add(
         ui.add.text(cx + 62, cy + 28 + j * 15, `${produceById(id).name} ${Math.min(have, n)}/${n}`, txt(12, have >= n ? C.green : C.red, false)),
       );

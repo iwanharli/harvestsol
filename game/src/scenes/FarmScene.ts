@@ -4,7 +4,13 @@ import {
   FIELD,
   GAME_MIN_PER_SEC,
   MAP_H,
+  FISH,
+  FURNITURE,
   NPC_HOMES,
+  TROPHY_BONUS,
+  TROPHY_BONUS_MAX,
+  WEATHER_INFO,
+  furnitureById,
   RUN_MULT,
   isWet,
   fishStars,
@@ -57,11 +63,23 @@ type Dir = 'down' | 'up' | 'left' | 'right';
 const DIR_VEC: Record<Dir, [number, number]> = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] };
 const SPEED = 62; // world px per second
 
-type Spot = 'door' | 'shop' | 'bin' | 'pond' | 'board' | 'coop' | 'stage' | 'house' | 'bed' | 'stove' | 'tv' | 'shelf' | 'wardrobe';
+type Spot =
+  | 'door' | 'shop' | 'bin' | 'pond' | 'board' | 'coop' | 'stage' | 'house'
+  | 'bed' | 'stove' | 'tv' | 'shelf' | 'wardrobe' | 'fridge' | 'radio' | 'trophy' | 'slot'
+  | 'mebel' | 'counter' | 'display';
 
 /** The farmhouse interior lives in empty world space east of the map (tiles), so all systems just work inside. */
 const ROOM = { x: 100, y: 4, w: 14, h: 10 };
-const inRoom = (tx: number, ty: number) => tx >= ROOM.x && tx < ROOM.x + ROOM.w && ty >= ROOM.y && ty < ROOM.y + ROOM.h;
+/** The Toko Mebel interior, further east. */
+const SHOP = { x: 160, y: 4, w: 12, h: 9 }; // far enough that the house never shows at the screen edge
+/** Where each room's doormat leads back to outside (world px, facing down). */
+const ROOMS = [
+  { room: ROOM, exit: { x: 4.5 * TILE + 8, y: 7 * TILE - 2 } },
+  { room: SHOP, exit: { x: 58 * TILE, y: 19 * TILE - 2 } },
+];
+const roomAt = (tx: number, ty: number) =>
+  ROOMS.find(({ room: r }) => tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h);
+const inRoom = (tx: number, ty: number) => !!roomAt(tx, ty);
 
 export class FarmScene extends Phaser.Scene {
   private state!: GameState;
@@ -113,6 +131,10 @@ export class FarmScene extends Phaser.Scene {
     this.state = this.registry.get('state');
     this.buildMap();
     this.buildRoom();
+    this.buildShop();
+    this.refreshFurniture();
+    this.game.events.on('furniture-changed', this.refreshFurniture, this);
+    this.events.once('shutdown', () => this.game.events.off('furniture-changed', this.refreshFurniture, this));
 
     this.playerShadow = this.shadow(0, 0, 12);
     this.player = this.add.image(5.5 * TILE, 7 * TILE, 'player-down-0').setOrigin(0.5, 1);
@@ -207,7 +229,8 @@ export class FarmScene extends Phaser.Scene {
     rect(55, 6, 56, 6, 'p'); // Pak Darto's door
     rect(53, 13, 58, 13, 'p'); // plaza → Mbak Rani
     rect(47, 15, 47, 30, 'p'); // plaza → south road → forest clearing
-    rect(40, 22, 54, 22, 'p');
+    rect(40, 22, 58, 22, 'p');
+    rect(57, 18, 58, 21, 'p'); // to the Toko Mebel door
     rect(42, 7, 52, 14, 's'); // village plaza
     for (let y = 26; y <= 29; y++) set(24, y, 'k'); // dock
 
@@ -279,6 +302,17 @@ export class FarmScene extends Phaser.Scene {
       this.houseOwner.set(plotKey(h.x + 1, h.y + 3), h.npc).set(plotKey(h.x + 2, h.y + 3), h.npc);
       this.windowGlow(h.x, h.y);
     }
+
+    // Toko Mebel, east of the village, with its own path to the south road
+    this.building('house-mebel', 56, 14);
+    this.spots.set(plotKey(57, 17), 'mebel').set(plotKey(58, 17), 'mebel');
+    this.windowGlow(56, 14);
+    this.add.image(58 * TILE, 14 * TILE + 30, 'sign-mebel').setOrigin(0.5, 0.5).setDepth(18 * TILE + 1);
+    this.add
+      .text(58 * TILE, 14 * TILE + 30, 'MEBEL', { fontFamily: 'monospace', fontSize: '8px', color: '#1a5a56', fontStyle: 'bold' })
+      .setOrigin(0.5)
+      .setResolution(4)
+      .setDepth(18 * TILE + 2);
 
     // plaza: shop, board, stage, fountain, lamps, benches, flowers
     this.shadow(47 * TILE, 7 * TILE - 1, 36);
@@ -384,6 +418,7 @@ export class FarmScene extends Phaser.Scene {
   private roomNight!: Phaser.GameObjects.Rectangle;
   private roomLamp!: Phaser.GameObjects.Image;
   private indoors = false;
+  private currentRoom?: { x: number; y: number; w: number; h: number };
 
   private buildRoom() {
     const X = (lx: number) => (ROOM.x + lx) * TILE;
@@ -414,7 +449,7 @@ export class FarmScene extends Phaser.Scene {
     // furniture along the back wall
     const put = (key: string, lx: number, lyBottom: number, origin = 0.5) =>
       this.add.image(X(lx), Y(lyBottom), key).setOrigin(origin, 1).setDepth(Y(lyBottom));
-    put('in-bed', 1, 5);
+    this.bedImg = put('in-bed', 1, 5);
     for (const [lx, ly] of [[0, 2], [1, 2], [0, 3], [1, 3], [0, 4], [1, 4]]) spot(lx, ly, 'bed');
     put('in-tv', 4, 4);
     for (const lx of [3, 4]) spot(lx, 2, 'tv'), spot(lx, 3, 'tv');
@@ -424,6 +459,23 @@ export class FarmScene extends Phaser.Scene {
     for (const lx of [8, 9, 10]) spot(lx, 2, 'stove'), spot(lx, 3, 'stove');
     put('in-wardrobe', 13, 5);
     for (const [lx, ly] of [[12, 2], [13, 2], [12, 3], [13, 3], [12, 4], [13, 4]]) spot(lx, ly, 'wardrobe');
+
+    // furniture slots, filled from the Toko Mebel (dashed outline until bought)
+    const slot = (id: string, x: number, y: number, w: number, h: number, key: string, tiles: [number, number][], spotKind: Spot | null) => {
+      const ph = this.add.graphics().setDepth(-8.4);
+      dashed(ph, x, y, w, h);
+      const img = this.add.image(x + w / 2, y + h, key).setOrigin(0.5, 1).setDepth(y + h);
+      for (const [lx, ly] of tiles) {
+        const k = plotKey(ROOM.x + lx, ROOM.y + ly);
+        if (spotKind) this.blocked.add(k);
+        this.furnitureTiles.set(k, id);
+      }
+      this.furnitureObjs.set(id, { img, ph, spot: spotKind });
+    };
+    slot('kulkas', X(11), Y(2) - 16, TILE, 32, 'in-fridge', [[11, 2], [11, 3]], 'fridge');
+    slot('radio', X(2), Y(2), TILE, TILE, 'in-radio', [[2, 2]], 'radio');
+    slot('jam', X(12.5) - 7, Y(0) + 6, 14, 14, 'in-clock', [], null);
+    slot('piala', X(12), Y(6) - 8, 32, 40, 'in-trophy', [[12, 6], [13, 6], [12, 7], [13, 7]], 'trophy');
 
     // dining corner on a rug, plants, doormat
     this.add.image(X(7), Y(7), 'in-rug').setOrigin(0.5, 0.5).setDepth(-9);
@@ -446,13 +498,114 @@ export class FarmScene extends Phaser.Scene {
     this.lamps.push(this.add.image(X(7), Y(5) + 2, 'glow').setScale(2.4).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0));
   }
 
+  private bedImg!: Phaser.GameObjects.Image;
+  private furnitureObjs = new Map<string, { img: Phaser.GameObjects.Image; ph: Phaser.GameObjects.Graphics; spot: Spot | null }>();
+  /** World tile → furniture id, for furniture slots in the house and display stands in the shop. */
+  private furnitureTiles = new Map<string, string>();
+
+  /** Show bought furniture and dashed placeholders for the rest. */
+  private refreshFurniture() {
+    const owned = this.state.furniture;
+    for (const [id, o] of this.furnitureObjs) {
+      o.img.setVisible(!!owned[id]);
+      o.ph.setVisible(!owned[id]);
+    }
+    for (const [k, id] of this.furnitureTiles) {
+      if (this.spots.get(k) === 'display') continue; // shop stands stay stands
+      const o = this.furnitureObjs.get(id);
+      if (!o?.spot) continue;
+      this.spots.set(k, owned[id] ? o.spot : 'slot');
+    }
+    // the big bed replaces the old one
+    this.bedImg.setTexture(owned.kasur ? 'in-bigbed' : 'in-bed').setX((ROOM.x + (owned.kasur ? 1.2 : 1)) * TILE);
+  }
+
+  private buildShop() {
+    const R = SHOP;
+    const X = (lx: number) => (R.x + lx) * TILE;
+    const Y = (ly: number) => (R.y + ly) * TILE;
+    const spot = (lx: number, ly: number, what: Spot | null) => {
+      this.blocked.add(plotKey(R.x + lx, R.y + ly));
+      if (what) this.spots.set(plotKey(R.x + lx, R.y + ly), what);
+    };
+    for (let ly = 2; ly < R.h; ly++) for (let lx = 0; lx < R.w; lx++) this.add.image(X(lx), Y(ly), 'shop-floor').setOrigin(0).setDepth(-10);
+    for (let lx = 0; lx < R.w; lx++) {
+      this.add.image(X(lx), Y(0), 'shop-wall').setOrigin(0).setDepth(-9);
+      spot(lx, 0, null);
+      spot(lx, 1, null);
+    }
+    for (let ly = 0; ly < R.h; ly++) {
+      this.add.image(X(0) - 4, Y(ly), 'in-wall-side').setOrigin(0).setDepth(Y(R.h));
+      this.add.image(X(R.w), Y(ly), 'in-wall-side').setOrigin(0).setDepth(Y(R.h));
+    }
+    const mid = R.w / 2;
+    this.add.rectangle(X(0) - 4, Y(R.h), X(mid - 1) - X(0) + 4, 4, 0x1a5a56).setOrigin(0).setDepth(Y(R.h));
+    this.add.rectangle(X(mid + 1), Y(R.h), X(R.w) - X(mid + 1) + 4, 4, 0x1a5a56).setOrigin(0).setDepth(Y(R.h));
+
+    // back wall: shelves of goods and the counter with the shopkeeper
+    for (const lx of [1.5, 10.5]) {
+      this.add.image(X(lx), Y(4), 'in-shelf').setOrigin(0.5, 1).setDepth(Y(4));
+      spot(Math.floor(lx - 0.5), 2, null), spot(Math.floor(lx + 0.5), 2, null), spot(Math.floor(lx - 0.5), 3, null), spot(Math.floor(lx + 0.5), 3, null);
+    }
+    this.add.image(X(mid) + 1, Y(3) - 1, 'npc-mebel-0').setOrigin(0.5, 1).setDepth(Y(3));
+    this.add.image(X(mid), Y(4), 'counter').setOrigin(0.5, 1).setDepth(Y(4));
+    for (let lx = mid - 2; lx < mid + 2; lx++) spot(lx, 2, null), spot(lx, 3, 'counter');
+    this.add.image(X(mid), Y(0) + 4, 'sign-mebel').setOrigin(0.5, 0).setDepth(-8.5);
+    this.add
+      .text(X(mid), Y(0) + 10, 'MEBEL', { fontFamily: 'monospace', fontSize: '8px', color: '#1a5a56', fontStyle: 'bold' })
+      .setOrigin(0.5)
+      .setResolution(4)
+      .setDepth(-8.4);
+
+    // five display stands, each showing one piece of furniture and its price
+    FURNITURE.forEach((f, i) => {
+      const lx = 1 + i * 2;
+      const cx = X(lx + 1);
+      this.add.image(cx, Y(7) - 2, 'pedestal').setOrigin(0.5, 1).setDepth(Y(7) - 3);
+      const key = { jam: 'in-clock', radio: 'in-radio', piala: 'in-trophy', kulkas: 'in-fridge', kasur: 'in-bigbed' }[f.id] ?? 'in-radio';
+      const img = this.add.image(cx, Y(7) - 10, key).setOrigin(0.5, 1).setDepth(Y(7) - 2);
+      if (img.height > 34) img.setScale(34 / img.height);
+      this.add
+        .text(cx, Y(7) + 1, `${f.price.toLocaleString('id-ID')}`, { fontFamily: 'monospace', fontSize: '7px', color: '#fffbe6', stroke: '#2a1d17', strokeThickness: 2 })
+        .setOrigin(0.5, 0)
+        .setResolution(4)
+        .setDepth(Y(8));
+      for (const ly of [5, 6]) {
+        spot(lx, ly, 'display');
+        spot(lx + 1, ly, 'display');
+        this.furnitureTiles.set(plotKey(R.x + lx, R.y + ly), f.id);
+        this.furnitureTiles.set(plotKey(R.x + lx + 1, R.y + ly), f.id);
+      }
+    });
+    for (const [lx, ly] of [[0, 8], [R.w - 1, 8]]) {
+      this.add.image(X(lx + 0.5), Y(ly + 1), 'in-plant').setOrigin(0.5, 1).setDepth(Y(ly + 1));
+      spot(lx, ly, null);
+    }
+    this.add.image(X(mid), Y(R.h) - 1, 'in-mat').setOrigin(0.5, 1).setDepth(-8.5);
+  }
+
+  private enterShop() {
+    this.moveTo((SHOP.x + SHOP.w / 2) * TILE, (SHOP.y + SHOP.h - 1) * TILE - 2, 'up');
+  }
+
+  /** The radio reads out today's rare fish and tomorrow's weather. */
+  private radio() {
+    const s = this.state;
+    const season = seasonOf(s.day);
+    const wet = isWet(s.weather);
+    const rare = FISH.filter((f) => f.weight <= 14 && (!f.seasons || f.seasons.includes(season)) && (f.rain !== 'only' || wet));
+    const list = rare.slice(0, 3).map((f) => `${f.name} (${f.where.includes('danau') ? 'danau' : 'kolam'} ${f.hours[0]}–${f.hours[1]})`).join(', ');
+    play('click');
+    this.toast(`Radio Desa: hari ini muncul ${list || 'ikan biasa saja'}. Besok ${WEATHER_INFO[s.forecasts[0]].name.toLowerCase()}.`);
+  }
+
   /** Step through the farmhouse door. */
   private enterHouse() {
     this.moveTo((ROOM.x + 7) * TILE, (ROOM.y + 9) * TILE - 2, 'up');
   }
 
-  private leaveHouse() {
-    this.moveTo(4.5 * TILE + 8, 7 * TILE - 2, 'down');
+  private leaveRoom(exit: { x: number; y: number }) {
+    this.moveTo(exit.x, exit.y, 'down');
   }
 
   /** Fade, move the player, fade back. */
@@ -477,14 +630,17 @@ export class FarmScene extends Phaser.Scene {
   private updateIndoors() {
     const tx = Math.floor(this.player.x / TILE);
     const ty = Math.floor((this.player.y - 4) / TILE);
-    const inside = inRoom(tx, ty);
-    if (inside === this.indoors) return;
+    const here = roomAt(tx, ty);
+    const inside = !!here;
+    if (inside === this.indoors && here?.room === this.currentRoom) return;
     this.indoors = inside;
+    this.currentRoom = here?.room;
     const cam = this.cameras.main;
-    if (inside) {
+    if (here) {
+      this.refreshFurniture(); // always show the latest purchases
       cam.stopFollow();
       cam.removeBounds();
-      cam.centerOn((ROOM.x + ROOM.w / 2) * TILE, (ROOM.y + ROOM.h / 2) * TILE + 6);
+      cam.centerOn((here.room.x + here.room.w / 2) * TILE, (here.room.y + here.room.h / 2) * TILE + 6);
     } else {
       cam.setBounds(0, 0, MAP_W * TILE, MAP_H * TILE);
       cam.startFollow(this.player, true, 0.15, 0.15);
@@ -647,9 +803,13 @@ export class FarmScene extends Phaser.Scene {
     this.updateRoomLight(this.darkness());
     // stepping onto the doormat leaves the house
     if (this.indoors && !this.busy) {
-      const tx = Math.floor(this.player.x / TILE) - ROOM.x;
-      const ty = Math.floor((this.player.y - 1) / TILE) - ROOM.y;
-      if (ty >= ROOM.h - 1 && (tx === 6 || tx === 7) && this.dir === 'down') this.leaveHouse();
+      const ftx = Math.floor(this.player.x / TILE);
+      const fty = Math.floor((this.player.y - 1) / TILE);
+      const here = roomAt(ftx, fty);
+      if (here) {
+        const tx = ftx - here.room.x, ty = fty - here.room.y, mid = here.room.w / 2;
+        if (ty >= here.room.h - 1 && (tx === mid - 1 || tx === mid) && this.dir === 'down') this.leaveRoom(here.exit);
+      }
     }
     this.boardBubble.setVisible(
       s.level >= FEATURE_LEVEL.board && s.requests.some((r) => countBase(s, r.crop) >= r.qty),
@@ -922,6 +1082,19 @@ export class FarmScene extends Phaser.Scene {
     if (spot === 'tv') return this.game.events.emit('open-calendar');
     if (spot === 'shelf') return this.game.events.emit('open-fishbook');
     if (spot === 'wardrobe') return this.game.events.emit('open-wardrobe');
+    if (spot === 'mebel') return this.enterShop();
+    if (spot === 'counter') return this.game.events.emit('open-mebel');
+    if (spot === 'display') return this.game.events.emit('open-mebel', this.furnitureTiles.get(k));
+    if (spot === 'fridge') return this.game.events.emit('open-fridge');
+    if (spot === 'radio') return this.radio();
+    if (spot === 'trophy') {
+      const gold = Math.min(TROPHY_BONUS_MAX, s.festival.trophies.emas ?? 0);
+      return this.toast(`Lemari Piala: ${gold} piala emas · bonus hadiah festival +${Math.round(gold * TROPHY_BONUS * 100)}%.`);
+    }
+    if (spot === 'slot') {
+      const f = furnitureById(this.furnitureTiles.get(k) ?? '');
+      return this.toast(`${f?.name ?? 'Perabot'} bisa dibeli di Toko Mebel (desa sebelah timur).`);
+    }
     if (spot === 'shop') return this.game.events.emit('open-shop');
     if (spot === 'bin') return this.ship();
     if (spot === 'board') {
@@ -1483,5 +1656,19 @@ export class FarmScene extends Phaser.Scene {
   private flyIcon(tx: number, ty: number, key: string) {
     const icon = this.add.image((tx + 0.5) * TILE, ty * TILE, key).setDepth(9002);
     this.tweens.add({ targets: icon, y: icon.y - 14, alpha: 0, duration: 700, ease: 'Quad.Out', onComplete: () => icon.destroy() });
+  }
+}
+
+/** Dashed rounded outline marking an empty furniture slot. */
+function dashed(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number) {
+  g.fillStyle(0xffffff, 0.12).fillRect(x, y, w, h);
+  g.fillStyle(0xfff6dc, 0.7);
+  for (let i = 0; i < w; i += 4) {
+    g.fillRect(x + i, y, 2, 1);
+    g.fillRect(x + i, y + h - 1, 2, 1);
+  }
+  for (let i = 0; i < h; i += 4) {
+    g.fillRect(x, y + i, 1, 2);
+    g.fillRect(x + w - 1, y + i, 1, 2);
   }
 }

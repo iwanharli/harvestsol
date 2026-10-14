@@ -253,6 +253,7 @@ export const NPC_LINES: Record<string, string[]> = {
 /** Named areas, shown as a banner when the player walks in. First match wins. */
 export const ZONES: { name: string; x0: number; y0: number; x1: number; y1: number }[] = [
   { name: 'Rumah', x0: 100, y0: 4, x1: 113, y1: 13 }, // the farmhouse interior (east of the map)
+  { name: 'Toko Mebel', x0: 160, y0: 4, x1: 171, y1: 12 },
   { name: 'Ladang', x0: 0, y0: 0, x1: 33, y1: 21 },
   { name: 'Perkampungan Warga', x0: 34, y0: 0, x1: 63, y1: 23 },
   { name: 'Hutan Kecil', x0: 44, y0: 24, x1: 63, y1: 39 },
@@ -374,3 +375,28 @@ export const FORECAST_DAYS = 7;
 export const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 export const STORM_DAMAGE = 0.07; // chance per growing crop to be ruined by a storm
 export const isWet = (w: Weather) => w === 'hujan' || w === 'badai';
+
+// ---------- furniture (Toko Mebel) ----------
+
+export interface FurnitureDef {
+  id: string;
+  name: string;
+  price: number;
+  level: number;
+  desc: string;
+}
+
+export const FURNITURE: FurnitureDef[] = [
+  { id: 'jam', name: 'Jam Dinding', price: 800, level: 2, desc: 'Alarm pagi: bangun pukul 05:00, satu jam ekstra setiap hari.' },
+  { id: 'radio', name: 'Radio', price: 2000, level: 4, desc: 'Siaran desa: ikan langka hari ini dan cuaca besok.' },
+  { id: 'piala', name: 'Lemari Piala', price: 3000, level: 5, desc: '+5% hadiah koin festival per piala emas (maks +25%).' },
+  { id: 'kulkas', name: 'Kulkas', price: 4000, level: 3, desc: 'Simpan 24 slot barang; dapur memakai bahan dari kulkas.' },
+  { id: 'kasur', name: 'Kasur Besar', price: 6000, level: 6, desc: 'Tidur nyenyak: +15 tenaga bonus setiap pagi.' },
+];
+export const furnitureById = (id: string) => FURNITURE.find((f) => f.id === id);
+
+export const FRIDGE_SLOTS = 24;
+export const BIG_BED_BONUS = 15;
+export const ALARM_WAKE_MIN = 5 * 60;
+export const TROPHY_BONUS = 0.05;
+export const TROPHY_BONUS_MAX = 5;

@@ -318,6 +318,7 @@ export function makeTextures(scene: Phaser.Scene) {
     'house-darto': { roof: ['#3f6fb0', '#5a8fd0', '#2f5590', '#264577'], wall: ['#eae4d6', '#d8d0bd', '#c2b9a2'] },
     'house-rani': { roof: ['#4f9a4a', '#6cbf62', '#3a7a36', '#2f652c'], wall: ['#f4ead2', '#e2d6b6', '#cdbf99'] },
     'house-joyo': { roof: ['#7a5a3a', '#9c7a52', '#5f452c', '#4c3723'], wall: ['#e6d8bc', '#d4c3a2', '#bfac88'] },
+    'house-mebel': { roof: ['#2f8f8a', '#4fb3ad', '#21706b', '#1a5a56'], wall: ['#f4ead2', '#e2d6b6', '#cdbf99'] },
     'house-dina': { roof: ['#b05a8f', '#d07ab0', '#8a4570', '#71385c'], wall: ['#fbeee2', '#ebdac8', '#d6c2ac'] },
   };
   for (const [key, { roof, wall }] of Object.entries(houses)) {
@@ -490,6 +491,87 @@ export function makeTextures(scene: Phaser.Scene) {
     px(c, 3, 8, '#e8c35a', 10, 6);
     px(c, 4, 8, '#f7df8e', 4, 6);
     px(c, 5, 14, '#fff3c4', 6, 2);
+  }, true);
+
+  // ---------- furniture ----------
+  canvas(scene, 'in-fridge', TILE, 32, (c) => {
+    px(c, 1, 0, '#dfe6ee', 14, 32);
+    px(c, 2, 1, '#f4f7fa', 12, 30);
+    px(c, 1, 11, '#b8c4d0', 14, 1);
+    px(c, 12, 4, '#8a949e', 1, 5);
+    px(c, 12, 14, '#8a949e', 1, 8);
+    px(c, 3, 3, '#e2434b', 2, 2); // a magnet
+  }, true);
+  canvas(scene, 'in-radio', TILE, TILE, (c) => {
+    px(c, 1, 5, '#8d5a34', 14, 10);
+    px(c, 2, 6, '#a36c40', 12, 8);
+    px(c, 3, 7, '#3a3a46', 6, 6);
+    for (let y = 8; y < 13; y += 2) px(c, 3, y, '#5a5a66', 6, 1);
+    px(c, 11, 8, '#f2c94c', 2, 2);
+    px(c, 11, 11, '#e2434b', 2, 2);
+    px(c, 12, 0, '#3a3a46', 1, 5);
+  }, true);
+  canvas(scene, 'in-clock', 14, 14, (c) => {
+    disc(c, 7, 7, 6, '#8d5a34', '#a36c40', '#6b4224');
+    disc(c, 7, 7, 4, '#fffaea', '#ffffff', '#efe2c4');
+    px(c, 7, 4, '#2b2b2b', 1, 4);
+    px(c, 7, 7, '#2b2b2b', 3, 1);
+  }, true);
+  canvas(scene, 'in-trophy', 32, 40, (c) => {
+    px(c, 0, 0, '#6b4224', 32, 40);
+    px(c, 2, 2, '#c9ecfb', 28, 34); // glass
+    px(c, 2, 18, '#6b4224', 28, 2);
+    for (const [x, y, col] of [[6, 6, '#f2c94c'], [14, 6, '#c3c8cc'], [22, 6, '#c98a4a'], [10, 22, '#f2c94c'], [18, 22, '#f2c94c']] as const) {
+      px(c, x, y, col, 5, 5);
+      px(c, x + 1, y + 5, col, 3, 2);
+      px(c, x, y + 7, col, 5, 2);
+    }
+    px(c, 3, 3, '#ffffff', 2, 10);
+  }, true);
+  canvas(scene, 'in-bigbed', 40, 46, (c) => {
+    px(c, 1, 0, '#4a2f1a', 38, 12);
+    px(c, 2, 1, '#6b4224', 36, 10);
+    for (let x = 6; x < 36; x += 6) px(c, x, 3, '#8d5a34', 2, 6);
+    px(c, 2, 10, '#fffaea', 36, 32);
+    px(c, 4, 12, '#ffffff', 15, 8);
+    px(c, 21, 12, '#ffffff', 15, 8);
+    px(c, 2, 22, '#8a3a5a', 36, 20);
+    px(c, 2, 22, '#a84d72', 36, 3);
+    for (let x = 5; x < 38; x += 7) px(c, x, 29, '#f2c94c', 2, 2);
+    px(c, 1, 42, '#4a2f1a', 38, 4);
+  }, true);
+
+  // ---------- Toko Mebel interior ----------
+  canvas(scene, 'shop-floor', TILE, TILE, (c) => {
+    px(c, 0, 0, '#8d5a34', TILE, TILE);
+    px(c, 0, 0, '#7a4b2a', 8, 8);
+    px(c, 8, 8, '#7a4b2a', 8, 8);
+    px(c, 0, 0, '#6b4224', TILE, 1);
+    px(c, 0, 0, '#6b4224', 1, TILE);
+  });
+  canvas(scene, 'shop-wall', TILE, TILE * 2, (c) => {
+    px(c, 0, 0, '#dfe9e4', TILE, 20);
+    for (let y = 3; y < 20; y += 5) px(c, 0, y, '#cddcd5', TILE, 1);
+    px(c, 0, 20, '#2f8f8a', TILE, 2);
+    px(c, 0, 22, '#4fb3ad', TILE, 8);
+    px(c, 0, 30, '#1a5a56', TILE, 2);
+  });
+  canvas(scene, 'pedestal', 32, 12, (c) => {
+    px(c, 0, 2, '#efe2c4', 32, 8);
+    px(c, 0, 0, '#ffffff', 32, 3);
+    px(c, 0, 10, '#b8a888', 32, 2);
+  }, true);
+  canvas(scene, 'counter', 64, 28, (c) => {
+    px(c, 0, 0, '#a36c40', 64, 6);
+    px(c, 0, 0, '#c08a55', 64, 2);
+    px(c, 0, 6, '#8d5a34', 64, 22);
+    for (let x = 4; x < 64; x += 12) px(c, x, 9, '#6b4224', 8, 16);
+    px(c, 46, -0, '#3a3a46', 10, 5); // cash register
+    px(c, 48, 0, '#5fb04a', 6, 2);
+  }, true);
+  canvas(scene, 'sign-mebel', 40, 12, (c) => {
+    px(c, 0, 0, '#6b4224', 40, 12);
+    px(c, 1, 1, '#f4ead2', 38, 10);
   }, true);
 
   // ---------- village & lake ----------
@@ -753,6 +835,7 @@ export function makeTextures(scene: Phaser.Scene) {
     darto: { H: '#d8d8d8', h: '#ffffff', C: '#2f5590', c: '#264577', l: '#5a8fd0', P: '#3a3a46', p: '#2a2a33' },
     rani: { H: '#1f1b2e', h: '#3a3352', C: '#f4f1e8', c: '#d8d2c2', l: '#ffffff', P: '#4f9a4a', p: '#3a7a36' },
     joyo: { H: '#bdbdbd', h: '#e6e6e6', C: '#6b8f71', c: '#4f6f55', l: '#8fb595', P: '#5f452c', p: '#4c3723', S: '#e0b07e', s: '#c08e5e' },
+    mebel: { H: '#2b2b2b', h: '#4a4a4a', C: '#2f8f8a', c: '#21706b', l: '#4fb3ad', P: '#5a4a3a', p: '#40342a' }, // shopkeeper in a work apron
     dina: { H: '#3a3a3a', h: '#6a6a6a', C: '#7a5a3a', c: '#5f452c', l: '#b08a52', P: '#2a2a33', p: '#1f1f26' }, // batik shirt
   };
   for (const [id, look] of Object.entries(npcLooks)) {
