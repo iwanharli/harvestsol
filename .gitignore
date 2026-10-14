@@ -1,0 +1,10 @@
+# dependencies and builds
+node_modules/
+dist/
+
+# business documents stay private (repo is public)
+*.pdf
+
+# OS / editor
+.DS_Store
+*.log
