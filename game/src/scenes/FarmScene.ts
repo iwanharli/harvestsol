@@ -34,6 +34,7 @@ import {
 import {
   add,
   canAdd,
+  checkStaminaRewards,
   countBase,
   harvestStars,
   roomFor,
@@ -970,12 +971,13 @@ export class FarmScene extends Phaser.Scene {
     add(s.produce, key, 1);
     const first = !s.fishCaught[id];
     s.fishCaught[id] = Math.max(s.fishCaught[id] ?? 0, q);
+    const fishReward = checkStaminaRewards(s)[0]; // completing the Fish Book
     const [tx, ty] = [Math.floor(f.bobber.x / TILE), Math.floor(f.bobber.y / TILE)];
     this.flyIcon(tx, ty, `icon-${id}`);
     this.starBurst(tx, ty, q);
     play(q >= 4 || first ? 'quest' : 'harvest');
     this.xp(fishXp(id), tx, ty);
-    this.endFishing(`${first ? 'Ikan baru! ' : ''}Dapat ${fish.name} (${fish.sellPrice} G)`);
+    this.endFishing(fishReward ?? `${first ? 'Ikan baru! ' : ''}Dapat ${fish.name} (${fish.sellPrice} G)`);
   }
 
   private endFishing(msg: string, failed = false) {
@@ -1039,6 +1041,7 @@ export class FarmScene extends Phaser.Scene {
     if (s.talkedDay[id] !== s.day) {
       s.talkedDay[id] = s.day;
       s.friendship[id] = (s.friendship[id] ?? 0) + 1;
+      for (const msg of checkStaminaRewards(s)) this.time.delayedCall(1500, () => (play('quest'), this.toast(msg))); // Jamu Kuat
       const h = this.add.image(img.x, img.y - 18, 'heart').setDepth(9003);
       this.tweens.add({ targets: h, y: h.y - 10, alpha: 0, duration: 900, onComplete: () => h.destroy() });
       this.xp(2, Math.floor(img.x / TILE), Math.floor((img.y - 8) / TILE));

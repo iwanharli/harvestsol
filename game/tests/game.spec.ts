@@ -368,3 +368,29 @@ test('kanvas mengikuti rasio jendela tanpa pita hitam, termasuk saat diubah', as
   expect((await state(page)).tool).toBe('siram');
   noErrors(errors);
 });
+
+test('tenaga maksimal naik di level tonggak dan dari Jamu Kuat', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, 's.level = 4');
+  await sleep(page);
+  expect((await state(page)).stamina).toBe(110); // Lv 4 milestone: 100 → 110
+
+  // first villager to reach ♥10 gives Jamu Kuat (+10, once)
+  await patch(page, 's.friendship.sari = 9');
+  const v = await page.evaluate(() => {
+    const img = window.game.scene.getScene('farm').villagers.get('sari');
+    window.game.scene.getScene('farm').tweens.killTweensOf(img);
+    return [img.x, img.y];
+  });
+  await page.evaluate(([x, y]) => {
+    const f = window.game.scene.getScene('farm');
+    f.player.setPosition(x - 16, y);
+    f.dir = 'right';
+  }, v);
+  await press(page, 'Space');
+  const s = await state(page);
+  expect(s.friendship.sari).toBe(10);
+  expect(s.staminaRewards.jamu).toBe(true);
+  expect(s.stamina).toBe(120);
+  noErrors(errors);
+});

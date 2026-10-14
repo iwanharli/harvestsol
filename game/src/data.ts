@@ -61,7 +61,14 @@ export const TOOLS: { id: Tool; name: string; key: string }[] = [
 ];
 
 export const WATER_CAN_MAX = 20;
-export const STAMINA_MAX = 100;
+export const STAMINA_MAX = 100; // base; grows with level milestones and one-off rewards
+
+/** Every 4 levels up to Lv 20 adds 10 max stamina (100 → 150). */
+export const STAMINA_PER_MILESTONE = 10;
+export const STAMINA_MILESTONE_EVERY = 4;
+export const STAMINA_MILESTONE_CAP_LEVEL = 20;
+export const STAMINA_REWARD = 10; // one-off rewards: Jamu Kuat (first villager at ♥10), complete Fish Book
+export const FRIENDSHIP_MAX = 10;
 export const STAMINA_COST: Record<Tool, number> = { cangkul: 2, siram: 2, benih: 0, tangan: 0, pancing: 4 };
 
 // Clock: 1 real second = 1.5 game minutes, so a day (06:00–24:00) lasts 12 real minutes.
@@ -115,7 +122,9 @@ export const FEATURES: { level: number; name: string }[] = [
 
 /** Everything that opens at exactly this level, for the level-up screen. */
 export function unlocksAt(level: number): string[] {
+  const stamina = level % STAMINA_MILESTONE_EVERY === 0 && level <= STAMINA_MILESTONE_CAP_LEVEL ? [`Tenaga maksimal +${STAMINA_PER_MILESTONE}`] : [];
   return [
+    ...stamina,
     ...FEATURES.filter((f) => f.level === level).map((f) => f.name),
     ...CROPS.filter((c) => c.level === level).map((c) => `Benih ${c.name}`),
     ...ITEMS.filter((i) => i.level === level).map((i) => i.name),

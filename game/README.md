@@ -46,6 +46,8 @@ Item di toko (masuk slot 3, ganti dengan Q):
 
 **Level**: XP dari mencangkul, menyiram, menanam, memanen, permintaan warga, dan merawat ayam. Fitur terbuka bertahap: Papan Permintaan (Lv 2), Pupuk (Lv 3), Sprinkler (Lv 5), Kandang Ayam (Lv 7), dan benih tertentu.
 
+**Tenaga maksimal**: 100 di awal, +10 di Lv 4, 8, 12, 16, dan 20 (sampai 150), ditambah dua hadiah sekali: **Jamu Kuat** saat pertama kali ada warga mencapai keakraban ♥10, dan **Buku Ikan lengkap** (13/13). Masakan tetap cara utama memulihkan tenaga di siang hari.
+
 **Ternak (Lv 7)**: beli Ayam (maks 4) dan Pakan di toko, tab Ternak. Hadapkan pemain ke kandang lalu tekan Spasi untuk mengambil telur sekaligus memberi pakan. Ayam yang diberi pakan bertelur keesokan pagi. Elus ayam (Tangan) sekali sehari supaya akrab; ayam yang sangat akrab bisa memberi Telur Emas.
 
 **Festival mingguan** (hari ke-7, 14, 21, 28 tiap musim, 09:00–18:00, di panggung alun-alun): serahkan sampai 5 hasil panen (dikembalikan setelah dinilai). Skor = harga jual (tanaman tema ×2) + 40 per jenis berbeda. Juara 1–3 mendapat koin, XP, piala, dan Poin Festival (dasar pembagian pool hadiah di fase 3 whitepaper). Datangi panggung di hari lain untuk melihat tema festival berikutnya.

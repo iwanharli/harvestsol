@@ -8,7 +8,6 @@ import {
   ITEMS,
   MAX_CHICKENS,
   STACK_MAX,
-  STAMINA_MAX,
   cropById,
   itemName,
   npcById,
@@ -25,6 +24,7 @@ import {
   seasonOf,
   slotsUsed,
   upgradeBag,
+  maxStamina,
 } from '../../state';
 import type { UIScene } from '../../scenes/UIScene';
 
@@ -213,9 +213,9 @@ export function openInventory(ui: UIScene) {
         }
         play('plant');
         save(s);
-        ui.toast(`Nyam! ${dish.name}, tenaga ${s.stamina}/${STAMINA_MAX}.`);
+        ui.toast(`Nyam! ${dish.name}, tenaga ${s.stamina}/${maxStamina(s)}.`);
         openInventory(ui);
-      }, dw - 28, s.stamina >= STAMINA_MAX);
+      }, dw - 28, s.stamina >= maxStamina(s));
     }
     if (sel.bag === 'seeds') {
       const active = s.seed === sel.id;

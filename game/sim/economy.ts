@@ -22,6 +22,7 @@ import {
   gainXp,
   harvestStars,
   isFestivalDay,
+  maxStamina,
   newGame,
   rollWeather,
   seasonOf,
@@ -113,7 +114,7 @@ function simulate(style: Style, seed: number): Result {
     }
     const wet = weather === 'hujan' || weather === 'badai';
     const startCoins = s.coins;
-    let stamina = 100;
+    let stamina = maxStamina(s); // grows at level milestones
 
     // ---- shopping / upgrades in the morning ----
     const rodPrice = 800;

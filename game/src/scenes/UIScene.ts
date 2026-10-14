@@ -5,7 +5,6 @@ import {
   isWet,
   baseId,
   starsOf,
-  STAMINA_MAX,
   TOOLS,
   WATER_CAN_MAX,
   itemName,
@@ -26,6 +25,7 @@ import {
   yearOf,
   type DayReport,
   type GameState,
+  maxStamina,
 } from '../state';
 import type { FarmScene } from './FarmScene';
 import { openShop } from '../ui/windows/shop';
@@ -216,7 +216,7 @@ export class UIScene extends Phaser.Scene {
       const v = (this.children.getByName(key) as Phaser.GameObjects.Text | null) ?? this.add.text(246, y - 1, '', txt(12, INK)).setOrigin(1, 0).setName(key);
       v.setText(`${Math.floor(value)}/${max}`);
     };
-    bar(46, s.stamina, STAMINA_MAX, HEX.orange, 'Tenaga');
+    bar(46, s.stamina, maxStamina(s), HEX.orange, 'Tenaga');
     bar(66, s.water, WATER_CAN_MAX, HEX.blue, 'Air');
 
     // XP: a thin full-width progress line along the top edge
