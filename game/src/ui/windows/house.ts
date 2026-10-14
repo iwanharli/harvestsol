@@ -2,18 +2,9 @@ import { DISHES, XP_COOK, produceById } from '../../data';
 import { play } from '../../sfx';
 import { C, card, txt, well } from '../theme';
 import { cook, countBase, gainXp, save, maxStamina } from '../../state';
-import { askSleep } from './report';
+
 import type { UIScene } from '../../scenes/UIScene';
 
-const INK = C.ink;
-
-export function openHouse(ui: UIScene) {
-  const { c, x, y } = ui.openModal(380, 190, 'Rumah');
-  c.add(ui.add.text(x + 190, y + 56, 'Mau apa di rumah?', txt(14, INK, false)).setOrigin(0.5, 0));
-  ui.button(c, x + 24, y + 96, 'Tidur', () => askSleep(ui), 100);
-  ui.button(c, x + 140, y + 96, 'Dapur', () => openKitchen(ui), 100);
-  ui.button(c, x + 256, y + 96, 'Batal', () => ui.closeModal(), 100);
-}
 
 export function openKitchen(ui: UIScene) {
   const s = ui.state;

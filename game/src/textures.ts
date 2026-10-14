@@ -361,6 +361,137 @@ export function makeTextures(scene: Phaser.Scene) {
     }, true);
   }
 
+  // ---------- farmhouse interior ----------
+  canvas(scene, 'in-floor', TILE, TILE, (c) => {
+    px(c, 0, 0, '#c08a55', TILE, TILE);
+    for (let y = 0; y < 16; y += 4) {
+      px(c, 0, y, '#a87442', 16, 1);
+      px(c, 0, y + 1, '#d39d66', 16, 1);
+    }
+    px(c, (0 * 5) % 16, 0, '#a87442', 1, 4);
+    px(c, 9, 4, '#a87442', 1, 4);
+    px(c, 4, 8, '#a87442', 1, 4);
+    px(c, 12, 12, '#a87442', 1, 4);
+    px(c, 6, 2, '#b5804c');
+    px(c, 13, 10, '#b5804c');
+  });
+  canvas(scene, 'in-wall', TILE, TILE * 2, (c) => {
+    // wallpaper with soft stripes, then a wooden wainscot and skirting
+    px(c, 0, 0, '#efe2c4', TILE, 20);
+    for (let x = 1; x < 16; x += 4) px(c, x, 0, '#e4d3ae', 2, 20);
+    px(c, 0, 20, '#8d5a34', TILE, 2);
+    px(c, 0, 22, '#a36c40', TILE, 8);
+    for (let x = 3; x < 16; x += 8) px(c, x, 23, '#8d5a34', 1, 6);
+    px(c, 0, 30, '#5a3a22', TILE, 2);
+  });
+  canvas(scene, 'in-wall-side', 4, TILE, (c) => {
+    px(c, 0, 0, '#5a3a22', 4, TILE);
+    px(c, 1, 0, '#7a4b2a', 2, TILE);
+  });
+  canvas(scene, 'in-window', 32, 24, (c) => {
+    px(c, 0, 0, '#6b4224', 32, 24);
+    c.clearRect(2, 2, 28, 18); // clear glass: the sky colour is drawn behind it in the scene
+    px(c, 3, 3, 'rgba(255,255,255,0.35)', 6, 3); // a glint
+    px(c, 15, 2, '#6b4224', 2, 18);
+    px(c, 2, 10, '#6b4224', 28, 2);
+    px(c, 0, 20, '#8d5a34', 32, 4);
+    px(c, 2, 21, '#f28bb3', 3, 2); px(c, 8, 21, '#f2c94c', 3, 2); px(c, 21, 21, '#5fb04a', 3, 2); px(c, 27, 21, '#f28bb3', 3, 2);
+  }, true);
+  canvas(scene, 'in-bed', 32, 44, (c) => {
+    px(c, 1, 0, '#6b4224', 30, 10); // headboard
+    px(c, 2, 1, '#8d5a34', 28, 8);
+    px(c, 2, 8, '#f4f1e8', 28, 32); // sheet
+    px(c, 4, 10, '#ffffff', 11, 7); // pillows
+    px(c, 17, 10, '#ffffff', 11, 7);
+    px(c, 2, 20, '#3f7fbf', 28, 20); // blanket
+    px(c, 2, 20, '#5a9ad6', 28, 3);
+    for (let x = 4; x < 30; x += 6) px(c, x, 26, '#2f5f95', 3, 3);
+    px(c, 1, 40, '#6b4224', 30, 4);
+  }, true);
+  canvas(scene, 'in-stove', 48, 32, (c) => {
+    px(c, 0, 6, '#b8b0a0', 48, 26); // counter
+    px(c, 0, 4, '#d8d0c0', 48, 4);
+    px(c, 2, 12, '#8d5a34', 14, 18); // cupboard doors
+    px(c, 3, 13, '#a36c40', 12, 16);
+    px(c, 13, 20, '#f2c94c', 1, 2);
+    px(c, 18, 8, '#3a3a46', 14, 22); // stove
+    px(c, 20, 10, '#1d1d24', 10, 3);
+    px(c, 21, 15, '#5a5a66', 8, 12);
+    px(c, 22, 5, '#2b2b2b', 4, 2); px(c, 27, 5, '#2b2b2b', 4, 2);
+    px(c, 34, 12, '#8d5a34', 12, 18);
+    px(c, 35, 13, '#a36c40', 10, 16);
+    px(c, 36, 0, '#b3402f', 8, 5); // a pot
+    px(c, 37, 0, '#cf5a43', 3, 2);
+  }, true);
+  canvas(scene, 'in-table', 32, 24, (c) => {
+    px(c, 0, 4, '#8d5a34', 32, 10);
+    px(c, 0, 4, '#a36c40', 32, 3);
+    px(c, 2, 14, '#6b4224', 3, 10); px(c, 27, 14, '#6b4224', 3, 10);
+    px(c, 11, 0, '#f4f1e8', 10, 5); // a bowl of fruit
+    px(c, 12, 0, '#e2434b', 3, 3); px(c, 16, 0, '#f2c94c', 3, 3);
+  }, true);
+  canvas(scene, 'in-chair', TILE, TILE, (c) => {
+    px(c, 3, 0, '#8d5a34', 10, 8);
+    px(c, 4, 1, '#a36c40', 8, 6);
+    px(c, 3, 8, '#a36c40', 10, 3);
+    px(c, 3, 11, '#6b4224', 2, 5); px(c, 11, 11, '#6b4224', 2, 5);
+  }, true);
+  canvas(scene, 'in-rug', 64, 40, (c) => {
+    px(c, 0, 0, '#b3402f', 64, 40);
+    px(c, 3, 3, '#cf5a43', 58, 34);
+    px(c, 6, 6, '#e8c35a', 52, 28);
+    px(c, 8, 8, '#cf5a43', 48, 24);
+    for (let x = 12; x < 52; x += 8) px(c, x, 18, '#e8c35a', 4, 4);
+  });
+  canvas(scene, 'in-shelf', 32, 40, (c) => {
+    px(c, 0, 0, '#6b4224', 32, 40);
+    px(c, 2, 2, '#8d5a34', 28, 36);
+    const cols = ['#3f7fbf', '#e2434b', '#5fb04a', '#f2c94c', '#6b3fa0', '#e88a2d'];
+    for (const y of [4, 16, 28]) {
+      for (let x = 3, i = 0; x < 28; x += 4, i++) px(c, x, y, cols[(i + y) % cols.length], 3, 9);
+      px(c, 2, y + 9, '#6b4224', 28, 2);
+    }
+  }, true);
+  canvas(scene, 'in-tv', 32, 32, (c) => {
+    px(c, 2, 18, '#6b4224', 28, 14); // cabinet
+    px(c, 3, 19, '#8d5a34', 26, 12);
+    px(c, 15, 24, '#f2c94c', 2, 2);
+    px(c, 4, 2, '#2b2b2b', 24, 16); // CRT
+    px(c, 6, 4, '#4aa3df', 20, 12);
+    px(c, 7, 5, '#8fd0f5', 8, 3);
+    px(c, 10, 0, '#2b2b2b', 1, 2); px(c, 21, 0, '#2b2b2b', 1, 2);
+  }, true);
+  canvas(scene, 'in-wardrobe', 32, 44, (c) => {
+    px(c, 0, 0, '#6b4224', 32, 44);
+    px(c, 2, 2, '#8d5a34', 13, 40);
+    px(c, 17, 2, '#8d5a34', 13, 40);
+    px(c, 3, 3, '#a36c40', 11, 38);
+    px(c, 18, 3, '#a36c40', 11, 38);
+    px(c, 13, 20, '#f2c94c', 1, 3); px(c, 18, 20, '#f2c94c', 1, 3);
+  }, true);
+  canvas(scene, 'in-plant', TILE, 24, (c) => {
+    px(c, 4, 16, '#b3402f', 8, 8);
+    px(c, 4, 16, '#cf5a43', 8, 2);
+    disc(c, 8, 9, 6, '#3f9a45', '#5cbc5c', '#2c7434');
+    px(c, 7, 2, '#5cbc5c', 2, 4);
+  }, true);
+  canvas(scene, 'in-mat', 32, 14, (c) => {
+    px(c, 0, 0, '#8a6a45', 32, 14);
+    px(c, 2, 2, '#b8955f', 28, 10);
+    for (let x = 4; x < 28; x += 3) px(c, x, 4, '#8a6a45', 1, 6);
+  });
+  canvas(scene, 'in-calendar', 14, 16, (c) => {
+    px(c, 0, 0, '#ffffff', 14, 16);
+    px(c, 0, 0, '#e2434b', 14, 4);
+    for (let y = 6; y < 15; y += 3) for (let x = 2; x < 13; x += 3) px(c, x, y, '#b8b0a0', 2, 2);
+  }, true);
+  canvas(scene, 'in-lamp', TILE, 20, (c) => {
+    px(c, 7, 0, '#3a3a46', 2, 8);
+    px(c, 3, 8, '#e8c35a', 10, 6);
+    px(c, 4, 8, '#f7df8e', 4, 6);
+    px(c, 5, 14, '#fff3c4', 6, 2);
+  }, true);
+
   // ---------- village & lake ----------
   canvas(scene, 'stone', TILE, TILE, (c) => {
     px(c, 0, 0, '#b9b3a6', TILE, TILE);

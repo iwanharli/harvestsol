@@ -210,17 +210,19 @@ test('joystick sentuh menggerakkan pemain', async ({ page }) => {
 
 test('memasak di dapur lalu makan untuk tenaga', async ({ page }) => {
   const errors = await start(page);
-  // before level 3 the door only offers sleep
-  await at(page, 5, 6, 'up');
+  await at(page, 5, 6, 'up'); // farmhouse door
   await press(page, 'Space');
-  expect((await page.evaluate(() => window.game.scene.getScene('ui').modalKind))).toBe('');
-  await press(page, 'Escape');
+  await page.waitForTimeout(700);
+  expect(await page.evaluate(() => window.game.registry.get('indoors'))).toBe(true);
+
+  // the stove refuses before Lv 3
+  await at(page, 109, 8, 'up');
+  await press(page, 'Space');
+  expect((await toasts(page)).join()).toContain('Level 3');
 
   await patch(page, 's.level = 3; s.stamina = 50; s.produce = { kangkung: 2 }');
   await press(page, 'Space');
-  await page.mouse.click(480, 288); // "Dapur"
-  await page.waitForTimeout(100);
-  await page.screenshot({ path: 'test-results/dapur.png' });
+  expect(await page.evaluate(() => window.game.scene.getScene('ui').modalKind)).toBe('');
   await page.mouse.click(308, 176); // "Masak" on Tumis Kangkung
   await page.waitForTimeout(100);
   let s = await state(page);
@@ -233,6 +235,40 @@ test('memasak di dapur lalu makan untuk tenaga', async ({ page }) => {
   s = await state(page);
   expect(s.produce).toEqual({});
   expect(s.stamina).toBe(75);
+  noErrors(errors);
+});
+
+test('rumah: masuk, perabot, tidur bangun di kasur, keluar lewat keset', async ({ page }) => {
+  const errors = await start(page);
+  await at(page, 5, 6, 'up');
+  await press(page, 'Space');
+  await page.waitForTimeout(700);
+  expect(await page.evaluate(() => window.game.registry.get('indoors'))).toBe(true);
+
+  await at(page, 102, 7, 'left'); // facing the bed
+  await press(page, 'Space');
+  expect(await page.evaluate(() => window.game.registry.get('modal'))).toBe(true);
+  await press(page, 'Escape');
+
+  await at(page, 106, 8, 'up'); // bookshelf → fish book
+  await press(page, 'Space');
+  expect(await page.evaluate(() => window.game.scene.getScene('ui').modalKind)).toBe('fishbook');
+  await press(page, 'Escape');
+
+  await at(page, 112, 8, 'right'); // wardrobe → stamina record
+  await press(page, 'Space');
+  expect(await page.evaluate(() => window.game.registry.get('modal'))).toBe(true);
+  await press(page, 'Escape');
+
+  await sleep(page); // wake up indoors, next to the bed
+  expect(await page.evaluate(() => window.game.registry.get('indoors'))).toBe(true);
+
+  await at(page, 107, 12, 'down'); // step onto the doormat
+  await page.keyboard.down('s');
+  await page.waitForTimeout(250);
+  await page.keyboard.up('s');
+  await page.waitForTimeout(700);
+  expect(await page.evaluate(() => window.game.registry.get('indoors'))).toBe(false);
   noErrors(errors);
 });
 

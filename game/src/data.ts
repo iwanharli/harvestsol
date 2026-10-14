@@ -252,6 +252,7 @@ export const NPC_LINES: Record<string, string[]> = {
 
 /** Named areas, shown as a banner when the player walks in. First match wins. */
 export const ZONES: { name: string; x0: number; y0: number; x1: number; y1: number }[] = [
+  { name: 'Rumah', x0: 100, y0: 4, x1: 113, y1: 13 }, // the farmhouse interior (east of the map)
   { name: 'Ladang', x0: 0, y0: 0, x1: 33, y1: 21 },
   { name: 'Perkampungan Warga', x0: 34, y0: 0, x1: 63, y1: 23 },
   { name: 'Hutan Kecil', x0: 44, y0: 24, x1: 63, y1: 39 },
