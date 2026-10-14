@@ -32,6 +32,7 @@ function canvas(scene: Phaser.Scene, key: string, w: number, h: number, draw: (c
   draw(ctx);
   if (line) outline(ctx, w, h);
   tex.refresh();
+  tex.setFilter(Phaser.Textures.FilterMode.NEAREST); // crisp pixels even though the game antialiases
 }
 
 const px = (c: Ctx, x: number, y: number, color: string, w = 1, h = 1) => {

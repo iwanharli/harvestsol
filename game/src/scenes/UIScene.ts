@@ -36,7 +36,7 @@ import {
 } from '../data';
 import { play, setRain, unlockAudio } from '../sfx';
 import { startMusic } from '../music';
-import { C, HEX, bar as drawBar, card, glass, segmented, txt, well } from '../ui/theme';
+import { C, HEX, UI_SCALE, VIEW, bar as drawBar, card, glass, segmented, txt, well } from '../ui/theme';
 import {
   add,
   bagCapacity,
@@ -105,22 +105,22 @@ export class UIScene extends Phaser.Scene {
 
   create() {
     this.state = this.registry.get('state');
-    const { width: W, height: H } = this.scale;
+    this.cameras.main.setZoom(UI_SCALE).centerOn(VIEW.w / 2, VIEW.h / 2);
+    const { w: W, h: H } = VIEW;
 
     this.buildWeather();
 
     // top-left: date, time, coins, bars
-    this.panel(12, 12, 250, 124);
-    this.dateText = this.add.text(28, 22, '', txt(15, C.secondary));
-    this.levelText = this.add.text(246, 22, '', txt(15, C.purple)).setOrigin(1, 0);
-    this.coinText = this.add.text(28, 42, '', txt(20, C.orange));
+    this.panel(12, 12, 250, 104);
+    this.dateText = this.add.text(28, 22, '', txt(14, C.secondary));
+    this.levelText = this.add.text(246, 22, '', txt(14, C.purple)).setOrigin(1, 0);
     this.bars = this.add.graphics();
     this.buildClock();
 
     // top-right: bag
     this.panel(W - 232, 12, 220, 112);
     this.bagTitle = this.add.text(W - 216, 22, 'Tas', txt(16));
-    this.add.text(W - 28, 24, '[I] buka', txt(12, C.tertiary, false)).setOrigin(1, 0);
+    this.coinText = this.add.text(W - 28, 22, '', txt(16, C.orange)).setOrigin(1, 0);
     this.bagMini = this.add.container(0, 0);
     this.bagText = this.add.text(W - 216, 96, '', txt(11, C.secondary, false));
     const bagHit = this.add.zone(W - 232, 12, 220, 112).setOrigin(0).setInteractive({ useHandCursor: true });
@@ -147,7 +147,7 @@ export class UIScene extends Phaser.Scene {
         else this.farm.setTool(i);
       });
       this.slots.push({ frame, label, icon });
-      if (t.id === 'benih') this.seedIcon = this.add.image(x + slotW - 12, y + 12, 'icon-kangkung').setScale(1.2);
+      if (t.id === 'benih') this.seedIcon = this.add.image(x + slotW - 12, y + 12, 'icon-kangkung').setScale(1);
     });
 
     this.toastBg = this.add.graphics().setDepth(199).setAlpha(0);
@@ -222,17 +222,21 @@ export class UIScene extends Phaser.Scene {
     this.refreshClock();
 
     const g = this.bars.clear();
-    const bar = (y: number, frac: number, color: number, label: string) => {
-      drawBar(g, 86, y + 2, 158, frac, color);
-      if (!this.children.getByName(label)) this.add.text(28, y - 2, label, txt(12, C.secondary)).setName(label); // created once
+    const bar = (y: number, value: number, max: number, color: number, label: string) => {
+      drawBar(g, 82, y + 3, 104, value / max, color);
+      // label and value are created once, then only their text changes
+      if (!this.children.getByName(label)) this.add.text(28, y - 1, label, txt(12, C.secondary)).setName(label);
+      const key = `${label}-val`;
+      const v = (this.children.getByName(key) as Phaser.GameObjects.Text | null) ?? this.add.text(246, y - 1, '', txt(12, INK)).setOrigin(1, 0).setName(key);
+      v.setText(`${Math.floor(value)}/${max}`);
     };
-    bar(76, s.stamina / STAMINA_MAX, HEX.orange, 'Tenaga');
-    bar(94, s.water / WATER_CAN_MAX, HEX.blue, 'Air');
-    bar(112, s.xp / xpToNext(s.level), HEX.purple, 'XP');
+    bar(46, s.stamina, STAMINA_MAX, HEX.orange, 'Tenaga');
+    bar(66, s.water, WATER_CAN_MAX, HEX.blue, 'Air');
+    bar(86, s.xp, xpToNext(s.level), HEX.purple, 'XP');
     this.levelText.setText(`Lv ${s.level}`);
 
     // HUD bag: a row of mini slots plus one status line
-    const W = this.scale.width;
+    const W = VIEW.w;
     this.bagMini.removeAll(true);
     const used = slotsUsed(s), cap = bagCapacity(s);
     this.bagTitle.setText(`Tas ${used}/${cap}`).setColor(used >= cap ? C.red : INK);
@@ -242,7 +246,7 @@ export class UIScene extends Phaser.Scene {
       const sx = W - 216 + i * 38;
       const g = this.add.graphics();
       card(g, sx, 46, 34, 34, 'muted', 9);
-      this.bagMini.add([g, this.add.image(sx + 17, 63, `icon-${baseId(id)}`).setScale(1.6), this.add.text(sx + 33, 80, `${q}`, txt(11)).setOrigin(1, 1)]);
+      this.bagMini.add([g, this.add.image(sx + 17, 63, `icon-${baseId(id)}`).setScale(1.5), this.add.text(sx + 33, 80, `${q}`, txt(11)).setOrigin(1, 1)]);
       const badge = this.starBadge(sx + 2, 47, id, 9);
       if (badge) this.bagMini.add(badge);
     });
@@ -260,8 +264,8 @@ export class UIScene extends Phaser.Scene {
       const locked = needsPurchase(t.id) && !s.ownedTools.includes(t.id);
       icon.setTint(locked ? 0x8a8070 : 0xffffff).setAlpha(locked ? 0.45 : 1);
       label.setText(locked ? '🔒 Toko' : t.name);
-      const x = this.scale.width / 2 - (TOOLS.length * 74 - 10) / 2 + i * 74;
-      const y = this.scale.height - 78;
+      const x = VIEW.w / 2 - (TOOLS.length * 74 - 10) / 2 + i * 74;
+      const y = VIEW.h - 78;
       const on = s.tool === t.id;
       frame.clear();
       glass(frame, x, y, 64, 64, 16, { alpha: on ? 0.96 : 0.72, shadow: on ? 10 : 6 });
@@ -314,7 +318,7 @@ export class UIScene extends Phaser.Scene {
   private modalBox?: { top: number; bottom: number };
 
   private placeToast() {
-    const H = this.scale.height;
+    const H = VIEW.h;
     const m = this.modalLayer ? this.modalBox : undefined;
     if (!m) this.toastText.setY(H - 100);
     else if (m.bottom + 30 <= H) this.toastText.setY(m.bottom + 28);
@@ -326,7 +330,7 @@ export class UIScene extends Phaser.Scene {
     this.closeModal(false);
     this.registry.set('modal', true);
     this.touchLayer?.setVisible(false);
-    const { width: W, height: H } = this.scale;
+    const { w: W, h: H } = VIEW;
     const c = this.add.container(0, 0).setDepth(100);
     const dim = this.add.rectangle(0, 0, W, H, 0x101418, 0.25).setOrigin(0).setInteractive();
     c.add(dim);
@@ -744,7 +748,7 @@ export class UIScene extends Phaser.Scene {
       const g = this.add.graphics();
       card(g, cx, cy, 60, 56, baseId(id) === theme.id ? 'today' : 'normal', 14);
       c.add(g);
-      c.add(this.add.image(cx + 30, cy + 24, `icon-${baseId(id)}`).setScale(2.2));
+      c.add(this.add.image(cx + 30, cy + 24, `icon-${baseId(id)}`).setScale(2.5));
       const cb = this.starBadge(cx + 4, cy + 3, id, 10);
       if (cb) c.add(cb);
       c.add(this.add.text(cx + 56, cy + 52, `${q}`, txt(12)).setOrigin(1, 1));
@@ -885,7 +889,7 @@ export class UIScene extends Phaser.Scene {
       const on = this.invSel?.bag === cl.bag && this.invSel.id === cl.id;
       const active = cl.bag === 'seeds' && s.seed === cl.id;
       card(g, sx, sy, SZ, SZ, on ? 'selected' : 'normal', 12);
-      c.add(this.add.image(sx + SZ / 2, sy + SZ / 2 - 2, cl.icon).setScale(2.2));
+      c.add(this.add.image(sx + SZ / 2, sy + SZ / 2 - 2, cl.icon).setScale(2.5));
       c.add(this.add.text(sx + SZ - 4, sy + SZ - 2, `${cl.qty}`, { ...txt(11, C.secondary), stroke: '#ffffff', strokeThickness: 3 }).setOrigin(1, 1));
       if (cl.bag === 'produce') {
         const sb = this.starBadge(sx + 3, sy + 2, cl.id, 10);
@@ -1023,7 +1027,7 @@ export class UIScene extends Phaser.Scene {
   private areaBanner(name: string) {
     this.banner?.destroy(); // a newer area replaces the old banner
     const t = this.add
-      .text(this.scale.width / 2, 150, name, { ...txt(26, C.white), shadow: { offsetX: 0, offsetY: 2, color: 'rgba(0,0,0,0.45)', blur: 8, fill: true } })
+      .text(VIEW.w / 2, 150, name, { ...txt(26, C.white), shadow: { offsetX: 0, offsetY: 2, color: 'rgba(0,0,0,0.45)', blur: 8, fill: true } })
       .setOrigin(0.5)
       .setAlpha(0)
       .setDepth(150);
@@ -1044,7 +1048,7 @@ export class UIScene extends Phaser.Scene {
   private touchLayer?: Phaser.GameObjects.Container;
 
   private buildTouchControls() {
-    const { width: W, height: H } = this.scale;
+    const { w: W, h: H } = VIEW;
     this.input.addPointer(2); // joystick and action button at the same time
     const layer = this.add.container(0, 0).setDepth(50);
     this.touchLayer = layer;
@@ -1056,7 +1060,7 @@ export class UIScene extends Phaser.Scene {
     layer.add([base, knob]);
     let pid = -1;
     const move = (p: Phaser.Input.Pointer) => {
-      const dx = p.x - jx, dy = p.y - jy;
+      const dx = p.x / UI_SCALE - jx, dy = p.y / UI_SCALE - jy;
       const d = Math.min(R, Math.hypot(dx, dy));
       const a = Math.atan2(dy, dx);
       knob.setPosition(jx + Math.cos(a) * d, jy + Math.sin(a) * d);
@@ -1069,7 +1073,7 @@ export class UIScene extends Phaser.Scene {
     };
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       if (this.registry.get('modal')) return;
-      if (Math.hypot(p.x - jx, p.y - jy) < R * 1.5) {
+      if (Math.hypot(p.x / UI_SCALE - jx, p.y / UI_SCALE - jy) < R * 1.5) {
         pid = p.id;
         move(p);
       }
@@ -1123,7 +1127,7 @@ export class UIScene extends Phaser.Scene {
       card(g, cx, cy, cw, ch, ready ? 'ready' : 'normal', 16);
       well(g, cx + 32, cy + 38, 24);
       c.add(g);
-      c.add(this.add.image(cx + 32, cy + 38, `icon-${d.id}`).setScale(2.4));
+      c.add(this.add.image(cx + 32, cy + 38, `icon-${d.id}`).setScale(2.5));
       c.add(this.add.text(cx + 62, cy + 8, d.name, txt(14)));
       Object.entries(d.ingredients).forEach(([id, n], j) => {
         const have = countBase(s, id);
@@ -1159,7 +1163,7 @@ export class UIScene extends Phaser.Scene {
   private shownWeather = '';
 
   private buildWeather() {
-    const { width: W, height: H } = this.scale;
+    const { w: W, h: H } = VIEW;
     this.gloom = this.add.rectangle(0, 0, W, H, 0x24304a, 0).setOrigin(0);
     this.rain = this.add.particles(0, 0, 'raindrop', {
       x: { min: -60, max: W + 240 },
@@ -1227,12 +1231,12 @@ export class UIScene extends Phaser.Scene {
 
   /** Compact pill at the top centre: weather, time, day. Click (or K) for the calendar. */
   private buildClock() {
-    const W = this.scale.width;
+    const W = VIEW.w;
     const w = 248, h = 46, x = W / 2 - w / 2, y = 10;
     const g = this.add.graphics();
     glass(g, x, y, w, h, h / 2, { alpha: 0.8, shadow: 10 });
     g.fillStyle(HEX.hairline, 0.1).fillRect(x + 132, y + 12, 1, h - 24);
-    this.clockIcon = this.add.image(x + 30, y + h / 2, 'wx-cerah').setScale(1.9);
+    this.clockIcon = this.add.image(x + 30, y + h / 2, 'wx-cerah').setScale(2);
     this.timeText = this.add.text(x + 52, y + h / 2, '', txt(24, C.ink)).setOrigin(0, 0.5);
     this.clockDay = this.add.text(x + 146, y + 9, '', txt(14));
     this.clockSub = this.add.text(x + 146, y + 27, '', txt(11, C.secondary, false));
@@ -1279,9 +1283,9 @@ export class UIScene extends Phaser.Scene {
       c.add(this.add.text(cx + 8, cy + 6, `${d}`, txt(13, past ? C.disabled : isToday ? C.blue : INK)));
       // weather: today and the forecast window; nothing for days we cannot see yet
       const wx = isToday ? s.weather : ahead >= 1 && ahead <= s.forecasts.length ? s.forecasts[ahead - 1] : null;
-      if (wx) c.add(this.add.image(cx + cw - 20, cy + 20, `wx-${wx}`).setScale(1.6));
+      if (wx) c.add(this.add.image(cx + cw - 20, cy + 20, `wx-${wx}`).setScale(1.5));
       if (festival) {
-        c.add(this.add.image(cx + 14, cy + ch - 16, `icon-${festivalTheme(abs).id}`).setScale(1.3).setAlpha(past ? 0.5 : 1));
+        c.add(this.add.image(cx + 14, cy + ch - 16, `icon-${festivalTheme(abs).id}`).setScale(1.5).setAlpha(past ? 0.5 : 1));
         c.add(this.add.text(cx + cw - 5, cy + ch - 5, 'Festival', txt(10, past ? C.disabled : C.red)).setOrigin(1, 1));
       } else if (isToday) c.add(this.add.text(cx + cw - 5, cy + ch - 5, 'Hari ini', txt(10, C.blue)).setOrigin(1, 1));
     }
