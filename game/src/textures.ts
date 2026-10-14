@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CROPS, TILE } from './data';
+import { CROPS, DISHES, TILE } from './data';
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -723,6 +723,25 @@ export function makeTextures(scene: Phaser.Scene) {
     px(c, 7, 11, '#f2c94c', 2, 2);
     px(c, 3, 4, '#c08a55', 1, 11);
   }, true);
+
+  // ---------- dishes: food on a plate ----------
+  for (const d of DISHES) {
+    canvas(scene, `icon-${d.id}`, TILE, TILE, (c) => {
+      // plate
+      for (let x = 1; x < 15; x++) px(c, x, 11, '#d8dde2');
+      px(c, 2, 12, '#b9c0c7', 12, 1);
+      px(c, 3, 10, '#f4f6f8', 10, 1);
+      // food mound with a highlight
+      const light = Phaser.Display.Color.HexStringToColor(d.color).lighten(20).rgba;
+      const dark = Phaser.Display.Color.HexStringToColor(d.color).darken(18).rgba;
+      disc(c, 8, 8, 4, d.color, light, dark);
+      px(c, 4, 9, d.color, 8, 2);
+      // steam
+      px(c, 6, 1, '#ffffff', 1, 2);
+      px(c, 9, 0, '#ffffff', 1, 2);
+      px(c, 7, 3, '#ffffff');
+    }, true);
+  }
 
   // ---------- fish & fishing ----------
   const fish: Record<string, [string, string, string]> = {
