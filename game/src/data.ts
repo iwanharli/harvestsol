@@ -25,19 +25,19 @@ export interface CropDef {
 }
 
 export const CROPS: CropDef[] = [
-  { id: 'kangkung', name: 'Kangkung', seasons: ['Tanam', 'Hujan'], seedPrice: 15, sellPrice: 35, days: 2, level: 1, color: '#3f9a3f', leaf: '#5fb04a' },
-  { id: 'timun', name: 'Timun', seasons: ['Hujan', 'Panen'], seedPrice: 25, sellPrice: 60, days: 3, level: 2, color: '#7cbf4a', leaf: '#4f9a3f' },
-  { id: 'terong', name: 'Terong', seasons: ['Hujan'], seedPrice: 30, sellPrice: 75, days: 4, level: 2, color: '#6b3fa0', leaf: '#4a9a3d' },
-  { id: 'tomat', name: 'Tomat', seasons: ['Panen'], seedPrice: 35, sellPrice: 80, days: 4, level: 2, color: '#e5533d', leaf: '#4a9a3d' },
-  { id: 'ubi', name: 'Ubi', seasons: ['Panen', 'Kemarau'], seedPrice: 30, sellPrice: 70, days: 4, level: 2, color: '#a0527d', leaf: '#5b9c46' },
-  { id: 'padi', name: 'Padi', seasons: ['Tanam', 'Hujan'], seedPrice: 50, sellPrice: 130, days: 6, level: 3, color: '#e8c35a', leaf: '#7fb84a' },
-  { id: 'cabai', name: 'Cabai', seasons: ['Tanam', 'Kemarau'], seedPrice: 40, sellPrice: 105, days: 5, level: 3, color: '#d62828', leaf: '#3f8a3a' },
-  { id: 'singkong', name: 'Singkong', seasons: ['Kemarau'], seedPrice: 45, sellPrice: 115, days: 6, level: 3, color: '#a0703f', leaf: '#4f9a3f' },
-  { id: 'jagung', name: 'Jagung', seasons: ['Panen', 'Kemarau'], seedPrice: 60, sellPrice: 150, days: 7, level: 4, color: '#f2cf3c', leaf: '#6aa84f' },
-  { id: 'kedelai', name: 'Kedelai', seasons: ['Panen'], seedPrice: 40, sellPrice: 95, days: 5, level: 4, color: '#c9b16a', leaf: '#5b9c46' },
-  { id: 'semangka', name: 'Semangka', seasons: ['Kemarau'], seedPrice: 90, sellPrice: 260, days: 8, level: 6, color: '#3f8a3a', leaf: '#4f9a3f' },
+  { id: 'kangkung', name: 'Kangkung', seasons: ['Tanam', 'Hujan'], seedPrice: 15, sellPrice: 30, days: 3, level: 1, color: '#3f9a3f', leaf: '#5fb04a' },
+  { id: 'timun', name: 'Timun', seasons: ['Hujan', 'Panen'], seedPrice: 25, sellPrice: 50, days: 4, level: 2, color: '#7cbf4a', leaf: '#4f9a3f' },
+  { id: 'terong', name: 'Terong', seasons: ['Hujan'], seedPrice: 30, sellPrice: 65, days: 5, level: 2, color: '#6b3fa0', leaf: '#4a9a3d' },
+  { id: 'tomat', name: 'Tomat', seasons: ['Panen'], seedPrice: 35, sellPrice: 70, days: 5, level: 2, color: '#e5533d', leaf: '#4a9a3d' },
+  { id: 'ubi', name: 'Ubi', seasons: ['Panen', 'Kemarau'], seedPrice: 30, sellPrice: 60, days: 5, level: 2, color: '#a0527d', leaf: '#5b9c46' },
+  { id: 'padi', name: 'Padi', seasons: ['Tanam', 'Hujan'], seedPrice: 50, sellPrice: 110, days: 7, level: 3, color: '#e8c35a', leaf: '#7fb84a' },
+  { id: 'cabai', name: 'Cabai', seasons: ['Tanam', 'Kemarau'], seedPrice: 40, sellPrice: 95, days: 6, level: 3, color: '#d62828', leaf: '#3f8a3a' },
+  { id: 'singkong', name: 'Singkong', seasons: ['Kemarau'], seedPrice: 45, sellPrice: 100, days: 7, level: 3, color: '#a0703f', leaf: '#4f9a3f' },
+  { id: 'jagung', name: 'Jagung', seasons: ['Panen', 'Kemarau'], seedPrice: 60, sellPrice: 140, days: 8, level: 4, color: '#f2cf3c', leaf: '#6aa84f' },
+  { id: 'kedelai', name: 'Kedelai', seasons: ['Panen'], seedPrice: 40, sellPrice: 90, days: 6, level: 4, color: '#c9b16a', leaf: '#5b9c46' },
+  { id: 'semangka', name: 'Semangka', seasons: ['Kemarau'], seedPrice: 90, sellPrice: 220, days: 9, level: 6, color: '#3f8a3a', leaf: '#4f9a3f' },
   // high-level perennial: expensive, slow, then fruits every few days in any season
-  { id: 'sawit', name: 'Sawit', seasons: ['Tanam', 'Hujan', 'Panen', 'Kemarau'], seedPrice: 2000, sellPrice: 300, days: 14, level: 12, regrow: 5, allSeasons: true, color: '#d9541e', leaf: '#2f7d3a' },
+  { id: 'sawit', name: 'Sawit', seasons: ['Tanam', 'Hujan', 'Panen', 'Kemarau'], seedPrice: 6000, sellPrice: 200, days: 14, level: 12, regrow: 7, allSeasons: true, color: '#d9541e', leaf: '#2f7d3a' },
 ];
 
 /** Crop ids from the temperate first version, mapped to their tropical replacement. */
@@ -62,7 +62,7 @@ export const TOOLS: { id: Tool; name: string; key: string }[] = [
 
 export const WATER_CAN_MAX = 20;
 export const STAMINA_MAX = 100;
-export const STAMINA_COST: Record<Tool, number> = { cangkul: 2, siram: 1, benih: 0, tangan: 0, pancing: 3 };
+export const STAMINA_COST: Record<Tool, number> = { cangkul: 2, siram: 2, benih: 0, tangan: 0, pancing: 4 };
 
 // Clock: 1 real second = 1.5 game minutes, so a day (06:00–24:00) lasts 12 real minutes.
 export const DAY_START_MIN = 6 * 60;
@@ -80,7 +80,7 @@ export interface ItemDef {
 
 export const ITEMS: ItemDef[] = [
   { id: 'pupuk', name: 'Pupuk Cepat', price: 50, desc: 'tumbuh 2× per malam', level: 3 },
-  { id: 'sprinkler', name: 'Sprinkler', price: 400, desc: 'siram 8 petak tiap pagi', level: 5 },
+  { id: 'sprinkler', name: 'Sprinkler', price: 1500, desc: 'siram 8 petak tiap pagi', level: 5 },
 ];
 
 export const isItem = (id: string) => ITEMS.some((i) => i.id === id);
@@ -100,10 +100,10 @@ export const REQUEST_DAYS = 3;
 
 // ---------- levels ----------
 
-export const XP = { till: 1, water: 1, plant: 2, harvestPerDay: 2, request: 25 };
+export const XP = { till: 1, water: 1, plant: 2, harvestPerDay: 1, request: 25 };
 
 /** XP needed to go from level l to l+1. */
-export const xpToNext = (l: number) => Math.round(40 * Math.pow(l, 1.6));
+export const xpToNext = (l: number) => Math.round(55 * Math.pow(l, 1.6));
 
 export const FEATURE_LEVEL = { board: 2, kitchen: 3, coop: 7 };
 
@@ -125,8 +125,8 @@ export function unlocksAt(level: number): string[] {
 // ---------- livestock ----------
 
 export const MAX_CHICKENS = 4;
-export const CHICKEN_PRICE = 800;
-export const FEED_PRICE = 10;
+export const CHICKEN_PRICE = 2500;
+export const FEED_PRICE = 15;
 export const AFFECTION_MAX = 10;
 export const GOLDEN_EGG_AFFECTION = 8;
 
@@ -148,15 +148,15 @@ export interface Dish {
 }
 
 export const DISHES: Dish[] = [
-  { id: 'tumis-kangkung', name: 'Tumis Kangkung', ingredients: { kangkung: 2 }, sellPrice: 105, stamina: 25, color: '#3f9a3f' },
-  { id: 'singkong-goreng', name: 'Singkong Goreng', ingredients: { singkong: 2 }, sellPrice: 300, stamina: 30, color: '#e8c35a' },
+  { id: 'tumis-kangkung', name: 'Tumis Kangkung', ingredients: { kangkung: 2 }, sellPrice: 90, stamina: 25, color: '#3f9a3f' },
+  { id: 'singkong-goreng', name: 'Singkong Goreng', ingredients: { singkong: 2 }, sellPrice: 250, stamina: 30, color: '#e8c35a' },
   { id: 'telur-dadar', name: 'Telur Dadar', ingredients: { telur: 2 }, sellPrice: 140, stamina: 30, color: '#f7d65a' },
-  { id: 'ikan-bakar', name: 'Ikan Bakar', ingredients: { 'ikan-nila': 1 }, sellPrice: 75, stamina: 35, color: '#a0703f' },
-  { id: 'sambal-tomat', name: 'Sambal Tomat', ingredients: { tomat: 1, cabai: 1 }, sellPrice: 230, stamina: 20, color: '#d9402f' },
-  { id: 'jagung-bakar', name: 'Jagung Bakar', ingredients: { jagung: 1 }, sellPrice: 190, stamina: 25, color: '#e8b830' },
-  { id: 'kolak-ubi', name: 'Kolak Ubi', ingredients: { ubi: 2 }, sellPrice: 200, stamina: 40, color: '#c98a4a' },
-  { id: 'es-semangka', name: 'Es Semangka', ingredients: { semangka: 2 }, sellPrice: 650, stamina: 20, color: '#e2434b' },
-  { id: 'nasi-goreng', name: 'Nasi Goreng Spesial', ingredients: { telur: 1, padi: 1, 'ikan-lele': 1 }, sellPrice: 360, stamina: 60, color: '#c98a4a' },
+  { id: 'ikan-bakar', name: 'Ikan Bakar', ingredients: { 'ikan-nila': 1 }, sellPrice: 60, stamina: 35, color: '#a0703f' },
+  { id: 'sambal-tomat', name: 'Sambal Tomat', ingredients: { tomat: 1, cabai: 1 }, sellPrice: 210, stamina: 20, color: '#d9402f' },
+  { id: 'jagung-bakar', name: 'Jagung Bakar', ingredients: { jagung: 1 }, sellPrice: 175, stamina: 25, color: '#e8b830' },
+  { id: 'kolak-ubi', name: 'Kolak Ubi', ingredients: { ubi: 2 }, sellPrice: 160, stamina: 40, color: '#c98a4a' },
+  { id: 'es-semangka', name: 'Es Semangka', ingredients: { semangka: 2 }, sellPrice: 560, stamina: 20, color: '#e2434b' },
+  { id: 'nasi-goreng', name: 'Nasi Goreng Spesial', ingredients: { telur: 1, padi: 1, 'ikan-lele': 1 }, sellPrice: 300, stamina: 60, color: '#c98a4a' },
 ];
 
 export const dishById = (id: string) => DISHES.find((d) => d.id === id);
@@ -166,7 +166,7 @@ export const COOK_MINUTES = 30;
 // ---------- crop quality ----------
 // Bag keys carry quality as "padi@3" (3 stars). A plain "padi" is 1 star (also old saves).
 
-export const QUALITY_MULT = [1, 1, 1.25, 1.5, 2, 3]; // indexed by stars
+export const QUALITY_MULT = [1, 1, 1.2, 1.4, 1.7, 2.2]; // indexed by stars
 export const baseId = (key: string) => key.split('@')[0];
 export const starsOf = (key: string) => Number(key.split('@')[1] ?? 1);
 export const qualityKey = (id: string, stars: number) => (stars > 1 ? `${id}@${stars}` : id);
@@ -273,19 +273,19 @@ export interface FishDef {
 }
 
 export const FISH: FishDef[] = [
-  { id: 'ikan-nila', name: 'Ikan Nila', sellPrice: 45, where: ['kolam', 'danau'], hours: [6, 24], weight: 40, colors: ['#8a9aa8', '#b8c6d2', '#5f6f7d'] },
-  { id: 'ikan-mas', name: 'Ikan Mas', sellPrice: 60, where: ['kolam', 'danau'], hours: [6, 20], weight: 30, colors: ['#e88a2d', '#f4b66a', '#b8651c'] },
-  { id: 'ikan-betok', name: 'Ikan Betok', sellPrice: 55, where: ['kolam'], hours: [6, 12], weight: 22, colors: ['#7a8a5a', '#a0b07a', '#556040'] },
-  { id: 'ikan-lele', name: 'Ikan Lele', sellPrice: 80, where: ['danau'], seasons: ['Tanam', 'Hujan'], hours: [18, 24], weight: 26, rain: 'bonus', colors: ['#5a5248', '#7d746a', '#3b352f'] },
-  { id: 'ikan-belut', name: 'Belut', sellPrice: 100, where: ['kolam'], seasons: ['Tanam', 'Hujan'], hours: [18, 24], weight: 16, rain: 'only', colors: ['#6a5a3a', '#8f7a52', '#4a3f2a'], shape: 'eel' },
-  { id: 'ikan-gabus', name: 'Ikan Gabus', sellPrice: 95, where: ['danau'], seasons: ['Hujan', 'Panen'], hours: [6, 18], weight: 18, colors: ['#4f5a4a', '#6f7a68', '#353d32'], shape: 'long' },
-  { id: 'ikan-patin', name: 'Ikan Patin', sellPrice: 110, where: ['danau'], seasons: ['Panen', 'Kemarau'], hours: [6, 18], weight: 15, colors: ['#9aa6b2', '#c8d2dc', '#6a7682'] },
-  { id: 'ikan-gurame', name: 'Ikan Gurame', sellPrice: 130, where: ['danau'], hours: [9, 17], weight: 14, colors: ['#b8a07a', '#d8c4a0', '#8a7452'] },
-  { id: 'ikan-bawal', name: 'Ikan Bawal', sellPrice: 120, where: ['danau'], seasons: ['Kemarau'], hours: [12, 24], weight: 12, colors: ['#5a6a7a', '#8a9aaa', '#3a4a5a'] },
-  { id: 'ikan-udang', name: 'Udang Galah', sellPrice: 150, where: ['danau'], seasons: ['Hujan'], hours: [18, 24], weight: 10, rain: 'bonus', colors: ['#5f8fb0', '#8fbfdf', '#3f6f90'], shape: 'shrimp' },
-  { id: 'ikan-koi', name: 'Ikan Koi', sellPrice: 250, where: ['kolam'], seasons: ['Panen'], hours: [10, 16], weight: 5, colors: ['#f4f1e8', '#ffffff', '#e2434b'] },
-  { id: 'ikan-emas', name: 'Ikan Emas', sellPrice: 300, where: ['danau'], hours: [6, 24], weight: 3, rain: 'bonus', colors: ['#f2c94c', '#fff3a8', '#c99a2e'] },
-  { id: 'ikan-arwana', name: 'Ikan Arwana', sellPrice: 600, where: ['danau'], seasons: ['Kemarau'], hours: [18, 24], weight: 2, colors: ['#d9b45a', '#f2dc94', '#a8843a'], shape: 'long' },
+  { id: 'ikan-nila', name: 'Ikan Nila', sellPrice: 25, where: ['kolam', 'danau'], hours: [6, 24], weight: 40, colors: ['#8a9aa8', '#b8c6d2', '#5f6f7d'] },
+  { id: 'ikan-mas', name: 'Ikan Mas', sellPrice: 35, where: ['kolam', 'danau'], hours: [6, 20], weight: 30, colors: ['#e88a2d', '#f4b66a', '#b8651c'] },
+  { id: 'ikan-betok', name: 'Ikan Betok', sellPrice: 30, where: ['kolam'], hours: [6, 12], weight: 22, colors: ['#7a8a5a', '#a0b07a', '#556040'] },
+  { id: 'ikan-lele', name: 'Ikan Lele', sellPrice: 50, where: ['danau'], seasons: ['Tanam', 'Hujan'], hours: [18, 24], weight: 26, rain: 'bonus', colors: ['#5a5248', '#7d746a', '#3b352f'] },
+  { id: 'ikan-belut', name: 'Belut', sellPrice: 60, where: ['kolam'], seasons: ['Tanam', 'Hujan'], hours: [18, 24], weight: 16, rain: 'only', colors: ['#6a5a3a', '#8f7a52', '#4a3f2a'], shape: 'eel' },
+  { id: 'ikan-gabus', name: 'Ikan Gabus', sellPrice: 55, where: ['danau'], seasons: ['Hujan', 'Panen'], hours: [6, 18], weight: 18, colors: ['#4f5a4a', '#6f7a68', '#353d32'], shape: 'long' },
+  { id: 'ikan-patin', name: 'Ikan Patin', sellPrice: 65, where: ['danau'], seasons: ['Panen', 'Kemarau'], hours: [6, 18], weight: 15, colors: ['#9aa6b2', '#c8d2dc', '#6a7682'] },
+  { id: 'ikan-gurame', name: 'Ikan Gurame', sellPrice: 80, where: ['danau'], hours: [9, 17], weight: 14, colors: ['#b8a07a', '#d8c4a0', '#8a7452'] },
+  { id: 'ikan-bawal', name: 'Ikan Bawal', sellPrice: 70, where: ['danau'], seasons: ['Kemarau'], hours: [12, 24], weight: 12, colors: ['#5a6a7a', '#8a9aaa', '#3a4a5a'] },
+  { id: 'ikan-udang', name: 'Udang Galah', sellPrice: 90, where: ['danau'], seasons: ['Hujan'], hours: [18, 24], weight: 10, rain: 'bonus', colors: ['#5f8fb0', '#8fbfdf', '#3f6f90'], shape: 'shrimp' },
+  { id: 'ikan-koi', name: 'Ikan Koi', sellPrice: 160, where: ['kolam'], seasons: ['Panen'], hours: [10, 16], weight: 5, colors: ['#f4f1e8', '#ffffff', '#e2434b'] },
+  { id: 'ikan-emas', name: 'Ikan Emas', sellPrice: 200, where: ['danau'], hours: [6, 24], weight: 3, rain: 'bonus', colors: ['#f2c94c', '#fff3a8', '#c99a2e'] },
+  { id: 'ikan-arwana', name: 'Ikan Arwana', sellPrice: 400, where: ['danau'], seasons: ['Kemarau'], hours: [18, 24], weight: 2, colors: ['#d9b45a', '#f2dc94', '#a8843a'], shape: 'long' },
 ];
 
 export const fishById = (id: string) => FISH.find((f) => f.id === id);
@@ -325,7 +325,7 @@ export const fishXp = (id: string) => 4 + Math.round((fishById(id)?.sellPrice ??
 
 /** Tools that must be bought once before they can be used. */
 export const BUYABLE_TOOLS: { id: Tool; name: string; price: number; level: number; desc: string }[] = [
-  { id: 'pancing', name: 'Pancing', price: 500, level: 2, desc: 'untuk kolam & danau' },
+  { id: 'pancing', name: 'Pancing', price: 800, level: 2, desc: 'untuk kolam & danau' },
 ];
 export const needsPurchase = (tool: Tool) => BUYABLE_TOOLS.some((t) => t.id === tool);
 
@@ -335,9 +335,9 @@ export const STACK_MAX = 99;
 
 export const BAG_TIERS: { name: string; slots: number; price: number; level: number }[] = [
   { name: 'Tas Kain', slots: 12, price: 0, level: 1 },
-  { name: 'Tas Kulit', slots: 18, price: 2000, level: 2 },
-  { name: 'Ransel Petani', slots: 24, price: 5000, level: 4 },
-  { name: 'Ransel Besar', slots: 30, price: 12000, level: 6 },
+  { name: 'Tas Kulit', slots: 18, price: 3000, level: 2 },
+  { name: 'Ransel Petani', slots: 24, price: 9000, level: 4 },
+  { name: 'Ransel Besar', slots: 30, price: 20000, level: 6 },
 ];
 export const BAG_MAX_SLOTS = BAG_TIERS[BAG_TIERS.length - 1].slots;
 
