@@ -322,6 +322,7 @@ export class UIScene extends Phaser.Scene {
   openModal(w: number, h: number, title: string, kind = '') {
     this.modalKind = kind;
     this.closeModal(false);
+    this.banner?.destroy(); // an area banner never stays over a window
     this.registry.set('modal', true);
     this.touchLayer?.setVisible(false);
     const { w: W, h: H } = VIEW;
@@ -438,6 +439,7 @@ export class UIScene extends Phaser.Scene {
   private banner?: Phaser.GameObjects.Text;
 
   private areaBanner(name: string) {
+    if (this.registry.get('modal')) return; // never over an open window
     this.banner?.destroy(); // a newer area replaces the old banner
     const t = this.add
       .text(VIEW.w / 2, 150, name, { ...txt(26, C.white), shadow: { offsetX: 0, offsetY: 2, color: 'rgba(0,0,0,0.45)', blur: 8, fill: true } })

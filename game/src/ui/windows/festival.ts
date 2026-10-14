@@ -17,7 +17,7 @@ export function openFestival(ui: UIScene) {
   const left = { ...s.produce };
   festivalPick = festivalPick.filter((id) => (left[id] ?? 0) > 0 && (left[id]--, true));
 
-  c.add(ui.add.text(x + W / 2, y + 52, `Pilih sampai ${FESTIVAL_MAX_ITEMS} hasil panen (dikembalikan setelah dinilai). ${theme.name} dihitung ×${FESTIVAL_THEME_MULT}, +${FESTIVAL_VARIETY_BONUS} per jenis berbeda.`, txt(13, C.secondary, false)).setOrigin(0.5, 0));
+  c.add(ui.add.text(x + W / 2, y + 54, `Maks ${FESTIVAL_MAX_ITEMS} barang · ${theme.name} ×${FESTIVAL_THEME_MULT} · +${FESTIVAL_VARIETY_BONUS} per jenis · barang dikembalikan`, txt(12, C.secondary, false)).setOrigin(0.5, 0));
 
   // entry slots
   for (let i = 0; i < FESTIVAL_MAX_ITEMS; i++) {
