@@ -73,7 +73,8 @@ Loop: cangkul → tanam → siram tiap hari → tidur (pintu rumah) → panen �
 - `src/sfx.ts` — efek suara disintesis dengan Web Audio (tanpa file audio)
 - `src/music.ts` — musik latar prosedural: lagu berbeda per musim, lebih tenang di malam hari, lebih meriah di hari festival
 - `src/ui/theme.ts` — gaya UI kaca minimalis ala Apple: panel kaca, kartu, tombol pil, segmented control, warna dan font sistem
-- `src/scenes/UIScene.ts` — HUD, toolbar, toko, laporan pagi, overlay malam
+- `src/scenes/UIScene.ts` — HUD (panel, jam, tas, toolbar), lapisan cuaca, kontrol sentuh, dan infrastruktur jendela (modal, tombol, toast)
+- `src/ui/windows/` — satu file per jendela: `shop`, `bag`, `house` (rumah & dapur), `board`, `festival`, `calendar`, `fishbook`, `report` (laporan pagi, sambutan, tidur)
 
 ## Catatan satire
 

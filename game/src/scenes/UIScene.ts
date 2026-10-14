@@ -1,71 +1,41 @@
 import Phaser from 'phaser';
 import {
-  BAG_MAX_SLOTS,
-  FISH,
-  DAYS_PER_SEASON,
-  FESTIVAL_EVERY,
   WEEKDAYS,
   WEATHER_INFO,
   isWet,
   baseId,
   starsOf,
-  DISHES,
-  XP_COOK,
-  dishById,
-  BAG_TIERS,
-  BUYABLE_TOOLS,
-  CHICKEN_PRICE,
-  FEATURE_LEVEL,
-  FEED_PRICE,
-  FESTIVAL_MAX_ITEMS,
-  FESTIVAL_THEME_MULT,
-  FESTIVAL_VARIETY_BONUS,
-  ITEMS,
-  MAX_CHICKENS,
-  STACK_MAX,
   STAMINA_MAX,
   TOOLS,
   WATER_CAN_MAX,
-  XP,
-  cropById,
   itemName,
   needsPurchase,
-  npcById,
-  produceById,
   unlocksAt,
   xpToNext,
 } from '../data';
 import { play, setRain, unlockAudio } from '../sfx';
 import { startMusic } from '../music';
-import { C, HEX, UI_SCALE, VIEW, bar as drawBar, card, glass, segmented, txt, well } from '../ui/theme';
+import { C, HEX, UI_SCALE, VIEW, bar as drawBar, card, glass, txt } from '../ui/theme';
 import {
-  add,
   bagCapacity,
-  canAdd,
-  cook,
   countBase,
-  deliverRequest,
-  eat,
-  enterFestival,
-  festivalScore,
-  festivalTheme,
   isFestivalDay,
-  type FestivalResult,
-  gainXp,
   dayOfSeason,
-  save,
   seasonOf,
-  shopStock,
   slotsUsed,
-  upgradeBag,
   yearOf,
   type DayReport,
   type GameState,
 } from '../state';
 import type { FarmScene } from './FarmScene';
-
-type ShopTab = 'benih' | 'alat' | 'ternak';
-type InvTab = 'semua' | 'panen' | 'benih' | 'ternak';
+import { openShop } from '../ui/windows/shop';
+import { openInventory } from '../ui/windows/bag';
+import { openHouse } from '../ui/windows/house';
+import { openBoard } from '../ui/windows/board';
+import { openFestival } from '../ui/windows/festival';
+import { openCalendar } from '../ui/windows/calendar';
+import { openFishBook } from '../ui/windows/fishbook';
+import { showReport, showWelcome, askSleep } from '../ui/windows/report';
 
 const INK = C.ink;
 
@@ -73,7 +43,7 @@ const INK = C.ink;
 const SECONDARY = new Set(['Tutup', 'Batal', 'Nanti', 'Belum']);
 
 export class UIScene extends Phaser.Scene {
-  private state!: GameState;
+  state!: GameState;
   private dateText!: Phaser.GameObjects.Text;
   private timeText!: Phaser.GameObjects.Text;
   private coinText!: Phaser.GameObjects.Text;
@@ -81,7 +51,6 @@ export class UIScene extends Phaser.Scene {
   private bagText!: Phaser.GameObjects.Text;
   private bagMini!: Phaser.GameObjects.Container;
   private bagTitle!: Phaser.GameObjects.Text;
-  private invSel?: { bag: 'produce' | 'seeds' | 'other'; id: string };
   private slots: { frame: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text; icon: Phaser.GameObjects.Image }[] = [];
   private seedIcon!: Phaser.GameObjects.Image;
   private toastText!: Phaser.GameObjects.Text;
@@ -136,7 +105,7 @@ export class UIScene extends Phaser.Scene {
     bagHit.on('pointerdown', () => {
       if (this.registry.get('modal')) return;
       play('click');
-      this.openInventory();
+      openInventory(this);
     });
 
     // toolbar
@@ -171,14 +140,14 @@ export class UIScene extends Phaser.Scene {
       ['hud', () => this.refresh()],
       ['toast', (m: string) => this.toast(m)],
       ['cycle-seed', () => this.cycleSeed()],
-      ['open-shop', () => this.openShop()],
-      ['open-board', () => this.openBoard()],
-      ['open-festival', () => this.openFestival()],
-      ['open-house', () => this.openHouse()],
+      ['open-shop', () => openShop(this)],
+      ['open-board', () => openBoard(this)],
+      ['open-festival', () => openFestival(this)],
+      ['open-house', () => openHouse(this)],
       ['area', (name: string) => this.areaBanner(name)],
       ['level-up', (lv: number[]) => this.queueLevelUp(lv)],
-      ['ask-sleep', () => this.askSleep()],
-      ['day-report', (r: DayReport) => this.showReport(r)],
+      ['ask-sleep', () => askSleep(this)],
+      ['day-report', (r: DayReport) => showReport(this, r)],
     ];
     for (const [e, h] of handlers) ev.on(e, h, this);
     this.events.once('shutdown', () => handlers.forEach(([e, h]) => ev.off(e, h, this)));
@@ -186,15 +155,15 @@ export class UIScene extends Phaser.Scene {
     this.input.keyboard!.on('keydown-ESC', () => this.closeModal());
     this.input.keyboard!.on('keydown-J', () => {
       if (this.modalLayer && this.modalKind === 'fishbook') return this.closeModal();
-      if (!this.registry.get('modal')) this.openFishBook();
+      if (!this.registry.get('modal')) openFishBook(this);
     });
     this.input.keyboard!.on('keydown-K', () => {
       if (this.modalLayer && this.modalKind === 'calendar') return this.closeModal();
-      if (!this.registry.get('modal')) this.openCalendar();
+      if (!this.registry.get('modal')) openCalendar(this);
     });
     this.input.keyboard!.on('keydown-I', () => {
       if (this.modalLayer && this.modalKind === 'inventory') return this.closeModal();
-      if (!this.registry.get('modal')) this.openInventory();
+      if (!this.registry.get('modal')) openInventory(this);
     });
 
     const touch = this.sys.game.device.input.touch || new URLSearchParams(location.search).has('touch');
@@ -205,7 +174,7 @@ export class UIScene extends Phaser.Scene {
     // once per session: a resize rebuilds this scene and must not greet again
     if (this.state.day === 1 && this.state.stats.harvested === 0 && !this.registry.get('welcomed')) {
       this.registry.set('welcomed', true);
-      this.showWelcome();
+      showWelcome(this);
     }
   }
 
@@ -337,7 +306,6 @@ export class UIScene extends Phaser.Scene {
     );
   }
 
-
   // ---------- modals ----------
 
   /** Messages sit just below an open window (or above it when there is no room), never over its buttons. */
@@ -351,7 +319,7 @@ export class UIScene extends Phaser.Scene {
     else this.toastText.setY(Math.max(26, m.top - 4));
   }
 
-  private openModal(w: number, h: number, title: string, kind = '') {
+  openModal(w: number, h: number, title: string, kind = '') {
     this.modalKind = kind;
     this.closeModal(false);
     this.registry.set('modal', true);
@@ -376,7 +344,7 @@ export class UIScene extends Phaser.Scene {
     this.closeModal(false);
   }
 
-  private closeModal(showPending = true) {
+  closeModal(showPending = true) {
     if (!this.modalLayer) return;
     this.modalLayer.destroy();
     this.modalLayer = undefined;
@@ -421,7 +389,7 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
-  private queueLevelUp(levels: number[]) {
+  queueLevelUp(levels: number[]) {
     this.pendingLevels.push(...levels);
     this.refresh();
     if (!this.modalLayer) this.showLevelUp();
@@ -439,7 +407,7 @@ export class UIScene extends Phaser.Scene {
     this.button(c, x + 150, y + h - 52, 'Hore!', () => this.closeModal(), 120);
   }
 
-  private button(c: Phaser.GameObjects.Container, x: number, y: number, label: string, onClick: () => void, w = 110, locked = false) {
+  button(c: Phaser.GameObjects.Container, x: number, y: number, label: string, onClick: () => void, w = 110, locked = false) {
     const g = this.add.graphics();
     const secondary = SECONDARY.has(label);
     const draw = (hover: boolean) => {
@@ -465,741 +433,7 @@ export class UIScene extends Phaser.Scene {
     c.add([g, t, z]);
   }
 
-  private showWelcome() {
-    const { c, x, y } = this.openModal(580, 370, 'Selamat datang di CropFarm');
-    const body = [
-      'Kakek mewariskan ladang ini padamu. Saatnya bertani!',
-      '',
-      'Gerak: WASD / panah, atau klik/tap tujuan',
-      'Aksi: Spasi / E, atau klik petak di dekatmu',
-      'Alat: 1 Cangkul · 2 Penyiram · 3 Benih · 4 Tangan · 5 Pancing',
-      'Lari: Shift  ·  Tas: I  ·  Kalender: K  ·  Buku Ikan: J  ·  Musik: N',
-      'Ganti benih: Q  ·  Semua suara: M  ·  Tutup jendela: Esc',
-      '',
-      'Cangkul → tanam → siram setiap hari → panen.',
-      'Kirim panen di kotak kayu, tidur di pintu rumah.',
-      'Cek papan permintaan warga untuk hadiah ekstra.',
-    ];
-    c.add(this.add.text(x + 34, y + 62, body.join('\n'), { ...txt(15, INK, false), lineSpacing: 4 }));
-    this.button(c, x + 580 / 2 - 60, y + 370 - 52, 'Mulai', () => this.closeModal(), 120);
-  }
-
-  private askSleep() {
-    const { c, x, y } = this.openModal(380, 170, 'Tidur dan akhiri hari?');
-    c.add(this.add.text(x + 190, y + 62, 'Tanaman yang disiram akan tumbuh.', txt(14, INK, false)).setOrigin(0.5, 0));
-    this.button(c, x + 60, y + 108, 'Tidur', () => {
-      this.closeModal();
-      this.game.events.emit('do-sleep');
-    });
-    this.button(c, x + 210, y + 108, 'Belum', () => this.closeModal());
-  }
-
-  /** Morning report: a header, an iOS-style grouped list, sales detail and notices. */
-  private showReport(r: DayReport) {
-    const s = this.state;
-    this.refresh();
-    type Row = { icon: string; label: string; value: string; color?: string };
-    const rows: Row[] = [
-      { icon: 'ic-coin', label: 'Pendapatan kemarin', value: r.income ? `+${r.income.toLocaleString('id-ID')} G` : '0 G', color: r.income ? C.green : C.tertiary },
-      { icon: 'ic-sprout', label: 'Tanaman tumbuh', value: `${r.grown}` },
-      { icon: `wx-${s.weather}`, label: 'Cuaca hari ini', value: WEATHER_INFO[s.weather].name },
-      { icon: `wx-${s.forecasts[0]}`, label: 'Besok', value: WEATHER_INFO[s.forecasts[0]].name, color: C.secondary },
-    ];
-    if (r.sprinkled) rows.push({ icon: 'icon-sprinkler', label: 'Disiram sprinkler', value: `${r.sprinkled} petak` });
-    if (r.eggs) rows.push({ icon: 'icon-telur', label: 'Telur di kandang', value: `${r.eggs} butir` });
-    const warnings: string[] = [];
-    if (isWet(s.weather)) warnings.push('Hujan menyiram ladang otomatis hari ini.');
-    if (s.weather === 'kabut') warnings.push('Kabut asap dari kebakaran lahan. Siram tanamanmu sendiri.');
-    if (r.stormDamage) warnings.push(`Badai merusak ${r.stormDamage} tanaman.`);
-    if (r.withered) warnings.push(`${r.withered} tanaman layu karena ganti musim.`);
-    if (r.hungry) warnings.push(`${r.hungry} ayam kelaparan semalam, keakraban turun.`);
-    let festival = '';
-    if (isFestivalDay(s.day)) festival = `Festival hari ini · tema ${festivalTheme(s.day).name} ×2 · 09:00–18:00`;
-    else if (isFestivalDay(s.day + 1)) festival = `Besok Festival. Siapkan ${festivalTheme(s.day + 1).name}!`;
-
-    // measure first so the window fits its content
-    const W = 440, P = 20, ROW = 32;
-    const MAX_SALES = 3;
-    const sold = r.sold.slice(0, MAX_SALES);
-    const more = r.sold.length - sold.length;
-    const sales = sold.length + (more > 0 ? 1 : 0);
-    let h = 86 + rows.length * ROW + 14;
-    if (sales) h += 30 + sales * 20 + 12;
-    h += warnings.length * 22 + (warnings.length ? 10 : 0);
-    if (festival) h += 46;
-    h += 58;
-    const { c, x, y } = this.openModal(W, h, '');
-
-    // header
-    const hg = this.add.graphics();
-    well(hg, x + P + 24, y + 42, 24);
-    c.add(hg);
-    c.add(this.add.image(x + P + 24, y + 42, `wx-${s.weather}`).setScale(2.5));
-    c.add(this.add.text(x + P + 60, y + 22, 'Selamat pagi!', txt(20)));
-    c.add(
-      this.add.text(x + P + 60, y + 48, `Musim ${seasonOf(s.day)} · Hari ${dayOfSeason(s.day)} · ${WEEKDAYS[(s.day - 1) % 7]}`, txt(13, C.secondary, false)),
-    );
-
-    // grouped list
-    let cy = y + 86;
-    const lg = this.add.graphics();
-    c.add(lg); // added before the row text so it sits underneath
-    card(lg, x + P, cy, W - 2 * P, rows.length * ROW, 'normal', 14);
-    rows.forEach((row, i) => {
-      const ry = cy + i * ROW;
-      if (i) lg.fillStyle(HEX.hairline, 0.08).fillRect(x + P + 48, ry, W - 2 * P - 48, 1);
-      c.add(this.add.image(x + P + 24, ry + ROW / 2, row.icon).setScale(1.5));
-      c.add(this.add.text(x + P + 48, ry + ROW / 2, row.label, txt(14, INK, false)).setOrigin(0, 0.5));
-      c.add(this.add.text(x + W - P - 14, ry + ROW / 2, row.value, txt(14, row.color ?? INK)).setOrigin(1, 0.5));
-    });
-    cy += rows.length * ROW + 14;
-
-    // what sold
-    if (sales) {
-      c.add(this.add.text(x + P + 4, cy, 'TERJUAL', txt(11, C.tertiary)));
-      cy += 22;
-      const sg = this.add.graphics();
-      card(sg, x + P, cy, W - 2 * P, sales * 20 + 12, 'muted', 12);
-      c.add(sg);
-      sold.forEach((it, i) => {
-        const ly = cy + 6 + i * 20;
-        c.add(this.add.text(x + P + 14, ly, `${it.name} ×${it.qty}`, txt(13, INK, false)));
-        c.add(this.add.text(x + W - P - 14, ly, `${it.total.toLocaleString('id-ID')} G`, txt(13, C.secondary)).setOrigin(1, 0));
-      });
-      if (more > 0) c.add(this.add.text(x + P + 14, cy + 6 + sold.length * 20, `+${more} lainnya`, txt(13, C.tertiary, false)));
-      cy += sales * 20 + 22;
-    }
-
-    // notices
-    warnings.forEach((w) => {
-      c.add(this.add.image(x + P + 10, cy + 9, 'ic-warn').setScale(1));
-      c.add(this.add.text(x + P + 26, cy, w, txt(13, C.secondary, false)));
-      cy += 22;
-    });
-    if (warnings.length) cy += 10;
-
-    if (festival) {
-      const fg = this.add.graphics();
-      card(fg, x + P, cy, W - 2 * P, 36, 'today', 12);
-      c.add(fg);
-      c.add(this.add.text(x + W / 2, cy + 18, festival, txt(13, C.blue)).setOrigin(0.5));
-      cy += 46;
-    }
-
-    this.button(c, x + P, y + h - 52, 'Lanjut', () => this.closeModal(), W - 2 * P);
-  }
-
-
-  private shopTab: ShopTab = 'benih';
-
-  private openShop() {
-    const s = this.state;
-    type Entry = { id: string; name: string; price: number; level: number; info: string; owned: () => string; buy: (n: number) => string | null; unique?: () => boolean };
-    const bag = (id: string) => (n: number) => {
-      if (!canAdd(s, 'seeds', id, n)) return 'Tas penuh! Upgrade tas atau kosongkan slot.';
-      add(s.seeds, id, n);
-      if (!s.seeds[s.seed]) s.seed = id;
-      return null;
-    };
-    const tabs: { id: ShopTab; name: string; items: Entry[] }[] = [
-      {
-        id: 'benih',
-        name: 'Benih',
-        items: shopStock(s).map((d) => ({
-          id: d.id, name: d.name, price: d.seedPrice, level: d.level,
-          info: d.regrow ? `${d.days} hari, lalu tiap ${d.regrow} hari` : `${d.days} hari · jual ${d.sellPrice}`,
-          owned: () => `${s.seeds[d.id] ?? 0}`,
-          buy: bag(d.id),
-        })),
-      },
-      {
-        id: 'alat',
-        name: 'Peralatan',
-        items: [
-          ...(() => {
-            const next = BAG_TIERS[s.bagTier + 1];
-            const top = BAG_TIERS[s.bagTier];
-            return [
-              {
-                id: 'tas',
-                name: next ? next.name : top.name,
-                price: next ? next.price : 0,
-                level: next ? next.level : 1,
-                info: next ? `tas ${top.slots} → ${next.slots} slot` : `${top.slots} slot (maksimal)`,
-                owned: () => '',
-                unique: () => !BAG_TIERS[s.bagTier + 1],
-                buy: () => {
-                  if (!BAG_TIERS[s.bagTier + 1]) return 'Tas sudah paling besar.';
-                  s.bagTier++;
-                  this.toast(`Tas sekarang ${bagCapacity(s)} slot!`);
-                  return null;
-                },
-              },
-            ];
-          })(),
-          ...BUYABLE_TOOLS.map((t) => ({
-            id: t.id, name: t.name, price: t.price, level: t.level, info: t.desc,
-            owned: () => '',
-            unique: () => s.ownedTools.includes(t.id),
-            buy: () => {
-              if (s.ownedTools.includes(t.id)) return `Kamu sudah punya ${t.name}.`;
-              s.ownedTools.push(t.id);
-              this.toast(`${t.name} terpasang di slot ${TOOLS.findIndex((x) => x.id === t.id) + 1}.`);
-              return null;
-            },
-          })),
-          ...ITEMS.map((i) => ({
-            id: i.id, name: i.name, price: i.price, level: i.level, info: i.desc,
-            owned: () => `${s.seeds[i.id] ?? 0}`,
-            buy: bag(i.id),
-          })),
-        ],
-      },
-      {
-        id: 'ternak',
-        name: 'Ternak',
-        items: [
-          {
-            id: 'ayam', name: 'Ayam', price: CHICKEN_PRICE, level: FEATURE_LEVEL.coop, info: 'bertelur tiap hari',
-            owned: () => `${s.animals.length}/${MAX_CHICKENS}`,
-            buy: (n) => {
-              if (s.animals.length + n > MAX_CHICKENS) return `Kandang muat ${MAX_CHICKENS} ayam.`;
-              for (let i = 0; i < n; i++) {
-                const id = s.nextAnimalId++;
-                s.animals.push({ id, name: `Ayam ${id}`, affection: 0, fed: false, petted: false });
-              }
-              this.game.events.emit('animals-changed');
-              return null;
-            },
-          },
-          {
-            id: 'pakan', name: 'Pakan', price: FEED_PRICE, level: FEATURE_LEVEL.coop, info: '1 per ayam per hari',
-            owned: () => `${s.feed}`,
-            buy: (n) => {
-              s.feed += n;
-              return null;
-            },
-          },
-        ],
-      },
-    ];
-    const tab = tabs.find((t) => t.id === this.shopTab)!;
-
-    // App Store-style list: two columns of horizontal cards, as many rows as needed
-    const items = [...tab.items].sort((p, q) => Number(p.level > s.level) - Number(q.level > s.level)); // locked last
-    const COLS = 2, cw = 280, ch = 94, gap = 10;
-    const rows = Math.max(1, Math.ceil(items.length / COLS));
-    const W = 620, H = 108 + rows * (ch + gap) + 58;
-    const { c, x, y } = this.openModal(W, H, `Toko · musim ${seasonOf(s.day)}`);
-    const coin = this.add.text(x + W - 28, y + 24, '', txt(16, C.orange)).setOrigin(1, 0);
-    c.add(coin);
-
-    // tabs
-    c.add(
-      segmented(this, x + 28, y + 56, tabs.map((t) => t.name), tabs.findIndex((t) => t.id === this.shopTab), (i) => {
-        play('click');
-        this.shopTab = tabs[i].id;
-        this.openShop();
-      }, 124),
-    );
-
-    const gx = x + (W - (COLS * cw + gap)) / 2;
-    const refresh: (() => void)[] = [() => coin.setText(`${s.coins.toLocaleString('id-ID')} G`), () => this.refresh()];
-    if (!items.length) c.add(this.add.text(x + W / 2, y + 150, 'Tidak ada barang untuk musim ini.', txt(14, C.secondary, false)).setOrigin(0.5));
-    items.forEach((it, i) => {
-      const cx = gx + (i % COLS) * (cw + gap);
-      const cy = y + 104 + Math.floor(i / COLS) * (ch + gap);
-      const locked = it.level > s.level;
-      const g = this.add.graphics();
-      card(g, cx, cy, cw, ch, locked ? 'locked' : 'normal', 16);
-      well(g, cx + 40, cy + ch / 2, 26, locked);
-      c.add(g);
-      const icon = this.add.image(cx + 40, cy + ch / 2, `icon-${it.id}`).setScale(2.5);
-      if (locked) icon.setTint(0x9a9aa0).setAlpha(0.5);
-      c.add(icon);
-      const tx = cx + 78;
-      const textW = cw - 78 - 92; // room left of the buttons
-      c.add(this.add.text(tx, cy + 10, it.name, txt(15, locked ? C.disabled : INK)));
-      c.add(this.add.text(tx, cy + 31, it.info, { ...txt(11, C.secondary, false), wordWrap: { width: textW, useAdvancedWrap: true } }));
-      const price = this.add.text(tx, cy + ch - 24, '', txt(13, locked ? C.disabled : C.orange));
-      c.add(price);
-      refresh.push(() => price.setText(it.owned() ? `${it.price.toLocaleString('id-ID')} G · punya ${it.owned()}` : `${it.price.toLocaleString('id-ID')} G`));
-
-      const bx = cx + cw - 76;
-      if (locked) {
-        const lt = this.add.text(bx + 34, cy + ch / 2, `Level ${it.level}`, txt(12, C.secondary)).setOrigin(0.5);
-        const lg = this.add.graphics();
-        lg.fillStyle(0x767680, 0.12).fillRoundedRect(bx - 2, cy + ch / 2 - 15, 72, 30, 15);
-        c.add([lg, lt]);
-        const z = this.add.zone(cx, cy, cw, ch).setOrigin(0).setInteractive();
-        z.on('pointerdown', () => {
-          play('error');
-          this.toast(`${it.name} terbuka di Level ${it.level}.`);
-        });
-        c.add(z);
-        return;
-      }
-      // +1 / +5 stacked on the right (one "Beli" for one-off items)
-      const buttons: [number, number][] = it.unique ? [[1, cy + ch / 2 - 17]] : [[1, cy + 9], [5, cy + ch - 43]];
-      for (const [n, by] of buttons) {
-        const have = it.unique?.() ?? false;
-        const label = it.unique ? (have ? 'Punya' : 'Beli') : `+${n}`;
-        this.button(c, bx, by, label, () => {
-          const cost = it.price * n;
-          if (s.coins < cost) {
-            play('error');
-            return this.toast(`Uang tidak cukup (butuh ${cost.toLocaleString('id-ID')} G).`);
-          }
-          const err = it.buy(n);
-          if (err) {
-            play('error');
-            return this.toast(err);
-          }
-          s.coins -= cost;
-          play('coin');
-          save(s);
-          refresh.forEach((f) => f());
-          if (it.unique) this.openShop(); // redraw the card as owned
-        }, 66, have);
-      }
-    });
-    refresh.forEach((f) => f());
-    this.button(c, x + W / 2 - 60, y + H - 48, 'Tutup', () => this.closeModal(), 120);
-  }
-
-  private openBoard() {
-    const s = this.state;
-    const cardH = 74;
-    const h = 120 + Math.max(1, s.requests.length) * (cardH + 10);
-    const { c, x, y } = this.openModal(600, h, 'Papan Permintaan Warga');
-    if (!s.requests.length) {
-      c.add(this.add.text(x + 300, y + 74, 'Belum ada permintaan. Cek lagi besok pagi.', txt(15, INK, false)).setOrigin(0.5, 0));
-    }
-    s.requests.forEach((r, i) => {
-      const cy = y + 60 + i * (cardH + 10);
-      const npc = npcById(r.npc);
-      const crop = cropById(r.crop);
-      const have = countBase(s, r.crop);
-      const ok = have >= r.qty;
-      const left = r.until - s.day + 1;
-      const g = this.add.graphics();
-      card(g, x + 24, cy, 552, cardH, ok ? 'ready' : 'normal', 16);
-      well(g, x + 58, cy + 37, 24);
-      c.add(g);
-      c.add(this.add.image(x + 58, cy + 37, `icon-${crop.id}`).setScale(2.5));
-      const hearts = '♥'.repeat(Math.min(5, s.friendship[r.npc] ?? 0)) + '♡'.repeat(Math.max(0, 5 - (s.friendship[r.npc] ?? 0)));
-      c.add(this.add.text(x + 92, cy + 8, `${npc.name}`, txt(16)));
-      c.add(this.add.text(x + 92 + npc.name.length * 9 + 10, cy + 10, hearts, txt(13, C.red)));
-      c.add(this.add.text(x + 92, cy + 30, `Butuh ${r.qty} ${crop.name} (punya ${have})`, txt(14, INK, false)));
-      c.add(this.add.text(x + 92, cy + 50, `Hadiah ${r.reward} G · sisa ${left} hari · ${npc.role}`, txt(12, C.secondary, false)));
-      this.button(c, x + 440, cy + 20, ok ? 'Serahkan' : 'Belum cukup', () => {
-        if (!deliverRequest(s, r.id)) {
-          play('error');
-          return this.toast(`Kurang ${r.qty - countBase(s, r.crop)} ${crop.name}.`);
-        }
-        play('quest');
-        const reached = gainXp(s, XP.request);
-        save(s);
-        this.toast(`${npc.name} senang! +${r.reward} G · +${XP.request} XP`);
-        this.openBoard();
-        if (reached.length) this.queueLevelUp(reached);
-      }, 120, !ok);
-    });
-    this.button(c, x + 240, y + h - 50, 'Tutup', () => this.closeModal(), 120);
-  }
-
-  private festivalPick: string[] = [];
-
-  private openFestival() {
-    const s = this.state;
-    const theme = festivalTheme(s.day);
-    const W = 600, H = 400;
-    const { c, x, y } = this.openModal(W, H, `Festival Panen · tema ${theme.name} ×${FESTIVAL_THEME_MULT}`);
-    // keep the selection valid against what is actually in the bag
-    const left = { ...s.produce };
-    this.festivalPick = this.festivalPick.filter((id) => (left[id] ?? 0) > 0 && (left[id]--, true));
-
-    c.add(this.add.text(x + W / 2, y + 52, `Pilih sampai ${FESTIVAL_MAX_ITEMS} hasil panen. ${theme.name} dihitung ×${FESTIVAL_THEME_MULT}, +${FESTIVAL_VARIETY_BONUS} per jenis berbeda.`, txt(13, C.secondary, false)).setOrigin(0.5, 0));
-
-    // entry slots
-    for (let i = 0; i < FESTIVAL_MAX_ITEMS; i++) {
-      const sx = x + W / 2 - (FESTIVAL_MAX_ITEMS * 64 - 10) / 2 + i * 64;
-      const sy = y + 84;
-      const g = this.add.graphics();
-      card(g, sx, sy, 54, 54, this.festivalPick[i] ? 'normal' : 'muted', 14);
-      c.add(g);
-      const id = this.festivalPick[i];
-      if (!id) continue;
-      c.add(this.add.image(sx + 27, sy + 27, `icon-${baseId(id)}`).setScale(2.5));
-      const sb = this.starBadge(sx + 3, sy + 2, id, 10);
-      if (sb) c.add(sb);
-      if (baseId(id) === theme.id) c.add(this.add.text(sx + 50, sy + 4, '×2', txt(11, C.red)).setOrigin(1, 0));
-      const z = this.add.zone(sx, sy, 54, 54).setOrigin(0).setInteractive({ useHandCursor: true });
-      z.on('pointerdown', () => {
-        play('click');
-        this.festivalPick.splice(i, 1);
-        this.openFestival();
-      });
-      c.add(z);
-    }
-    const score = festivalScore(this.festivalPick, theme.id);
-    c.add(this.add.text(x + W / 2, y + 150, `Skor kamu: ${score}`, txt(18, C.purple)).setOrigin(0.5, 0));
-
-    // produce to choose from
-    c.add(this.add.text(x + 32, y + 184, 'Tas kamu (klik untuk menambah):', txt(13)));
-    const avail = Object.entries(s.produce)
-      .map(([id, q]) => [id, q - this.festivalPick.filter((p) => p === id).length] as const)
-      .filter(([, q]) => q > 0);
-    if (!avail.length && !this.festivalPick.length)
-      c.add(this.add.text(x + W / 2, y + 240, 'Belum ada hasil panen. Panen dulu, lalu kembali sebelum 18:00.', txt(14, INK, false)).setOrigin(0.5, 0));
-    avail.forEach(([id, q], i) => {
-      const cx = x + 32 + (i % 8) * 68;
-      const cy = y + 206 + Math.floor(i / 8) * 64;
-      const g = this.add.graphics();
-      card(g, cx, cy, 60, 56, baseId(id) === theme.id ? 'today' : 'normal', 14);
-      c.add(g);
-      c.add(this.add.image(cx + 30, cy + 24, `icon-${baseId(id)}`).setScale(2.5));
-      const cb = this.starBadge(cx + 4, cy + 3, id, 10);
-      if (cb) c.add(cb);
-      c.add(this.add.text(cx + 56, cy + 52, `${q}`, txt(12)).setOrigin(1, 1));
-      const z = this.add.zone(cx, cy, 60, 56).setOrigin(0).setInteractive({ useHandCursor: true });
-      z.on('pointerdown', () => {
-        if (this.festivalPick.length >= FESTIVAL_MAX_ITEMS) {
-          play('error');
-          return this.toast(`Maksimal ${FESTIVAL_MAX_ITEMS} barang.`);
-        }
-        play('click');
-        this.festivalPick.push(id);
-        this.openFestival();
-      });
-      c.add(z);
-    });
-
-    const ready = this.festivalPick.length > 0;
-    this.button(c, x + W / 2 - 130, y + H - 52, 'Ikut Lomba', () => {
-      if (!ready) {
-        play('error');
-        return this.toast('Pilih minimal 1 hasil panen.');
-      }
-      const result = enterFestival(s, this.festivalPick);
-      this.festivalPick = [];
-      save(s);
-      this.showFestivalResult(result);
-    }, 130, !ready);
-    this.button(c, x + W / 2 + 10, y + H - 52, 'Nanti', () => this.closeModal(), 120);
-  }
-
-  private showFestivalResult(r: FestivalResult) {
-    const s = this.state;
-    const title = r.place === 0 ? 'Juara 1! 🏆' : r.place < 3 ? `Juara ${r.place + 1}!` : `Peringkat ${r.place + 1}`;
-    const h = 210 + r.ranking.length * 24 + 60;
-    const { c, x, y } = this.openModal(420, h, title);
-    play(r.place < 3 ? 'quest' : 'click');
-    r.ranking.forEach((e, i) => {
-      const ry = y + 60 + i * 24;
-      const col = e.you ? C.purple : INK;
-      c.add(this.add.text(x + 60, ry, `${i + 1}. ${e.name}`, txt(15, col, e.you)));
-      c.add(this.add.text(x + 360, ry, `${e.score}`, txt(15, col, e.you)).setOrigin(1, 0));
-    });
-    const rewards = [
-      r.reward.coins ? `+${r.reward.coins} G` : '',
-      `+${r.reward.xp} XP`,
-      r.reward.points ? `+${r.reward.points} Poin Festival` : '',
-      r.reward.trophy ? `Piala ${r.reward.trophy}` : '',
-    ].filter(Boolean);
-    const ry = y + 60 + r.ranking.length * 24 + 14;
-    c.add(this.add.text(x + 210, ry, rewards.join(' · '), txt(15, C.orange)).setOrigin(0.5, 0));
-    c.add(this.add.text(x + 210, ry + 26, `Total Poin Festival: ${s.festival.points}`, txt(13, C.secondary, false)).setOrigin(0.5, 0));
-    c.add(this.add.text(x + 210, ry + 46, 'Poin ini nanti menentukan bagian pool hadiah.', txt(12, C.tertiary, false)).setOrigin(0.5, 0));
-    this.button(c, x + 150, y + h - 52, 'Mantap!', () => this.closeModal(), 120);
-    if (r.levels.length) this.queueLevelUp(r.levels);
-  }
-
   // ---------- inventory ----------
-
-  private invTab: InvTab = 'semua';
-
-  private openInventory() {
-    const s = this.state;
-    const W = 700, H = 480;
-    const cap = bagCapacity(s);
-    const used = slotsUsed(s);
-    const { c, x, y } = this.openModal(W, H, `Tas · ${BAG_TIERS[s.bagTier].name}`, 'inventory');
-
-    // capacity: "9/12 slot" with a thin bar under it
-    const full = used >= cap;
-    c.add(this.add.text(x + W - 28, y + 20, `${used}/${cap} slot`, txt(13, full ? C.red : C.secondary)).setOrigin(1, 0));
-    const capBar = this.add.graphics();
-    drawBar(capBar, x + W - 128, y + 40, 100, used / cap, full ? HEX.red : HEX.blue);
-    c.add(capBar);
-
-    type Slot = { bag: 'produce' | 'seeds' | 'other'; id: string; icon: string; qty: number | string };
-    // one slot per stack of up to STACK_MAX
-    const stacksOf = (bag: 'produce' | 'seeds', rec: Record<string, number>) =>
-      Object.entries(rec).flatMap(([id, q]) => {
-        const out: Slot[] = [];
-        for (let left = q; left > 0; left -= STACK_MAX) out.push({ bag, id, icon: `icon-${baseId(id)}`, qty: Math.min(STACK_MAX, left) });
-        return out;
-      });
-    const produce = stacksOf('produce', s.produce);
-    const seeds = stacksOf('seeds', s.seeds);
-    const eggs = Object.values(s.coopEggs).reduce((a, b) => a + b, 0);
-    const livestock: Slot[] =
-      s.level >= FEATURE_LEVEL.coop
-        ? [
-            { bag: 'other', id: 'ayam', icon: 'icon-ayam', qty: `${s.animals.length}/${MAX_CHICKENS}` },
-            { bag: 'other', id: 'pakan', icon: 'icon-pakan', qty: s.feed },
-            ...(eggs ? [{ bag: 'other' as const, id: 'kandang', icon: 'icon-telur', qty: eggs }] : []),
-          ]
-        : [];
-
-    // tabs
-    const tabs: { id: InvTab; name: string; empty: string }[] = [
-      { id: 'semua', name: 'Semua', empty: 'Tas masih kosong' },
-      { id: 'panen', name: 'Hasil Panen', empty: 'Belum ada hasil panen' },
-      { id: 'benih', name: 'Benih & Alat', empty: 'Belum ada benih atau alat · beli di toko' },
-      ...(livestock.length ? [{ id: 'ternak' as const, name: 'Ternak', empty: 'Belum ada ternak' }] : []),
-    ];
-    if (!tabs.some((t) => t.id === this.invTab)) this.invTab = 'semua';
-    const tab = tabs.find((t) => t.id === this.invTab)!;
-    c.add(
-      segmented(this, x + 24, y + 54, tabs.map((t) => t.name), tabs.indexOf(tab), (i) => {
-        play('click');
-        this.invTab = tabs[i].id;
-        this.openInventory();
-      }, 112),
-    );
-
-    // every tab shows a full grid: items first, then empty slots, then locked ones ("Semua")
-    type Cell = Slot | 'empty' | 'locked';
-    const items: Slot[] = this.invTab === 'semua' ? [...produce, ...seeds] : this.invTab === 'panen' ? produce : this.invTab === 'benih' ? seeds : livestock;
-    const COLS = 6; // 6 x 5 = BAG_MAX_SLOTS
-    const cells: Cell[] = [...items];
-    for (let i = items.length; i < BAG_MAX_SLOTS; i++) cells.push(this.invTab === 'semua' && i >= cap ? 'locked' : 'empty');
-
-    // the detail card follows the open tab: keep the selection only if it is shown here
-    if (!this.invSel || !items.some((sl) => sl.bag === this.invSel!.bag && sl.id === this.invSel!.id)) {
-      const first = items[0];
-      this.invSel = first ? { bag: first.bag, id: first.id } : undefined;
-    }
-
-    const SZ = 50, GAP = 8;
-    const gx = x + 28, gy = y + 98;
-    cells.forEach((cl, i) => {
-      const sx = gx + (i % COLS) * (SZ + GAP);
-      const sy = gy + Math.floor(i / COLS) * (SZ + GAP);
-      const g = this.add.graphics();
-      c.add(g);
-      if (cl === 'locked') {
-        card(g, sx, sy, SZ, SZ, 'locked', 12);
-        g.fillStyle(0x8e8e93, 0.35).fillCircle(sx + SZ / 2, sy + SZ / 2, 3);
-        return;
-      }
-      if (cl === 'empty') {
-        card(g, sx, sy, SZ, SZ, 'muted', 12);
-        return;
-      }
-      const on = this.invSel?.bag === cl.bag && this.invSel.id === cl.id;
-      const draw = (hover: boolean) => {
-        g.clear();
-        card(g, sx, sy, SZ, SZ, on ? 'selected' : 'normal', 12);
-        if (hover && !on) g.lineStyle(1.5, HEX.blue, 0.45).strokeRoundedRect(sx, sy, SZ, SZ, 12);
-      };
-      draw(false);
-      c.add(this.add.image(sx + SZ / 2, sy + SZ / 2 - 3, cl.icon).setScale(2));
-      // quantity pill, bottom-right
-      const q = this.add.text(sx + SZ - 6, sy + SZ - 5, `${cl.qty}`, txt(10, C.secondary)).setOrigin(1, 1);
-      const qg = this.add.graphics();
-      qg.fillStyle(0x767680, 0.14).fillRoundedRect(q.x - q.width - 4, q.y - q.height - 1, q.width + 8, q.height + 2, (q.height + 2) / 2);
-      c.add([qg, q]);
-      if (cl.bag === 'produce' && starsOf(cl.id) > 1) {
-        const st = this.add.text(sx + 6, sy + 5, `★${starsOf(cl.id)}`, txt(9, '#a86f00'));
-        const sg = this.add.graphics();
-        sg.fillStyle(0xffd60a, 0.3).fillRoundedRect(st.x - 3, st.y - 1, st.width + 6, st.height + 2, (st.height + 2) / 2);
-        c.add([sg, st]);
-      }
-      if (cl.bag === 'seeds' && s.seed === cl.id) c.add(this.add.circle(sx + SZ - 8, sy + 8, 3.5, HEX.blue)); // equipped in slot 3
-      const z = this.add.zone(sx, sy, SZ, SZ).setOrigin(0).setInteractive({ useHandCursor: true });
-      z.on('pointerover', () => draw(true));
-      z.on('pointerout', () => draw(false));
-      z.on('pointerdown', () => {
-        play('click');
-        this.invSel = { bag: cl.bag, id: cl.id };
-        this.openInventory();
-      });
-      c.add(z);
-    });
-    if (!items.length) {
-      const gw = COLS * (SZ + GAP) - GAP;
-      const m = this.add.text(gx + gw / 2, gy + SZ + GAP / 2, tab.empty, txt(13, C.secondary, false)).setOrigin(0.5);
-      const mg = this.add.graphics();
-      mg.fillStyle(0xffffff, 0.92).fillRoundedRect(m.x - m.width / 2 - 14, m.y - 15, m.width + 28, 30, 15);
-      mg.lineStyle(1, HEX.hairline, 0.08).strokeRoundedRect(m.x - m.width / 2 - 14, m.y - 15, m.width + 28, 30, 15);
-      c.add([mg, m]);
-    }
-
-    // right: detail card
-    const dx = x + W - 250, dy = y + 98, dw = 222, dh = 284;
-    const g = this.add.graphics();
-    card(g, dx, dy, dw, dh, 'normal', 18);
-    c.add(g);
-    const sel = this.invSel;
-    if (!sel) {
-      well(g, dx + dw / 2, dy + 92, 32, true);
-      c.add(this.add.image(dx + dw / 2, dy + 92, 'icon-tas').setScale(3).setAlpha(0.5));
-      c.add(this.add.text(dx + dw / 2, dy + 150, 'Pilih barang untuk\nmelihat detailnya', { ...txt(13, C.tertiary, false), align: 'center' }).setOrigin(0.5, 0));
-    } else {
-      const d = this.describe(sel.bag, sel.id);
-      well(g, dx + dw / 2, dy + 46, 32);
-      c.add(this.add.image(dx + dw / 2, dy + 46, d.icon).setScale(3.5));
-      c.add(this.add.text(dx + dw / 2, dy + 86, d.name, txt(16)).setOrigin(0.5, 0));
-      // category chip
-      const kind =
-        sel.bag === 'other' ? 'Ternak'
-        : sel.bag === 'seeds' ? (ITEMS.some((i) => i.id === sel.id) ? 'Alat' : 'Benih')
-        : dishById(baseId(sel.id)) ? 'Masakan'
-        : baseId(sel.id).startsWith('ikan') ? 'Ikan'
-        : baseId(sel.id).startsWith('telur') ? 'Produk Ternak'
-        : 'Hasil Panen';
-      const chip = this.add.text(dx + dw / 2, dy + 116, kind, txt(11, C.blue)).setOrigin(0.5);
-      const cg = this.add.graphics();
-      cg.fillStyle(HEX.blueSoft, 1).fillRoundedRect(chip.x - chip.width / 2 - 10, chip.y - 10, chip.width + 20, 20, 10);
-      c.add([cg, chip]);
-
-      // label/value rows; lines without a colon become small notes
-      const action = sel.bag === 'seeds' || (sel.bag === 'produce' && !!dishById(baseId(sel.id)));
-      const bottom = dy + dh - (action ? 58 : 14);
-      let ry = dy + 136;
-      for (const line of d.lines) {
-        if (ry > bottom - 18) break;
-        const i = line.indexOf(':');
-        if (i > 0) {
-          if (ry > dy + 136) g.fillStyle(HEX.hairline, 0.07).fillRect(dx + 14, ry - 3, dw - 28, 1);
-          c.add(this.add.text(dx + 14, ry, line.slice(0, i), txt(12, C.secondary, false)));
-          const v = this.add.text(dx + dw - 14, ry, line.slice(i + 1).trim(), { ...txt(12, INK), align: 'right', wordWrap: { width: dw - 100 } }).setOrigin(1, 0);
-          c.add(v);
-          ry += Math.max(20, v.height + 4);
-        } else {
-          const n = this.add.text(dx + 14, ry, line, { ...txt(11, C.tertiary, false), wordWrap: { width: dw - 28 } });
-          c.add(n);
-          ry += n.height + 4;
-        }
-      }
-
-      const dish = sel.bag === 'produce' ? dishById(baseId(sel.id)) : undefined;
-      if (dish) {
-        this.button(c, dx + 14, dy + dh - 48, `Makan (+${dish.stamina} tenaga)`, () => {
-          const err = eat(s, dish.id);
-          if (err) {
-            play('error');
-            return this.toast(err);
-          }
-          play('plant');
-          save(s);
-          this.toast(`Nyam! ${dish.name}, tenaga ${s.stamina}/${STAMINA_MAX}.`);
-          this.openInventory();
-        }, dw - 28, s.stamina >= STAMINA_MAX);
-      }
-      if (sel.bag === 'seeds') {
-        const active = s.seed === sel.id;
-        this.button(c, dx + 14, dy + dh - 48, active ? 'Sedang dipakai' : 'Pakai (slot 3)', () => {
-          s.seed = sel.id;
-          s.tool = 'benih';
-          save(s);
-          this.toast(`Slot 3: ${itemName(sel.id)}`);
-          this.openInventory();
-        }, dw - 28, active);
-      }
-    }
-
-    // footer: capsules for wallet and collection
-    const value = Object.entries(s.produce).reduce((a, [id, q]) => a + produceById(id).sellPrice * q, 0);
-    const t = s.festival.trophies;
-    const caps = [
-      { icon: 'ic-coin', text: `${s.coins.toLocaleString('id-ID')} G`, color: C.orange },
-      { icon: '', text: `Nilai panen ${value.toLocaleString('id-ID')} G`, color: INK },
-      { icon: '', text: `Poin Festival ${s.festival.points}`, color: C.purple },
-      { icon: '', text: `Piala ${t.emas ?? 0} · ${t.perak ?? 0} · ${t.perunggu ?? 0}`, color: INK },
-    ];
-    const fy = y + 386;
-    const objs = caps.map((cp) => this.add.text(0, fy + 15, cp.text, txt(12, cp.color)).setOrigin(0, 0.5));
-    const widths = caps.map((cp, i) => objs[i].width + 24 + (cp.icon ? 18 : 0));
-    let fx = x + W / 2 - (widths.reduce((a, b) => a + b, 0) + 8 * (caps.length - 1)) / 2;
-    const fg = this.add.graphics();
-    c.add(fg);
-    caps.forEach((cp, i) => {
-      fg.fillStyle(0x767680, 0.1).fillRoundedRect(fx, fy, widths[i], 30, 15);
-      let tx = fx + 12;
-      if (cp.icon) {
-        c.add(this.add.image(tx + 7, fy + 15, cp.icon).setScale(1));
-        tx += 18;
-      }
-      objs[i].setX(tx);
-      c.add(objs[i]);
-      fx += widths[i] + 8;
-    });
-
-    const next = BAG_TIERS[s.bagTier + 1];
-    const by = y + H - 52;
-    if (next) {
-      const blocked = s.level < next.level || s.coins < next.price;
-      const label = s.level < next.level ? `${next.name} · butuh Level ${next.level}` : `Upgrade → ${next.slots} slot · ${next.price.toLocaleString('id-ID')} G`;
-      this.button(c, x + 24, by, label, () => {
-        const err = upgradeBag(s);
-        if (err) {
-          play('error');
-          return this.toast(err);
-        }
-        play('quest');
-        save(s);
-        this.toast(`${BAG_TIERS[s.bagTier].name}! Tas sekarang ${bagCapacity(s)} slot.`);
-        this.openInventory();
-      }, 300, blocked);
-    } else c.add(this.add.text(x + 24, by + 10, 'Tas sudah ukuran maksimal.', txt(13, C.secondary, false)));
-    this.button(c, x + W - 144, by, 'Tutup', () => this.closeModal(), 120);
-  }
-
-  /** Display info for an inventory entry. */
-  private describe(bag: 'produce' | 'seeds' | 'other', id: string): { name: string; icon: string; lines: string[] } {
-    const s = this.state;
-    if (bag === 'other') {
-      if (id === 'ayam') {
-        const lines = s.animals.length
-          ? s.animals.map((a) => `${a.name}: ♥${a.affection}${a.fed ? ' · sudah makan' : ' · lapar'}`)
-          : ['Belum punya ayam.'];
-        return { name: 'Ayam', icon: 'icon-ayam', lines };
-      }
-      if (id === 'pakan') return { name: 'Pakan', icon: 'icon-pakan', lines: [`Punya ${s.feed}.`, '1 pakan per ayam per hari.', 'Beri di kandang.'] };
-      const eggs = Object.entries(s.coopEggs).map(([e, q]) => `${produceById(e).name} ×${q}`);
-      return { name: 'Telur di kandang', icon: 'icon-telur', lines: [...eggs, 'Ambil di kandang.'] };
-    }
-    if (bag === 'produce') {
-      const p = produceById(id);
-      const qty = s.produce[id] ?? 0;
-      const lines = [`Jumlah: ${qty}`, `Jual: ${p.sellPrice} G / buah`, `Total: ${(p.sellPrice * qty).toLocaleString('id-ID')} G`];
-      const dishInfo = dishById(id);
-      if (dishInfo) lines.push(`Makan: +${dishInfo.stamina} tenaga`);
-      const want = s.requests.filter((r) => r.crop === baseId(id));
-      if (want.length) lines.push(`Diminta: ${want.map((r) => `${npcById(r.npc).name} (${r.qty})`).join(', ')}`);
-      if (isFestivalDay(s.day) && festivalTheme(s.day).id === baseId(id)) lines.push('Tema festival hari ini ×2!');
-      if (starsOf(id) > 1) lines.splice(1, 0, `Kualitas: ${'★'.repeat(starsOf(id))}`);
-      return { name: p.name, icon: `icon-${baseId(id)}`, lines };
-    }
-    const item = ITEMS.find((i) => i.id === id);
-    if (item) return { name: item.name, icon: `icon-${id}`, lines: [`Jumlah: ${s.seeds[id] ?? 0}`, `${item.desc[0].toUpperCase()}${item.desc.slice(1)}.`] };
-    const crop = cropById(id);
-    const inSeason = crop.seasons.includes(seasonOf(s.day));
-    return {
-      name: `Benih ${crop.name}`,
-      icon: `icon-${id}`,
-      lines: [
-        `Jumlah: ${s.seeds[id] ?? 0}`,
-        crop.allSeasons ? 'Musim: semua musim' : `Musim: ${crop.seasons.join(', ')}${inSeason ? '' : ' (bukan musimnya!)'}`,
-        crop.regrow ? `Panen pertama ${crop.days} hari, lalu tiap ${crop.regrow} hari` : `Panen setelah ${crop.days} hari disiram`,
-        `Hasil dijual ${crop.sellPrice} G`,
-      ],
-    };
-  }
 
   private banner?: Phaser.GameObjects.Text;
 
@@ -1276,61 +510,13 @@ export class UIScene extends Phaser.Scene {
   }
 
   /** Small gold "★3" badge for quality produce; null for plain (1-star) items. */
-  private starBadge(x: number, y: number, key: string, size: number) {
+  starBadge(x: number, y: number, key: string, size: number) {
     const q = starsOf(key);
     if (q <= 1) return null;
     return this.add.text(x, y, `★${q}`, { ...txt(size, '#d99a00'), stroke: '#ffffff', strokeThickness: 3 });
   }
 
   // ---------- house & kitchen ----------
-
-  private openHouse() {
-    const { c, x, y } = this.openModal(380, 190, 'Rumah');
-    c.add(this.add.text(x + 190, y + 56, 'Mau apa di rumah?', txt(14, INK, false)).setOrigin(0.5, 0));
-    this.button(c, x + 24, y + 96, 'Tidur', () => this.askSleep(), 100);
-    this.button(c, x + 140, y + 96, 'Dapur', () => this.openKitchen(), 100);
-    this.button(c, x + 256, y + 96, 'Batal', () => this.closeModal(), 100);
-  }
-
-  private openKitchen() {
-    const s = this.state;
-    const W = 700, H = 490;
-    const { c, x, y } = this.openModal(W, H, 'Dapur');
-    c.add(this.add.text(x + W - 28, y + 24, `Tenaga ${s.stamina}/${STAMINA_MAX}`, txt(14, C.secondary)).setOrigin(1, 0));
-    const cw = 212, ch = 118, gap = 10;
-    DISHES.forEach((d, i) => {
-      const cx = x + 20 + (i % 3) * (cw + gap);
-      const cy = y + 58 + Math.floor(i / 3) * (ch + 8);
-      const ready = Object.entries(d.ingredients).every(([id, n]) => countBase(s, id) >= n);
-      const g = this.add.graphics();
-      card(g, cx, cy, cw, ch, ready ? 'ready' : 'normal', 16);
-      well(g, cx + 32, cy + 38, 24);
-      c.add(g);
-      c.add(this.add.image(cx + 32, cy + 38, `icon-${d.id}`).setScale(2.5));
-      c.add(this.add.text(cx + 62, cy + 8, d.name, txt(14)));
-      Object.entries(d.ingredients).forEach(([id, n], j) => {
-        const have = countBase(s, id);
-        c.add(
-          this.add.text(cx + 62, cy + 28 + j * 15, `${produceById(id).name} ${Math.min(have, n)}/${n}`, txt(12, have >= n ? C.green : C.red, false)),
-        );
-      });
-      c.add(this.add.text(cx + 12, cy + ch - 26, `${d.sellPrice} G · +${d.stamina}⚡`, txt(12, C.orange)));
-      this.button(c, cx + cw - 96, cy + ch - 42, 'Masak', () => {
-        const err = cook(s, d.id);
-        if (err) {
-          play('error');
-          return this.toast(err);
-        }
-        play('harvest');
-        const reached = gainXp(s, XP_COOK);
-        save(s);
-        this.toast(`${d.name} jadi! +${XP_COOK} XP`);
-        this.openKitchen();
-        if (reached.length) this.queueLevelUp(reached);
-      }, 84, !ready);
-    });
-    this.button(c, x + W / 2 - 60, y + H - 46, 'Tutup', () => this.closeModal(), 120);
-  }
 
   // ---------- weather ----------
 
@@ -1424,7 +610,7 @@ export class UIScene extends Phaser.Scene {
     z.on('pointerdown', () => {
       if (this.registry.get('modal')) return;
       play('click');
-      this.openCalendar();
+      openCalendar(this);
     });
   }
 
@@ -1438,86 +624,6 @@ export class UIScene extends Phaser.Scene {
       .setColor(festival ? C.red : C.tertiary);
   }
 
-  private openCalendar() {
-    const s = this.state;
-    const W = 572, H = 430;
-    const { c, x, y } = this.openModal(W, H, `Kalender · ${seasonOf(s.day)}, Tahun ${yearOf(s.day)}`, 'calendar');
-    const today = dayOfSeason(s.day);
-    const seasonStart = s.day - today + 1; // absolute day of the 1st of this season
-    const cw = 72, ch = 62, gap = 6;
-    const gx = x + (W - (7 * cw + 6 * gap)) / 2;
-    const gy = y + 84;
-    WEEKDAYS.forEach((d, i) => c.add(this.add.text(gx + i * (cw + gap) + cw / 2, gy - 20, d, txt(12, C.tertiary)).setOrigin(0.5, 0)));
-
-    for (let d = 1; d <= DAYS_PER_SEASON; d++) {
-      const abs = seasonStart + d - 1;
-      const cx = gx + ((d - 1) % 7) * (cw + gap);
-      const cy = gy + Math.floor((d - 1) / 7) * (ch + gap);
-      const past = d < today;
-      const isToday = d === today;
-      const ahead = abs - s.day; // 1 = tomorrow
-      const festival = d % FESTIVAL_EVERY === 0;
-      const g = this.add.graphics();
-      card(g, cx, cy, cw, ch, isToday ? 'today' : past ? 'muted' : festival ? 'alert' : 'normal', 12);
-      c.add(g);
-      c.add(this.add.text(cx + 8, cy + 6, `${d}`, txt(13, past ? C.disabled : isToday ? C.blue : INK)));
-      // weather: today and the forecast window; nothing for days we cannot see yet
-      const wx = isToday ? s.weather : ahead >= 1 && ahead <= s.forecasts.length ? s.forecasts[ahead - 1] : null;
-      if (wx) c.add(this.add.image(cx + cw - 20, cy + 20, `wx-${wx}`).setScale(1.5));
-      if (festival) {
-        c.add(this.add.image(cx + 14, cy + ch - 16, `icon-${festivalTheme(abs).id}`).setScale(1.5).setAlpha(past ? 0.5 : 1));
-        c.add(this.add.text(cx + cw - 5, cy + ch - 5, 'Festival', txt(10, past ? C.disabled : C.red)).setOrigin(1, 1));
-      } else if (isToday) c.add(this.add.text(cx + cw - 5, cy + ch - 5, 'Hari ini', txt(10, C.blue)).setOrigin(1, 1));
-    }
-    c.add(
-      this.add
-        .text(x + W / 2, y + H - 72, 'Ikon cuaca = prakiraan 7 hari ke depan · Festival tiap hari ke-7 (ikon = tema ×2)', txt(11, C.tertiary, false))
-        .setOrigin(0.5, 0),
-    );
-    this.button(c, x + W / 2 - 60, y + H - 50, 'Tutup', () => this.closeModal(), 120);
-  }
-
   // ---------- fish book ----------
 
-  /** Every fish with where and when it bites; uncaught ones are silhouettes with hints. */
-  private openFishBook() {
-    const s = this.state;
-    const COLS = 5, cw = 124, ch = 112, gap = 8;
-    const rows = Math.ceil(FISH.length / COLS);
-    const W = 680, H = 78 + rows * (ch + gap) + 52;
-    const caught = FISH.filter((f) => s.fishCaught[f.id]).length;
-    const { c, x, y } = this.openModal(W, H, 'Buku Ikan', 'fishbook');
-    c.add(this.add.text(x + W - 28, y + 20, `${caught}/${FISH.length} ditemukan`, txt(13, C.secondary)).setOrigin(1, 0));
-    const pb = this.add.graphics();
-    drawBar(pb, x + W - 128, y + 40, 100, caught / FISH.length, HEX.blue);
-    c.add(pb);
-
-    const gx = x + (W - (COLS * cw + (COLS - 1) * gap)) / 2;
-    FISH.forEach((f, i) => {
-      const cx = gx + (i % COLS) * (cw + gap);
-      const cy = y + 66 + Math.floor(i / COLS) * (ch + gap);
-      const best = s.fishCaught[f.id] ?? 0;
-      const g = this.add.graphics();
-      card(g, cx, cy, cw, ch, best ? 'normal' : 'muted', 14);
-      well(g, cx + cw / 2, cy + 28, 20, !best);
-      c.add(g);
-      const icon = this.add.image(cx + cw / 2, cy + 28, `icon-${f.id}`).setScale(2);
-      if (!best) icon.setTint(0x1d1d1f).setAlpha(0.25); // silhouette until caught
-      c.add(icon);
-      c.add(this.add.text(cx + cw / 2, cy + 54, best ? f.name : '???', txt(12, best ? INK : C.tertiary)).setOrigin(0.5, 0));
-      c.add(
-        this.add
-          .text(cx + cw / 2, cy + 70, best ? `${'★'.repeat(best)} · ${f.sellPrice} G` : `${f.sellPrice} G`, txt(10, best ? '#a86f00' : C.disabled))
-          .setOrigin(0.5, 0),
-      );
-      // hints: where, when, which season/weather
-      const where = f.where.map((w) => (w === 'kolam' ? 'Kolam' : 'Danau')).join(' & ');
-      const when = `${String(f.hours[0]).padStart(2, '0')}–${f.hours[1]}`;
-      const season = f.seasons ? f.seasons.join(', ') : 'Semua musim';
-      const rain = f.rain === 'only' ? ' · hujan' : '';
-      c.add(this.add.text(cx + cw / 2, cy + 85, `${where} · ${when}`, txt(10, C.secondary, false)).setOrigin(0.5, 0));
-      c.add(this.add.text(cx + cw / 2, cy + 97, `${season}${rain}`, txt(10, C.tertiary, false)).setOrigin(0.5, 0));
-    });
-    this.button(c, x + W / 2 - 60, y + H - 46, 'Tutup', () => this.closeModal(), 120);
-  }
 }
