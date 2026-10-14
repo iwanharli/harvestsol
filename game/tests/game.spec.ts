@@ -28,7 +28,11 @@ test('tanam, siram, tumbuh, panen, kirim, dibayar', async ({ page }) => {
 
   await at(page, 8, 7, 'up'); // shipping bin
   await press(page, 'Space');
+  await page.waitForTimeout(150);
+  await page.mouse.click(195, 460); // "Kirim Semua"
+  await page.waitForTimeout(100);
   expect(Object.keys((await state(page)).shipping)).toEqual(keys);
+  await press(page, 'Escape');
   await sleep(page);
   expect((await state(page)).coins).toBeGreaterThanOrEqual(300 + Math.round(30 * 1.4)); // kangkung ★3+
   noErrors(errors);
@@ -557,5 +561,33 @@ test('ukuran jendela toko tetap saat pindah tab', async ({ page }) => {
     await page.waitForTimeout(120);
     expect(await box()).toEqual(first);
   }
+  noErrors(errors);
+});
+
+test('kotak kirim: pilih barang, ambil kembali, kirim semua', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.produce = { kangkung: 3, padi: 2 }");
+  await at(page, 8, 7, 'up');
+  await press(page, 'Space');
+  await page.waitForTimeout(150);
+  expect(await page.evaluate(() => window.game.scene.getScene('ui').modalKind)).toBe('shipping');
+
+  await page.mouse.click(171, 172); // first bag slot: kangkung
+  await page.waitForTimeout(120);
+  let s = await state(page);
+  expect(s.shipping).toEqual({ kangkung: 3 });
+  expect(s.produce).toEqual({ padi: 2 }); // the padi stays in the bag
+
+  await page.mouse.click(524, 172); // take the kangkung back
+  await page.waitForTimeout(120);
+  s = await state(page);
+  expect(s.shipping).toEqual({});
+  expect(s.produce).toEqual({ padi: 2, kangkung: 3 });
+
+  await page.mouse.click(195, 460); // "Kirim Semua"
+  await page.waitForTimeout(120);
+  s = await state(page);
+  expect(s.produce).toEqual({});
+  expect(s.shipping).toEqual({ padi: 2, kangkung: 3 });
   noErrors(errors);
 });

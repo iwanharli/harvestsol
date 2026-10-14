@@ -1314,15 +1314,11 @@ export class FarmScene extends Phaser.Scene {
   }
 
   private ship() {
-    const s = this.state;
-    const n = Object.values(s.produce).reduce((a, b) => a + b, 0);
-    if (!n) return this.fail('Tidak ada hasil panen untuk dikirim.');
-    for (const [id, q] of Object.entries(s.produce)) add(s.shipping, id, q);
-    s.produce = {};
-    play('place');
-    this.toast(`${n} hasil panen masuk kotak kirim. Dibayar besok pagi.`);
-    this.changed();
+    if (!Object.keys(this.state.produce).length && !Object.keys(this.state.shipping).length)
+      return this.fail('Tidak ada hasil panen untuk dikirim.');
+    this.game.events.emit('open-shipping');
   }
+
 
   private visitStage() {
     const s = this.state;
