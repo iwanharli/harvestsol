@@ -284,7 +284,7 @@ test('hujan menyiram ladang otomatis', async ({ page }) => {
   await at(page, 10, 9, 'down');
   await use(page, 1);
   await use(page, 3); // planted, not watered
-  await patch(page, "s.forecast = 'hujan'");
+  await patch(page, "s.forecasts[0] = 'hujan'");
   await sleep(page, true);
   const s = await state(page);
   expect(s.weather).toBe('hujan');
@@ -294,11 +294,11 @@ test('hujan menyiram ladang otomatis', async ({ page }) => {
 
 test('hari festival selalu cerah, badai berjalan tanpa error', async ({ page }) => {
   const errors = await start(page);
-  await patch(page, "s.day = 6; s.forecast = 'badai'");
+  await patch(page, "s.day = 6; s.forecasts[0] = 'badai'");
   await sleep(page, true);
   expect((await state(page)).weather).toBe('cerah'); // day 7 = festival
 
-  await patch(page, "s.forecast = 'badai'");
+  await patch(page, "s.forecasts[0] = 'badai'");
   await sleep(page, true);
   expect((await state(page)).weather).toBe('badai');
   await page.waitForTimeout(3000); // first lightning strike

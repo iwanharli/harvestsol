@@ -11,6 +11,7 @@ import {
   AFFECTION_MAX,
   BAG_TIERS,
   COOK_MINUTES,
+  FORECAST_DAYS,
   STORM_DAMAGE,
   WEATHER_ODDS,
   isWet,
@@ -70,7 +71,7 @@ export interface GameState {
   ownedTools: Tool[]; // bought tools (the starter tools are always available)
   bagTier: number; // index into BAG_TIERS
   weather: Weather; // today
-  forecast: Weather; // tomorrow
+  forecasts: Weather[]; // the next FORECAST_DAYS days, tomorrow first
   seed: string;
   seeds: Record<string, number>;
   produce: Record<string, number>;
@@ -104,7 +105,7 @@ export function newGame(): GameState {
     ownedTools: [],
     bagTier: 0,
     weather: 'cerah',
-    forecast: rollWeather(2),
+    forecasts: Array.from({ length: FORECAST_DAYS }, (_, i) => rollWeather(2 + i)),
     seed: 'lobak',
     seeds: { lobak: 6 },
     produce: {},
@@ -129,7 +130,10 @@ function migrate(s: GameState): GameState {
   s.ownedTools ??= [];
   s.bagTier ??= 0;
   s.weather ??= 'cerah';
-  s.forecast ??= rollWeather(s.day + 1);
+  if (!s.forecasts) {
+    const old = (s as unknown as { forecast?: Weather }).forecast; // saves from before the 7-day forecast
+    s.forecasts = Array.from({ length: FORECAST_DAYS }, (_, i) => (i === 0 && old ? old : rollWeather(s.day + 1 + i)));
+  }
   s.xp ??= 0;
   s.requests ??= [];
   s.animals ??= [];
@@ -230,9 +234,9 @@ export function endDay(s: GameState, passedOut: boolean): DayReport {
     if (!p.crop && !p.fertilized && p.tilled && Math.random() < 0.1) delete s.plots[key];
   }
 
-  // today's weather is yesterday's forecast; rain and storms water every tilled tile
-  s.weather = isFestivalDay(s.day) ? 'cerah' : s.forecast;
-  s.forecast = rollWeather(s.day + 1);
+  // today's weather comes off the front of the forecast; a new day joins the end
+  s.weather = isFestivalDay(s.day) ? 'cerah' : (s.forecasts.shift() ?? 'cerah');
+  while (s.forecasts.length < FORECAST_DAYS) s.forecasts.push(rollWeather(s.day + 1 + s.forecasts.length));
   if (isWet(s.weather)) {
     for (const p of Object.values(s.plots)) {
       if (p.tilled) p.watered = true;
