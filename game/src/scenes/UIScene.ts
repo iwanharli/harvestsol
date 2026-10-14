@@ -153,7 +153,7 @@ export class UIScene extends Phaser.Scene {
         else this.farm.setTool(i);
       });
       this.slots.push({ frame, label, icon });
-      if (t.id === 'benih') this.seedIcon = this.add.image(x + slotW - 12, y + 12, 'icon-lobak').setScale(1.2);
+      if (t.id === 'benih') this.seedIcon = this.add.image(x + slotW - 12, y + 12, 'icon-kangkung').setScale(1.2);
     });
 
     this.toastText = this.add
@@ -437,6 +437,7 @@ export class UIScene extends Phaser.Scene {
     const w = WEATHER_INFO[s.weather];
     lines.push(`Cuaca hari ini: ${w.name}${isWet(s.weather) ? ', ladang tersiram otomatis' : ''}.`);
     if (r.stormDamage) lines.push(`Badai merusak ${r.stormDamage} tanaman.`);
+    if (s.weather === 'kabut') lines.push('Kabut asap dari kebakaran lahan. Siram tanamanmu sendiri.');
     lines.push(`Prakiraan besok: ${WEATHER_INFO[s.forecasts[0]].name}. Kalender cuaca: K.`);
     if (isFestivalDay(s.day)) lines.push(`🎉 Hari ini Festival! Tema ${festivalTheme(s.day).name} ×2, 09:00–18:00.`);
     else if (isFestivalDay(s.day + 1)) lines.push(`Besok festival. Siapkan ${festivalTheme(s.day + 1).name}!`);
@@ -466,7 +467,7 @@ export class UIScene extends Phaser.Scene {
         name: 'Benih',
         items: shopStock(s).map((d) => ({
           id: d.id, name: d.name, price: d.seedPrice, level: d.level,
-          info: `${d.days} hari · jual ${d.sellPrice}`,
+          info: d.regrow ? `${d.days} hari, lalu tiap ${d.regrow} hari` : `${d.days} hari · jual ${d.sellPrice}`,
           owned: () => `${s.seeds[d.id] ?? 0}`,
           buy: bag(d.id),
         })),
@@ -1006,8 +1007,8 @@ export class UIScene extends Phaser.Scene {
       icon: `icon-${id}`,
       lines: [
         `Jumlah: ${s.seeds[id] ?? 0}`,
-        `Musim: ${crop.seasons.join(', ')}${inSeason ? '' : ' (bukan musimnya!)'}`,
-        `Panen setelah ${crop.days} hari disiram`,
+        crop.allSeasons ? 'Musim: semua musim' : `Musim: ${crop.seasons.join(', ')}${inSeason ? '' : ' (bukan musimnya!)'}`,
+        crop.regrow ? `Panen pertama ${crop.days} hari, lalu tiap ${crop.regrow} hari` : `Panen setelah ${crop.days} hari disiram`,
         `Hasil dijual ${crop.sellPrice} G`,
       ],
     };
@@ -1173,13 +1174,14 @@ export class UIScene extends Phaser.Scene {
     this.snow = this.add.particles(0, 0, 'snowflake', {
       x: { min: 0, max: W },
       y: -10,
-      lifespan: 14000,
-      speedY: { min: 28, max: 60 },
-      speedX: { min: -24, max: 24 },
-      scale: { min: 0.6, max: 1.5 },
-      alpha: { min: 0.6, max: 1 },
+      lifespan: 16000,
+      speedY: { min: 14, max: 34 },
+      speedX: { min: 10, max: 40 },
+      scale: { min: 1, max: 2.2 },
+      alpha: { min: 0.45, max: 0.85 },
+      tint: [0x6a6560, 0x8a8580, 0x4f4a45],
       quantity: 1,
-      frequency: 110,
+      frequency: 45,
       emitting: false,
     });
     this.flash = this.add.rectangle(0, 0, W, H, 0xffffff, 0).setOrigin(0);
@@ -1193,10 +1195,11 @@ export class UIScene extends Phaser.Scene {
     const wet = isWet(w);
     this.rain!.emitting = wet;
     this.rain!.frequency = w === 'badai' ? 8 : 16;
-    this.snow!.emitting = w === 'salju';
-    if (w === 'salju') this.snow!.fastForward(9000); // start with flakes already filling the screen
+    this.snow!.emitting = w === 'kabut'; // drifting ash from land fires
+    if (w === 'kabut') this.snow!.fastForward(9000); // start with ash already filling the screen
     if (wet) this.rain!.fastForward(1000);
-    this.gloom!.setFillStyle(0x24304a, w === 'badai' ? 0.3 : wet ? 0.16 : w === 'salju' ? 0.06 : 0);
+    if (w === 'kabut') this.gloom!.setFillStyle(0x9a7040, 0.45); // thick brownish haze
+    else this.gloom!.setFillStyle(0x24304a, w === 'badai' ? 0.3 : wet ? 0.16 : 0);
     setRain(w === 'badai' ? 2 : wet ? 1 : 0);
     this.lightning?.remove();
     this.lightning = undefined;

@@ -240,12 +240,10 @@ export function makeTextures(scene: Phaser.Scene) {
     px(c, 4, 12, '#4aa3df', 1, 3);
     px(c, 12, 12, '#4aa3df', 1, 3);
   }, true);
-  canvas(scene, 'wx-salju', TILE, TILE, (c) => {
-    cloud(c, '#dfe6ee', '#ffffff', '#b8c4d0', -1);
-    for (const [x, y] of [[4, 13], [8, 12], [12, 13], [6, 15], [10, 15]]) {
-      px(c, x, y, '#ffffff');
-      px(c, x - 1, y, '#cfe3f5'); px(c, x + 1, y, '#cfe3f5');
-    }
+  canvas(scene, 'wx-kabut', TILE, TILE, (c) => {
+    disc(c, 8, 6, 3, '#e8b84a', '#f7d97a', '#c99a2e'); // a dull sun behind the smoke
+    for (const [y, x0, w, col] of [[8, 1, 13, '#9a8a78'], [10, 3, 12, '#b8a894'], [12, 0, 12, '#8a7a68'], [14, 4, 10, '#a89884']] as const)
+      px(c, x0, y, col, w, 2);
   }, true);
   canvas(scene, 'raindrop', 2, 14, (c) => {
     px(c, 0, 0, 'rgba(200,225,255,0.25)', 2, 6);
@@ -623,7 +621,7 @@ export function makeTextures(scene: Phaser.Scene) {
     darto: { H: '#d8d8d8', h: '#ffffff', C: '#2f5590', c: '#264577', l: '#5a8fd0', P: '#3a3a46', p: '#2a2a33' },
     rani: { H: '#1f1b2e', h: '#3a3352', C: '#f4f1e8', c: '#d8d2c2', l: '#ffffff', P: '#4f9a4a', p: '#3a7a36' },
     joyo: { H: '#bdbdbd', h: '#e6e6e6', C: '#6b8f71', c: '#4f6f55', l: '#8fb595', P: '#5f452c', p: '#4c3723', S: '#e0b07e', s: '#c08e5e' },
-    dina: { H: '#a8552b', h: '#c8743f', C: '#f28bb3', c: '#d06a95', l: '#ffc2d8', P: '#5f9bd6', p: '#3f7fbf' },
+    dina: { H: '#3a3a3a', h: '#6a6a6a', C: '#7a5a3a', c: '#5f452c', l: '#b08a52', P: '#2a2a33', p: '#1f1f26' }, // batik shirt
   };
   for (const [id, look] of Object.entries(npcLooks)) {
     LEGS.forEach((legs, f) => {
@@ -633,6 +631,7 @@ export function makeTextures(scene: Phaser.Scene) {
 
   // ---------- crops: 4 growth stages + withered ----------
   for (const crop of CROPS) {
+    if (crop.id === 'sawit') continue; // drawn below as a tall palm
     for (let st = 0; st < 4; st++) {
       canvas(scene, `crop-${crop.id}-${st}`, TILE, TILE, (c) => {
         const L = crop.leaf;
@@ -671,6 +670,45 @@ export function makeTextures(scene: Phaser.Scene) {
       px(c, 6, 7, crop.color, 2, 1);
     }, true);
   }
+  // oil palm: sprout → young palm → palm → palm with orange fruit bunches (16x32, overhangs the tile above)
+  const frond = (c: Ctx, cx: number, cy: number, len: number, col: string, dark: string) => {
+    for (let i = 0; i < len; i++) {
+      px(c, cx - 1 - i, cy + Math.floor(i / 2), col);
+      px(c, cx + 1 + i, cy + Math.floor(i / 2), col);
+      px(c, cx - 1 - i, cy + Math.floor(i / 2) + 1, dark);
+      px(c, cx + 1 + i, cy + Math.floor(i / 2) + 1, dark);
+    }
+    px(c, cx - 1, cy - 3, col, 2, 3);
+  };
+  for (let st = 0; st < 4; st++) {
+    canvas(scene, `crop-sawit-${st}`, TILE, 32, (c) => {
+      if (st === 0) {
+        px(c, 7, 26, '#5fb04a', 2, 4);
+        px(c, 5, 25, '#7cc95a', 2, 2);
+        px(c, 9, 24, '#5fb04a', 2, 2);
+        return;
+      }
+      const top = st === 1 ? 20 : st === 2 ? 12 : 8;
+      px(c, 7, top + 2, '#7a5a3a', 2, 30 - top);
+      for (let y = top + 4; y < 30; y += 3) px(c, 6, y, '#5f452c', 4, 1); // trunk rings
+      frond(c, 8, top, st === 1 ? 4 : 7, '#3f9a45', '#2a6b30');
+      frond(c, 8, top + 2, st === 1 ? 3 : 6, '#57b257', '#2f7d3a');
+      if (st === 3) {
+        for (const [x, y] of [[4, top + 5], [10, top + 5], [7, top + 6]]) {
+          px(c, x, y, '#d9541e', 3, 3);
+          px(c, x, y, '#f08a3a');
+        }
+      }
+    }, true);
+  }
+  canvas(scene, 'icon-sawit', TILE, TILE, (c) => {
+    // a fruit bunch
+    for (const [x, y] of [[4, 5], [8, 4], [10, 7], [6, 8], [9, 10], [5, 11], [7, 6]]) {
+      disc(c, x, y, 2, '#d9541e', '#f08a3a', '#9a3a14');
+    }
+    px(c, 7, 1, '#5f452c', 2, 3);
+  }, true);
+
   canvas(scene, 'crop-dead', TILE, TILE, (c) => {
     px(c, 7, 6, '#7a5a3a', 2, 8);
     px(c, 4, 9, '#8a6a45', 3, 2);

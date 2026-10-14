@@ -51,7 +51,9 @@ Item di toko (masuk slot 3, ganti dengan Q):
 
 **Memancing**: beli Pancing di toko (Peralatan, 500 G, Lv 2). Hadapkan pemain ke air (kolam atau danau, paling enak dari ujung dermaga), tekan Spasi, tunggu tanda "!", lalu tekan Spasi lagi dengan cepat. Danau punya Ikan Lele dan Ikan Emas yang langka.
 
-**Cuaca**: Cerah, Hujan, Badai, atau Salju (Dingin), diundi dengan prakiraan 7 hari ke depan (lihat Kalender, K). Ikon cuaca dan jam ada di tengah atas layar. Hujan dan badai menyiram semua tanah yang dicangkul (tidak mengurangi kualitas) dan membuat Lele/Ikan Emas 2× lebih sering. Badai merusak sekitar 7% tanaman, ada kilat dan petir, dan warga tinggal di rumah. Ayam berteduh di kandang saat tidak cerah. Hari festival selalu cerah.
+**Musim tropis** (28 hari per musim): Tanam (awal hujan), Hujan, Panen (pancaroba), dan Kemarau. Tanaman: Kangkung, Timun, Terong, Tomat, Ubi, Padi, Cabai, Singkong, Jagung, Kedelai, Semangka, dan **Sawit (Lv 12)**: benih mahal, tumbuh 14 hari di semua musim, lalu berbuah lagi tiap 5 hari tanpa ditanam ulang.
+
+**Cuaca**: Cerah, Hujan, Badai, atau Kabut Asap (Kemarau), diundi dengan prakiraan 7 hari ke depan (lihat Kalender, K). Ikon cuaca dan jam ada di tengah atas layar. Hujan dan badai menyiram semua tanah yang dicangkul (tidak mengurangi kualitas) dan membuat Lele/Ikan Emas 2× lebih sering. Badai merusak sekitar 7% tanaman, ada kilat dan petir, dan warga tinggal di rumah. Ayam berteduh di kandang saat tidak cerah. Hari festival selalu cerah.
 
 **Kualitas tanaman (★1–5)**: ditentukan saat panen. Disiram setiap malam tanpa bolong +★2 (bolong 1 malam +★1), pupuk +★1, ditambah sedikit keberuntungan (naik seiring level). Harga ×1 / ×1,25 / ×1,5 / ×2 / ×3. Kualitas berbeda memakai slot tas terpisah; festival memakai harga berkualitas; permintaan warga dan resep memakai kualitas terendah dulu.
 
@@ -70,3 +72,17 @@ Loop: cangkul → tanam → siram tiap hari → tidur (pintu rumah) → panen �
 - `src/sfx.ts` — efek suara disintesis dengan Web Audio (tanpa file audio)
 - `src/music.ts` — musik latar prosedural: lagu berbeda per musim, lebih tenang di malam hari, lebih meriah di hari festival
 - `src/scenes/UIScene.ts` — HUD, toolbar, toko, laporan pagi, overlay malam
+
+## Catatan satire
+
+Warga desa memakai nama plesetan pejabat Indonesia yang **sudah divonis bersalah oleh pengadilan**. Semua tokoh di game ini fiktif; dialog mereka hanya menyindir fakta yang tercatat dalam putusan, bukan tuduhan baru.
+
+| Tokoh di game | Plesetan dari | Fakta putusan yang disindir |
+| --- | --- | --- |
+| Pak Setya Nopanto | Setya Novanto | Korupsi e-KTP, vonis 15 tahun (2018), dikurangi PK menjadi 12,5 tahun (2025); mobilnya menabrak tiang lampu jalan (Nov 2017) |
+| Pak Juliyari Batubata | Juliari Batubara | Fee Rp10 ribu per paket bansos Covid-19, vonis 12 tahun (2021) |
+| Pak Edi Lobstero | Edhy Prabowo | Suap ekspor benih lobster: 5 tahun, diperberat 9 tahun, dikurangi MA menjadi 5 tahun (2022) |
+| Bu Ratu Atit | Ratu Atut Chosiyah | Suap Ketua MK (2014) dan korupsi alkes Banten (2017); dinasti politik keluarga |
+| Pak Sahrul Lempo | Syahrul Yasin Limpo | Pemerasan pejabat Kementan, vonis 10 tahun diperberat menjadi 12 tahun (2024) |
+
+Sumber: [Tempo](https://en.tempo.co/read/917861/e-ktp-trial-setya-novanto-sentenced-to-15-year-in-jail), [Bisnis.com (tiang lampu)](https://kabar24.bisnis.com/read/20171117/16/710125/setya-novanto-kecelakaan-polisi-periksa-4-saksi-), [Hukumonline (bansos)](https://www.hukumonline.com/berita/a/begini-kronologis-mensos-juliari-minta-fee-rp10-ribu-paket-sembako-bansos-lt6037336f69e89/), [Hukumonline (lobster)](https://www.hukumonline.com/berita/a/ma-korting-vonis-edhy-prabowo-jadi-5-tahun-penjara-lt622951b1071fa/?page=all), [Liputan6 (Atut)](https://www.liputan6.com/news/read/2099618/vonis-sang-ratu-banten), [Republika (alkes)](https://news.republika.co.id/berita/otdygj354/ratu-atut-divonis-lima-setengah-tahun-penjara), [Bisnis.com (SYL)](https://kabar24.bisnis.com/read/20240910/16/1798391/banding-hukuman-syahrul-yasin-limpo-diperberat-jadi-12-tahun-penjara).

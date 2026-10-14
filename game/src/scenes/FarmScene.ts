@@ -854,8 +854,14 @@ export class FarmScene extends Phaser.Scene {
         const q = harvestStars(s, crop, !!plot.fertilized);
         const key = qualityKey(def.id, q);
         if (!canAdd(s, 'produce', key)) return this.fail('Tas penuh! Kirim atau jual hasil panen dulu.');
-        delete plot.crop;
-        delete plot.fertilized;
+        if (def.regrow) {
+          // perennial (sawit): the plant stays and fruits again after `regrow` watered days
+          crop.growth = def.days - def.regrow;
+          crop.missed = 0;
+        } else {
+          delete plot.crop;
+          delete plot.fertilized;
+        }
         add(s.produce, key, 1);
         s.stats.harvested++;
         this.flyIcon(tx, ty, `icon-${def.id}`);
