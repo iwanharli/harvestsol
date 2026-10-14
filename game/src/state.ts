@@ -6,7 +6,13 @@ import {
   DAY_START_MIN,
   DAYS_PER_SEASON,
   SEASONS,
+  FISH,
+  FRIENDSHIP_MAX,
   STAMINA_MAX,
+  STAMINA_MILESTONE_CAP_LEVEL,
+  STAMINA_MILESTONE_EVERY,
+  STAMINA_PER_MILESTONE,
+  STAMINA_REWARD,
   WATER_CAN_MAX,
   AFFECTION_MAX,
   BAG_TIERS,
@@ -88,7 +94,8 @@ export interface GameState {
   nextRequestId: number;
   friendship: Record<string, number>;
   talkedDay: Record<string, number>;
-  fishCaught: Record<string, number>; // fish id → best stars caught (the fish book) // last day the player chatted with each villager
+  fishCaught: Record<string, number>; // fish id → best stars caught (the fish book)
+  staminaRewards: Record<string, boolean>; // one-off max-stamina rewards already granted // last day the player chatted with each villager
   stats: { harvested: number; earned: number; requestsDone: number };
 }
 
@@ -124,6 +131,7 @@ export function newGame(): GameState {
     friendship: {},
     talkedDay: {},
     fishCaught: {},
+    staminaRewards: {},
     stats: { harvested: 0, earned: 0, requestsDone: 0 },
   };
 }
@@ -175,6 +183,7 @@ function migrate(s: GameState): GameState {
   s.friendship ??= {};
   s.talkedDay ??= {};
   s.fishCaught ??= {};
+  s.staminaRewards ??= {};
   s.stats.requestsDone ??= 0;
   return s;
 }
@@ -293,7 +302,7 @@ export function endDay(s: GameState, passedOut: boolean): DayReport {
   }
 
   s.minutes = DAY_START_MIN;
-  s.stamina = passedOut ? Math.round(STAMINA_MAX * 0.6) : STAMINA_MAX;
+  s.stamina = passedOut ? Math.round(maxStamina(s) * 0.6) : maxStamina(s);
   // chickens: fed ones lay an egg and grow fonder, hungry ones sulk
   for (const a of s.animals) {
     if (a.fed) {
@@ -360,6 +369,7 @@ export function gainXp(s: GameState, n: number): number[] {
     s.xp -= xpToNext(s.level);
     s.level++;
     reached.push(s.level);
+    if (s.level % STAMINA_MILESTONE_EVERY === 0 && s.level <= STAMINA_MILESTONE_CAP_LEVEL) s.stamina += STAMINA_PER_MILESTONE;
   }
   return reached;
 }
@@ -484,9 +494,9 @@ export function cook(s: GameState, dishId: string): string | null {
 export function eat(s: GameState, dishId: string): string | null {
   const dish = dishById(dishId);
   if (!dish || !s.produce[dishId]) return 'Masakan tidak ada di tas.';
-  if (s.stamina >= STAMINA_MAX) return 'Tenaga masih penuh.';
+  if (s.stamina >= maxStamina(s)) return 'Tenaga masih penuh.';
   add(s.produce, dishId, -1);
-  s.stamina = Math.min(STAMINA_MAX, s.stamina + dish.stamina);
+  s.stamina = Math.min(maxStamina(s), s.stamina + dish.stamina);
   return null;
 }
 
@@ -532,4 +542,31 @@ export function rollWeather(day: number, rand = Math.random): Weather {
   let n = rand() * odds.reduce((a, [, w]) => a + w, 0);
   for (const [w, weight] of odds) if ((n -= weight) < 0) return w;
   return 'cerah';
+}
+
+// ---------- max stamina ----------
+
+/** Base 100, +10 every 4 levels up to Lv 20, plus one-off rewards (up to 170). */
+export function maxStamina(s: GameState) {
+  const milestones = Math.floor(Math.min(s.level, STAMINA_MILESTONE_CAP_LEVEL) / STAMINA_MILESTONE_EVERY);
+  const rewards = Object.values(s.staminaRewards ?? {}).filter(Boolean).length;
+  return STAMINA_MAX + milestones * STAMINA_PER_MILESTONE + rewards * STAMINA_REWARD;
+}
+
+/**
+ * Grant one-off max-stamina rewards that are now earned; returns a message per new reward.
+ * Jamu Kuat: the first villager to reach ♥10. Fish Book: every species caught.
+ */
+export function checkStaminaRewards(s: GameState): string[] {
+  const out: string[] = [];
+  const grant = (key: string, msg: string) => {
+    if (s.staminaRewards[key]) return;
+    s.staminaRewards[key] = true;
+    s.stamina += STAMINA_REWARD; // the new headroom comes filled
+    out.push(msg);
+  };
+  const close = Object.entries(s.friendship).find(([, v]) => v >= FRIENDSHIP_MAX);
+  if (close) grant('jamu', `Kamu dapat Jamu Kuat! Tenaga maksimal +${STAMINA_REWARD}.`);
+  if (FISH.every((f) => s.fishCaught[f.id])) grant('fishbook', `Buku Ikan lengkap! Tenaga maksimal +${STAMINA_REWARD}.`);
+  return out;
 }

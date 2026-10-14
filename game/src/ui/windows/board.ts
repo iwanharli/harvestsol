@@ -1,7 +1,7 @@
 import { XP, cropById, npcById } from '../../data';
 import { play } from '../../sfx';
 import { C, card, txt, well } from '../theme';
-import { countBase, deliverRequest, gainXp, save } from '../../state';
+import { countBase, deliverRequest, gainXp, save, checkStaminaRewards } from '../../state';
 import type { UIScene } from '../../scenes/UIScene';
 
 const INK = C.ink;
@@ -38,8 +38,9 @@ export function openBoard(ui: UIScene) {
       }
       play('quest');
       const reached = gainXp(s, XP.request);
+      const rewards = checkStaminaRewards(s);
       save(s);
-      ui.toast(`${npc.name} senang! +${r.reward} G · +${XP.request} XP`);
+      ui.toast(rewards[0] ?? `${npc.name} senang! +${r.reward} G · +${XP.request} XP`);
       openBoard(ui);
       if (reached.length) ui.queueLevelUp(reached);
     }, 120, !ok);

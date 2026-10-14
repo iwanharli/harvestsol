@@ -1,7 +1,7 @@
-import { DISHES, XP_COOK, STAMINA_MAX, produceById } from '../../data';
+import { DISHES, XP_COOK, produceById } from '../../data';
 import { play } from '../../sfx';
 import { C, card, txt, well } from '../theme';
-import { cook, countBase, gainXp, save } from '../../state';
+import { cook, countBase, gainXp, save, maxStamina } from '../../state';
 import { askSleep } from './report';
 import type { UIScene } from '../../scenes/UIScene';
 
@@ -19,7 +19,7 @@ export function openKitchen(ui: UIScene) {
   const s = ui.state;
   const W = 700, H = 490;
   const { c, x, y } = ui.openModal(W, H, 'Dapur');
-  c.add(ui.add.text(x + W - 28, y + 24, `Tenaga ${s.stamina}/${STAMINA_MAX}`, txt(14, C.secondary)).setOrigin(1, 0));
+  c.add(ui.add.text(x + W - 28, y + 24, `Tenaga ${s.stamina}/${maxStamina(s)}`, txt(14, C.secondary)).setOrigin(1, 0));
   const cw = 212, ch = 118, gap = 10;
   DISHES.forEach((d, i) => {
     const cx = x + 20 + (i % 3) * (cw + gap);
