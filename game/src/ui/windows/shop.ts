@@ -115,7 +115,8 @@ export function openShop(ui: UIScene) {
   // App Store-style list: two columns of horizontal cards, as many rows as needed
   const items = [...tab.items].sort((p, q) => Number(p.level > s.level) - Number(q.level > s.level)); // locked last
   const COLS = 2, cw = 280, ch = 94, gap = 10;
-  const rows = Math.max(1, Math.ceil(items.length / COLS));
+  // size the window for the fullest tab, so switching tabs never changes its size
+  const rows = Math.max(1, ...tabs.map((t) => Math.ceil(t.items.length / COLS)));
   const W = 620, H = 108 + rows * (ch + gap) + 58;
   const { c, x, y } = ui.openModal(W, H, `Toko · musim ${seasonOf(s.day)}`);
   const coin = ui.add.text(x + W - 28, y + 24, '', txt(16, C.orange)).setOrigin(1, 0);
