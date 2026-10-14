@@ -50,6 +50,8 @@ Item di toko (masuk slot 3, ganti dengan Q):
 
 **Memancing**: beli Pancing di toko (Peralatan, 500 G, Lv 2). Hadapkan pemain ke air (kolam atau danau, paling enak dari ujung dermaga), tekan Spasi, tunggu tanda "!", lalu tekan Spasi lagi dengan cepat. Danau punya Ikan Lele dan Ikan Emas yang langka.
 
+**Memasak (Lv 3)**: hadapkan pemain ke pintu rumah lalu pilih Dapur. 9 resep dari hasil panen, telur, dan ikan; masakan dijual lebih mahal dari bahannya, bisa dimakan dari Tas untuk memulihkan tenaga, atau diserahkan ke festival.
+
 **Tas**: setiap jenis barang memakai 1 slot (maks 99 per slot). Kapasitas awal 12 slot (Tas Kain), upgrade ke Tas Kulit 18 (2.000 G, Lv 2), Ransel Petani 24 (5.000 G, Lv 4), Ransel Besar 30 (12.000 G, Lv 6) dari layar Tas (I) atau toko. Kalau penuh, panen/pancing/telur/belanja ditolak dan tanaman tetap di ladang.
 
 Loop: cangkul → tanam → siram tiap hari → tidur (pintu rumah) → panen → kotak kirim → dibayar pagi berikutnya. Isi penyiram di kolam. Jam 24:00 pemain pingsan dan tenaga pagi berikutnya hanya 60%.

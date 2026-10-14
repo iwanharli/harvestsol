@@ -87,10 +87,11 @@ export const XP = { till: 1, water: 1, plant: 2, harvestPerDay: 2, request: 25 }
 /** XP needed to go from level l to l+1. */
 export const xpToNext = (l: number) => Math.round(40 * Math.pow(l, 1.6));
 
-export const FEATURE_LEVEL = { board: 2, coop: 7 };
+export const FEATURE_LEVEL = { board: 2, kitchen: 3, coop: 7 };
 
 export const FEATURES: { level: number; name: string }[] = [
   { level: FEATURE_LEVEL.board, name: 'Papan Permintaan Warga' },
+  { level: FEATURE_LEVEL.kitchen, name: 'Dapur: masak di rumah' },
   { level: FEATURE_LEVEL.coop, name: 'Kandang Ayam: beli ayam dan pakan di toko' },
 ];
 
@@ -121,9 +122,36 @@ export const PRODUCTS: { id: string; name: string; sellPrice: number }[] = [
   { id: 'ikan-emas', name: 'Ikan Emas', sellPrice: 300 },
 ];
 
+// ---------- cooking ----------
+
+export interface Dish {
+  id: string;
+  name: string;
+  ingredients: Record<string, number>;
+  sellPrice: number;
+  stamina: number;
+  color: string; // main colour of the food on the plate
+}
+
+export const DISHES: Dish[] = [
+  { id: 'sup-lobak', name: 'Sup Lobak', ingredients: { lobak: 2 }, sellPrice: 130, stamina: 25, color: '#f4f1e8' },
+  { id: 'kentang-goreng', name: 'Kentang Goreng', ingredients: { kentang: 2 }, sellPrice: 230, stamina: 30, color: '#f2cf3c' },
+  { id: 'telur-dadar', name: 'Telur Dadar', ingredients: { telur: 2 }, sellPrice: 140, stamina: 30, color: '#f7d65a' },
+  { id: 'ikan-bakar', name: 'Ikan Bakar', ingredients: { 'ikan-nila': 1 }, sellPrice: 75, stamina: 35, color: '#a0703f' },
+  { id: 'sambal-tomat', name: 'Sambal Tomat', ingredients: { tomat: 2 }, sellPrice: 210, stamina: 20, color: '#d9402f' },
+  { id: 'jagung-bakar', name: 'Jagung Bakar', ingredients: { jagung: 1 }, sellPrice: 190, stamina: 25, color: '#e8b830' },
+  { id: 'kolak-labu', name: 'Kolak Labu', ingredients: { labu: 1, ubi: 1 }, sellPrice: 340, stamina: 40, color: '#e88a2d' },
+  { id: 'selai-stroberi', name: 'Selai Stroberi', ingredients: { stroberi: 2 }, sellPrice: 600, stamina: 20, color: '#c0303b' },
+  { id: 'nasi-goreng', name: 'Nasi Goreng Spesial', ingredients: { telur: 1, kentang: 1, 'ikan-lele': 1 }, sellPrice: 320, stamina: 60, color: '#c98a4a' },
+];
+
+export const dishById = (id: string) => DISHES.find((d) => d.id === id);
+export const XP_COOK = 4;
+export const COOK_MINUTES = 30;
+
 /** Name and price of anything that can sit in the produce bag (crops or animal products). */
 export function produceById(id: string): { id: string; name: string; sellPrice: number } {
-  return PRODUCTS.find((p) => p.id === id) ?? cropById(id);
+  return PRODUCTS.find((p) => p.id === id) ?? dishById(id) ?? cropById(id);
 }
 
 export const XP_ANIMAL = { feed: 1, egg: 2, pet: 1 };

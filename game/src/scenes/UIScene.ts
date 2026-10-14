@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import {
   BAG_MAX_SLOTS,
+  DISHES,
+  XP_COOK,
+  dishById,
   BAG_TIERS,
   BUYABLE_TOOLS,
   CHICKEN_PRICE,
@@ -30,7 +33,9 @@ import {
   add,
   bagCapacity,
   canAdd,
+  cook,
   deliverRequest,
+  eat,
   enterFestival,
   festivalScore,
   festivalTheme,
@@ -152,6 +157,7 @@ export class UIScene extends Phaser.Scene {
       ['open-shop', () => this.openShop()],
       ['open-board', () => this.openBoard()],
       ['open-festival', () => this.openFestival()],
+      ['open-house', () => this.openHouse()],
       ['area', (name: string) => this.areaBanner(name)],
       ['level-up', (lv: number[]) => this.queueLevelUp(lv)],
       ['ask-sleep', () => this.askSleep()],
@@ -871,6 +877,20 @@ export class UIScene extends Phaser.Scene {
       c.add(this.add.image(dx + dw / 2, dy + 50, d.icon).setScale(4));
       c.add(this.add.text(dx + dw / 2, dy + 94, d.name, txt(17)).setOrigin(0.5, 0));
       c.add(this.add.text(dx + 14, dy + 122, d.lines.join('\n'), { ...txt(13, INK, false), lineSpacing: 4, wordWrap: { width: dw - 28 } }));
+      const dish = sel.bag === 'produce' ? dishById(sel.id) : undefined;
+      if (dish) {
+        this.button(c, dx + 22, dy + dh - 48, `Makan (+${dish.stamina} tenaga)`, () => {
+          const err = eat(s, dish.id);
+          if (err) {
+            play('error');
+            return this.toast(err);
+          }
+          play('plant');
+          save(s);
+          this.toast(`Nyam! ${dish.name}, tenaga ${s.stamina}/${STAMINA_MAX}.`);
+          this.openInventory();
+        }, dw - 44, s.stamina >= STAMINA_MAX);
+      }
       if (sel.bag === 'seeds') {
         const active = s.seed === sel.id;
         this.button(c, dx + 22, dy + dh - 48, active ? 'Sedang dipakai' : 'Pakai (slot 3)', () => {
@@ -936,6 +956,8 @@ export class UIScene extends Phaser.Scene {
       const p = produceById(id);
       const qty = s.produce[id] ?? 0;
       const lines = [`Jumlah: ${qty}`, `Jual: ${p.sellPrice} G / buah`, `Total: ${(p.sellPrice * qty).toLocaleString('id-ID')} G`];
+      const dishInfo = dishById(id);
+      if (dishInfo) lines.push(`Makan: +${dishInfo.stamina} tenaga`);
       const want = s.requests.filter((r) => r.crop === id);
       if (want.length) lines.push(`Diminta: ${want.map((r) => `${npcById(r.npc).name} (${r.qty})`).join(', ')}`);
       if (isFestivalDay(s.day) && festivalTheme(s.day).id === id) lines.push('Tema festival hari ini ×2!');
@@ -1029,5 +1051,57 @@ export class UIScene extends Phaser.Scene {
     btn.on('pointerup', () => btn.setScale(1));
     btn.on('pointerout', () => btn.setScale(1));
     layer.add([btn, lbl]);
+  }
+
+  // ---------- house & kitchen ----------
+
+  private openHouse() {
+    const { c, x, y } = this.openModal(380, 190, 'Rumah');
+    c.add(this.add.text(x + 190, y + 56, 'Mau apa di rumah?', txt(14, INK, false)).setOrigin(0.5, 0));
+    this.button(c, x + 24, y + 96, 'Tidur', () => this.askSleep(), 100);
+    this.button(c, x + 140, y + 96, 'Dapur', () => this.openKitchen(), 100);
+    this.button(c, x + 256, y + 96, 'Batal', () => this.closeModal(), 100);
+  }
+
+  private openKitchen() {
+    const s = this.state;
+    const W = 700, H = 490;
+    const { c, x, y } = this.openModal(W, H, 'Dapur');
+    c.add(this.add.text(x + W - 28, y + 24, `Tenaga ${s.stamina}/${STAMINA_MAX}`, txt(14, '#6b5030')).setOrigin(1, 0));
+    const cw = 212, ch = 118, gap = 10;
+    DISHES.forEach((d, i) => {
+      const cx = x + 20 + (i % 3) * (cw + gap);
+      const cy = y + 58 + Math.floor(i / 3) * (ch + 8);
+      const ready = Object.entries(d.ingredients).every(([id, n]) => (s.produce[id] ?? 0) >= n);
+      const g = this.add.graphics();
+      g.fillStyle(WOOD_DARK, 1).fillRoundedRect(cx, cy + 2, cw, ch, 9);
+      g.fillStyle(ready ? 0xfffaea : 0xf3ead6, 1).fillRoundedRect(cx, cy, cw, ch, 9);
+      g.lineStyle(2, ready ? 0x6aa84f : 0xd9c08c, 1).strokeRoundedRect(cx, cy, cw, ch, 9);
+      g.fillStyle(0xf3e4bd, 1).fillCircle(cx + 32, cy + 38, 24);
+      c.add(g);
+      c.add(this.add.image(cx + 32, cy + 38, `icon-${d.id}`).setScale(2.4));
+      c.add(this.add.text(cx + 62, cy + 8, d.name, txt(14)));
+      Object.entries(d.ingredients).forEach(([id, n], j) => {
+        const have = s.produce[id] ?? 0;
+        c.add(
+          this.add.text(cx + 62, cy + 28 + j * 15, `${produceById(id).name} ${Math.min(have, n)}/${n}`, txt(12, have >= n ? '#3a7a36' : '#c0392b', false)),
+        );
+      });
+      c.add(this.add.text(cx + 12, cy + ch - 26, `${d.sellPrice} G · +${d.stamina}⚡`, txt(12, '#8a6a10')));
+      this.button(c, cx + cw - 96, cy + ch - 42, 'Masak', () => {
+        const err = cook(s, d.id);
+        if (err) {
+          play('error');
+          return this.toast(err);
+        }
+        play('harvest');
+        const reached = gainXp(s, XP_COOK);
+        save(s);
+        this.toast(`${d.name} jadi! +${XP_COOK} XP`);
+        this.openKitchen();
+        if (reached.length) this.queueLevelUp(reached);
+      }, 84, !ready);
+    });
+    this.button(c, x + W / 2 - 60, y + H - 46, 'Tutup', () => this.closeModal(), 120);
   }
 }

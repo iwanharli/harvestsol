@@ -10,6 +10,8 @@ import {
   WATER_CAN_MAX,
   AFFECTION_MAX,
   BAG_TIERS,
+  COOK_MINUTES,
+  dishById,
   STACK_MAX,
   FESTIVAL_EVERY,
   FESTIVAL_MAX_ITEMS,
@@ -392,5 +394,33 @@ export function upgradeBag(s: GameState): string | null {
   if (s.coins < next.price) return `Uang tidak cukup (butuh ${next.price} G).`;
   s.coins -= next.price;
   s.bagTier++;
+  return null;
+}
+
+// ---------- cooking ----------
+
+/** Turn ingredients into a dish. Returns an error message, or null on success. */
+export function cook(s: GameState, dishId: string): string | null {
+  const dish = dishById(dishId);
+  if (!dish) return 'Resep tidak dikenal.';
+  for (const [id, n] of Object.entries(dish.ingredients))
+    if ((s.produce[id] ?? 0) < n) return `Bahan kurang: ${produceById(id).name}.`;
+  for (const [id, n] of Object.entries(dish.ingredients)) add(s.produce, id, -n);
+  if (!canAdd(s, 'produce', dish.id)) {
+    for (const [id, n] of Object.entries(dish.ingredients)) add(s.produce, id, n); // put everything back
+    return 'Tas penuh! Kosongkan satu slot dulu.';
+  }
+  add(s.produce, dish.id, 1);
+  s.minutes += COOK_MINUTES;
+  return null;
+}
+
+/** Eat a dish from the bag to restore stamina. */
+export function eat(s: GameState, dishId: string): string | null {
+  const dish = dishById(dishId);
+  if (!dish || !s.produce[dishId]) return 'Masakan tidak ada di tas.';
+  if (s.stamina >= STAMINA_MAX) return 'Tenaga masih penuh.';
+  add(s.produce, dishId, -1);
+  s.stamina = Math.min(STAMINA_MAX, s.stamina + dish.stamina);
   return null;
 }

@@ -728,7 +728,7 @@ export class FarmScene extends Phaser.Scene {
     const s = this.state;
     const k = plotKey(tx, ty);
     const spot = this.spots.get(k);
-    if (spot === 'door') return this.game.events.emit('ask-sleep');
+    if (spot === 'door') return this.game.events.emit(s.level >= FEATURE_LEVEL.kitchen ? 'open-house' : 'ask-sleep');
     if (spot === 'shop') return this.game.events.emit('open-shop');
     if (spot === 'bin') return this.ship();
     if (spot === 'board') {

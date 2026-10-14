@@ -198,3 +198,31 @@ test('joystick sentuh menggerakkan pemain', async ({ page }) => {
   expect(y1 - y0).toBeGreaterThan(10);
   noErrors(errors);
 });
+
+test('memasak di dapur lalu makan untuk tenaga', async ({ page }) => {
+  const errors = await start(page);
+  // before level 3 the door only offers sleep
+  await at(page, 5, 6, 'up');
+  await press(page, 'Space');
+  expect((await page.evaluate(() => window.game.scene.getScene('ui').modalKind))).toBe('');
+  await press(page, 'Escape');
+
+  await patch(page, 's.level = 3; s.stamina = 50; s.produce = { lobak: 2 }');
+  await press(page, 'Space');
+  await page.mouse.click(480, 288); // "Dapur"
+  await page.waitForTimeout(100);
+  await page.screenshot({ path: 'test-results/dapur.png' });
+  await page.mouse.click(308, 176); // "Masak" on Sup Lobak
+  await page.waitForTimeout(100);
+  let s = await state(page);
+  expect(s.produce).toEqual({ 'sup-lobak': 1 });
+  expect(s.minutes).toBeGreaterThanOrEqual(6 * 60 + 30);
+
+  await press(page, 'Escape');
+  await press(page, 'i');
+  await page.mouse.click(690, 380); // "Makan" in the detail card
+  s = await state(page);
+  expect(s.produce).toEqual({});
+  expect(s.stamina).toBe(75);
+  noErrors(errors);
+});
