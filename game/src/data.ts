@@ -64,10 +64,10 @@ export const WATER_CAN_MAX = 20;
 export const STAMINA_MAX = 100;
 export const STAMINA_COST: Record<Tool, number> = { cangkul: 2, siram: 1, benih: 0, tangan: 0, pancing: 3 };
 
-// Clock: 1 real second = 10 game minutes. Day runs 06:00–24:00 (108 real seconds).
+// Clock: 1 real second = 1.5 game minutes, so a day (06:00–24:00) lasts 12 real minutes.
 export const DAY_START_MIN = 6 * 60;
 export const DAY_END_MIN = 24 * 60;
-export const GAME_MIN_PER_SEC = 10;
+export const GAME_MIN_PER_SEC = 1.5;
 
 // Non-seed items that live in the same bag as seeds (tool slot 3).
 export interface ItemDef {

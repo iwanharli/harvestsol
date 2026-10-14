@@ -90,6 +90,7 @@ export class UIScene extends Phaser.Scene {
   private pendingLevels: number[] = [];
   private modalKind = '';
   private levelText!: Phaser.GameObjects.Text;
+  private xpLine!: Phaser.GameObjects.Graphics;
   private clockIcon!: Phaser.GameObjects.Image;
   private clockDay!: Phaser.GameObjects.Text;
   private clockSub!: Phaser.GameObjects.Text;
@@ -117,10 +118,11 @@ export class UIScene extends Phaser.Scene {
     this.buildWeather();
 
     // top-left: date, time, coins, bars
-    this.panel(12, 12, 250, 104);
+    this.panel(12, 12, 250, 84);
     this.dateText = this.add.text(28, 22, '', txt(14, C.secondary));
     this.levelText = this.add.text(246, 22, '', txt(14, C.purple)).setOrigin(1, 0);
     this.bars = this.add.graphics();
+    this.xpLine = this.add.graphics();
     this.buildClock();
 
     // top-right: bag
@@ -242,8 +244,17 @@ export class UIScene extends Phaser.Scene {
     };
     bar(46, s.stamina, STAMINA_MAX, HEX.orange, 'Tenaga');
     bar(66, s.water, WATER_CAN_MAX, HEX.blue, 'Air');
-    bar(86, s.xp, xpToNext(s.level), HEX.purple, 'XP');
-    this.levelText.setText(`Lv ${s.level}`);
+
+    // XP: a thin full-width progress line along the top edge
+    const need = xpToNext(s.level);
+    const frac = Math.min(1, s.xp / need);
+    this.xpLine.clear();
+    this.xpLine.fillStyle(0x000000, 0.22).fillRect(0, 0, VIEW.w, 4);
+    if (frac > 0) {
+      this.xpLine.fillStyle(HEX.purple, 0.35).fillRect(0, 0, VIEW.w * frac, 6); // soft glow
+      this.xpLine.fillStyle(HEX.purple, 1).fillRect(0, 0, VIEW.w * frac, 4);
+    }
+    this.levelText.setText(`Lv ${s.level} · ${Math.floor(frac * 100)}%`);
 
     // HUD bag: a row of mini slots plus one status line
     const W = VIEW.w;
