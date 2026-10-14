@@ -680,7 +680,11 @@ export class UIScene extends Phaser.Scene {
     ];
     const tab = tabs.find((t) => t.id === this.shopTab)!;
 
-    const W = 620, H = 360;
+    // App Store-style list: two columns of horizontal cards, as many rows as needed
+    const items = [...tab.items].sort((p, q) => Number(p.level > s.level) - Number(q.level > s.level)); // locked last
+    const COLS = 2, cw = 280, ch = 94, gap = 10;
+    const rows = Math.max(1, Math.ceil(items.length / COLS));
+    const W = 620, H = 108 + rows * (ch + gap) + 58;
     const { c, x, y } = this.openModal(W, H, `Toko · musim ${seasonOf(s.day)}`);
     const coin = this.add.text(x + W - 28, y + 24, '', txt(16, C.orange)).setOrigin(1, 0);
     c.add(coin);
@@ -694,26 +698,34 @@ export class UIScene extends Phaser.Scene {
       }, 124),
     );
 
-    // card grid
-    const cols = 4, cw = 134, ch = 176, gap = 10;
-    const gx = x + (W - (cols * cw + (cols - 1) * gap)) / 2;
-    const refresh: (() => void)[] = [() => coin.setText(`${s.coins} G`), () => this.refresh()];
-    if (!tab.items.length) c.add(this.add.text(x + W / 2, y + 170, 'Tidak ada benih untuk musim ini.', txt(15, INK, false)).setOrigin(0.5));
-    tab.items.forEach((it, i) => {
-      const cx = gx + (i % cols) * (cw + gap);
-      const cy = y + 100;
+    const gx = x + (W - (COLS * cw + gap)) / 2;
+    const refresh: (() => void)[] = [() => coin.setText(`${s.coins.toLocaleString('id-ID')} G`), () => this.refresh()];
+    if (!items.length) c.add(this.add.text(x + W / 2, y + 150, 'Tidak ada barang untuk musim ini.', txt(14, C.secondary, false)).setOrigin(0.5));
+    items.forEach((it, i) => {
+      const cx = gx + (i % COLS) * (cw + gap);
+      const cy = y + 104 + Math.floor(i / COLS) * (ch + gap);
       const locked = it.level > s.level;
       const g = this.add.graphics();
       card(g, cx, cy, cw, ch, locked ? 'locked' : 'normal', 16);
-      well(g, cx + cw / 2, cy + 36, 26, locked);
+      well(g, cx + 40, cy + ch / 2, 26, locked);
       c.add(g);
-      const icon = this.add.image(cx + cw / 2, cy + 36, `icon-${it.id}`).setScale(3);
+      const icon = this.add.image(cx + 40, cy + ch / 2, `icon-${it.id}`).setScale(2.5);
       if (locked) icon.setTint(0x9a9aa0).setAlpha(0.5);
       c.add(icon);
-      c.add(this.add.text(cx + cw / 2, cy + 70, it.name, txt(15, locked ? C.disabled : INK)).setOrigin(0.5, 0));
-      c.add(this.add.text(cx + cw / 2, cy + 90, it.info, { ...txt(11, C.secondary, false), align: 'center', wordWrap: { width: cw - 12 } }).setOrigin(0.5, 0));
+      const tx = cx + 78;
+      const textW = cw - 78 - 92; // room left of the buttons
+      c.add(this.add.text(tx, cy + 10, it.name, txt(15, locked ? C.disabled : INK)));
+      c.add(this.add.text(tx, cy + 31, it.info, { ...txt(11, C.secondary, false), wordWrap: { width: textW, useAdvancedWrap: true } }));
+      const price = this.add.text(tx, cy + ch - 24, '', txt(13, locked ? C.disabled : C.orange));
+      c.add(price);
+      refresh.push(() => price.setText(it.owned() ? `${it.price.toLocaleString('id-ID')} G · punya ${it.owned()}` : `${it.price.toLocaleString('id-ID')} G`));
+
+      const bx = cx + cw - 76;
       if (locked) {
-        c.add(this.add.text(cx + cw / 2, cy + 130, `Level ${it.level}`, txt(13, C.disabled)).setOrigin(0.5));
+        const lt = this.add.text(bx + 34, cy + ch / 2, `Level ${it.level}`, txt(12, C.secondary)).setOrigin(0.5);
+        const lg = this.add.graphics();
+        lg.fillStyle(0x767680, 0.12).fillRoundedRect(bx - 2, cy + ch / 2 - 15, 72, 30, 15);
+        c.add([lg, lt]);
         const z = this.add.zone(cx, cy, cw, ch).setOrigin(0).setInteractive();
         z.on('pointerdown', () => {
           play('error');
@@ -722,19 +734,16 @@ export class UIScene extends Phaser.Scene {
         c.add(z);
         return;
       }
-      const owned = this.add.text(cx + cw - 8, cy + 6, '', txt(11, C.secondary)).setOrigin(1, 0);
-      c.add(owned);
-      refresh.push(() => owned.setText(it.owned() ? `punya ${it.owned()}` : ''));
-      c.add(this.add.text(cx + cw / 2, cy + 118, `${it.price} G`, txt(14, C.orange)).setOrigin(0.5, 0));
-      const buttons: [number, number, number][] = it.unique ? [[1, 8, cw - 16]] : [[1, 8, cw / 2 - 10], [5, cw / 2 + 2, cw / 2 - 10]];
-      for (const [n, bx, bw] of buttons) {
+      // +1 / +5 stacked on the right (one "Beli" for one-off items)
+      const buttons: [number, number][] = it.unique ? [[1, cy + ch / 2 - 17]] : [[1, cy + 9], [5, cy + ch - 43]];
+      for (const [n, by] of buttons) {
         const have = it.unique?.() ?? false;
-        const label = it.unique ? (have ? 'Sudah punya' : 'Beli') : `+${n}`;
-        this.button(c, cx + bx, cy + ch - 40, label, () => {
+        const label = it.unique ? (have ? 'Punya' : 'Beli') : `+${n}`;
+        this.button(c, bx, by, label, () => {
           const cost = it.price * n;
           if (s.coins < cost) {
             play('error');
-            return this.toast(`Uang tidak cukup (butuh ${cost} G).`);
+            return this.toast(`Uang tidak cukup (butuh ${cost.toLocaleString('id-ID')} G).`);
           }
           const err = it.buy(n);
           if (err) {
@@ -746,11 +755,11 @@ export class UIScene extends Phaser.Scene {
           save(s);
           refresh.forEach((f) => f());
           if (it.unique) this.openShop(); // redraw the card as owned
-        }, bw, have);
+        }, 66, have);
       }
     });
     refresh.forEach((f) => f());
-    this.button(c, x + W / 2 - 60, y + H - 50 + 6, 'Tutup', () => this.closeModal(), 120);
+    this.button(c, x + W / 2 - 60, y + H - 48, 'Tutup', () => this.closeModal(), 120);
   }
 
   private openBoard() {
