@@ -463,31 +463,101 @@ export class UIScene extends Phaser.Scene {
     this.button(c, x + 210, y + 108, 'Belum', () => this.closeModal());
   }
 
+  /** Morning report: a header, an iOS-style grouped list, sales detail and notices. */
   private showReport(r: DayReport) {
     const s = this.state;
     this.refresh();
-    const lines: string[] = [];
-    if (r.sold.length) {
-      for (const it of r.sold) lines.push(`${it.name} ×${it.qty}  →  ${it.total} G`);
-      lines.push('', `Total pendapatan: ${r.income} G`);
-    } else lines.push('Tidak ada kiriman kemarin.');
-    lines.push('', `${r.grown} tanaman tumbuh semalam.`);
-    if (r.withered) lines.push(`${r.withered} tanaman layu karena ganti musim.`);
-    const w = WEATHER_INFO[s.weather];
-    lines.push(`Cuaca hari ini: ${w.name}${isWet(s.weather) ? ', ladang tersiram otomatis' : ''}.`);
-    if (r.stormDamage) lines.push(`Badai merusak ${r.stormDamage} tanaman.`);
-    if (s.weather === 'kabut') lines.push('Kabut asap dari kebakaran lahan. Siram tanamanmu sendiri.');
-    lines.push(`Prakiraan besok: ${WEATHER_INFO[s.forecasts[0]].name}. Kalender cuaca: K.`);
-    if (isFestivalDay(s.day)) lines.push(`🎉 Hari ini Festival! Tema ${festivalTheme(s.day).name} ×2, 09:00–18:00.`);
-    else if (isFestivalDay(s.day + 1)) lines.push(`Besok festival. Siapkan ${festivalTheme(s.day + 1).name}!`);
-    if (r.eggs) lines.push(`Ayam bertelur ${r.eggs} butir. Ambil di kandang.`);
-    if (r.hungry) lines.push(`${r.hungry} ayam kelaparan semalam (keakraban turun).`);
-    if (r.sprinkled) lines.push(`Sprinkler menyiram ${r.sprinkled} petak pagi ini.`);
-    const h = 170 + lines.length * 20;
-    const { c, x, y } = this.openModal(420, h, `${seasonOf(s.day)} ${dayOfSeason(s.day)} · Pagi`);
-    c.add(this.add.text(x + 36, y + 62, lines.join('\n'), { ...txt(15, INK, false), lineSpacing: 2 }));
-    this.button(c, x + 150, y + h - 54, 'Lanjut', () => this.closeModal(), 120);
+    type Row = { icon: string; label: string; value: string; color?: string };
+    const rows: Row[] = [
+      { icon: 'ic-coin', label: 'Pendapatan kemarin', value: r.income ? `+${r.income.toLocaleString('id-ID')} G` : '0 G', color: r.income ? C.green : C.tertiary },
+      { icon: 'ic-sprout', label: 'Tanaman tumbuh', value: `${r.grown}` },
+      { icon: `wx-${s.weather}`, label: 'Cuaca hari ini', value: WEATHER_INFO[s.weather].name },
+      { icon: `wx-${s.forecasts[0]}`, label: 'Besok', value: WEATHER_INFO[s.forecasts[0]].name, color: C.secondary },
+    ];
+    if (r.sprinkled) rows.push({ icon: 'icon-sprinkler', label: 'Disiram sprinkler', value: `${r.sprinkled} petak` });
+    if (r.eggs) rows.push({ icon: 'icon-telur', label: 'Telur di kandang', value: `${r.eggs} butir` });
+    const warnings: string[] = [];
+    if (isWet(s.weather)) warnings.push('Hujan menyiram ladang otomatis hari ini.');
+    if (s.weather === 'kabut') warnings.push('Kabut asap dari kebakaran lahan. Siram tanamanmu sendiri.');
+    if (r.stormDamage) warnings.push(`Badai merusak ${r.stormDamage} tanaman.`);
+    if (r.withered) warnings.push(`${r.withered} tanaman layu karena ganti musim.`);
+    if (r.hungry) warnings.push(`${r.hungry} ayam kelaparan semalam, keakraban turun.`);
+    let festival = '';
+    if (isFestivalDay(s.day)) festival = `Festival hari ini · tema ${festivalTheme(s.day).name} ×2 · 09:00–18:00`;
+    else if (isFestivalDay(s.day + 1)) festival = `Besok Festival. Siapkan ${festivalTheme(s.day + 1).name}!`;
+
+    // measure first so the window fits its content
+    const W = 440, P = 20, ROW = 32;
+    const MAX_SALES = 3;
+    const sold = r.sold.slice(0, MAX_SALES);
+    const more = r.sold.length - sold.length;
+    const sales = sold.length + (more > 0 ? 1 : 0);
+    let h = 86 + rows.length * ROW + 14;
+    if (sales) h += 30 + sales * 20 + 12;
+    h += warnings.length * 22 + (warnings.length ? 10 : 0);
+    if (festival) h += 46;
+    h += 58;
+    const { c, x, y } = this.openModal(W, h, '');
+
+    // header
+    const hg = this.add.graphics();
+    well(hg, x + P + 24, y + 42, 24);
+    c.add(hg);
+    c.add(this.add.image(x + P + 24, y + 42, `wx-${s.weather}`).setScale(2.5));
+    c.add(this.add.text(x + P + 60, y + 22, 'Selamat pagi!', txt(20)));
+    c.add(
+      this.add.text(x + P + 60, y + 48, `Musim ${seasonOf(s.day)} · Hari ${dayOfSeason(s.day)} · ${WEEKDAYS[(s.day - 1) % 7]}`, txt(13, C.secondary, false)),
+    );
+
+    // grouped list
+    let cy = y + 86;
+    const lg = this.add.graphics();
+    c.add(lg); // added before the row text so it sits underneath
+    card(lg, x + P, cy, W - 2 * P, rows.length * ROW, 'normal', 14);
+    rows.forEach((row, i) => {
+      const ry = cy + i * ROW;
+      if (i) lg.fillStyle(HEX.hairline, 0.08).fillRect(x + P + 48, ry, W - 2 * P - 48, 1);
+      c.add(this.add.image(x + P + 24, ry + ROW / 2, row.icon).setScale(1.5));
+      c.add(this.add.text(x + P + 48, ry + ROW / 2, row.label, txt(14, INK, false)).setOrigin(0, 0.5));
+      c.add(this.add.text(x + W - P - 14, ry + ROW / 2, row.value, txt(14, row.color ?? INK)).setOrigin(1, 0.5));
+    });
+    cy += rows.length * ROW + 14;
+
+    // what sold
+    if (sales) {
+      c.add(this.add.text(x + P + 4, cy, 'TERJUAL', txt(11, C.tertiary)));
+      cy += 22;
+      const sg = this.add.graphics();
+      card(sg, x + P, cy, W - 2 * P, sales * 20 + 12, 'muted', 12);
+      c.add(sg);
+      sold.forEach((it, i) => {
+        const ly = cy + 6 + i * 20;
+        c.add(this.add.text(x + P + 14, ly, `${it.name} ×${it.qty}`, txt(13, INK, false)));
+        c.add(this.add.text(x + W - P - 14, ly, `${it.total.toLocaleString('id-ID')} G`, txt(13, C.secondary)).setOrigin(1, 0));
+      });
+      if (more > 0) c.add(this.add.text(x + P + 14, cy + 6 + sold.length * 20, `+${more} lainnya`, txt(13, C.tertiary, false)));
+      cy += sales * 20 + 22;
+    }
+
+    // notices
+    warnings.forEach((w) => {
+      c.add(this.add.image(x + P + 10, cy + 9, 'ic-warn').setScale(1));
+      c.add(this.add.text(x + P + 26, cy, w, txt(13, C.secondary, false)));
+      cy += 22;
+    });
+    if (warnings.length) cy += 10;
+
+    if (festival) {
+      const fg = this.add.graphics();
+      card(fg, x + P, cy, W - 2 * P, 36, 'today', 12);
+      c.add(fg);
+      c.add(this.add.text(x + W / 2, cy + 18, festival, txt(13, C.blue)).setOrigin(0.5));
+      cy += 46;
+    }
+
+    this.button(c, x + P, y + h - 52, 'Lanjut', () => this.closeModal(), W - 2 * P);
   }
+
 
   private shopTab: ShopTab = 'benih';
 
