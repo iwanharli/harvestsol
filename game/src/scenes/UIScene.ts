@@ -32,6 +32,8 @@ import { openShop } from '../ui/windows/shop';
 import { openInventory } from '../ui/windows/bag';
 import { openKitchen } from '../ui/windows/house';
 import { openWardrobe } from '../ui/windows/wardrobe';
+import { openMebel } from '../ui/windows/mebel';
+import { openFridge } from '../ui/windows/fridge';
 import { openBoard } from '../ui/windows/board';
 import { openFestival } from '../ui/windows/festival';
 import { openCalendar } from '../ui/windows/calendar';
@@ -148,6 +150,8 @@ export class UIScene extends Phaser.Scene {
       ['open-calendar', () => openCalendar(this)],
       ['open-fishbook', () => openFishBook(this)],
       ['open-wardrobe', () => openWardrobe(this)],
+      ['open-mebel', (id?: string) => openMebel(this, id)],
+      ['open-fridge', () => openFridge(this)],
       ['indoors', (inside: boolean) => this.applyIndoors(inside)],
       ['area', (name: string) => this.areaBanner(name)],
       ['level-up', (lv: number[]) => this.queueLevelUp(lv)],

@@ -62,6 +62,16 @@ Item di toko (masuk slot 3, ganti dengan Q):
 
 **Rumah**: hadapkan pemain ke pintu rumah lalu tekan Spasi untuk masuk; keluar dengan berjalan ke keset. Di dalam: kasur (tidur, bangun di sampingnya), kompor (dapur), TV (kalender & cuaca), rak buku (Buku Ikan), lemari (catatan tenaga maksimal). Jendela mengikuti warna langit dan lampu gantung menyala di malam hari.
 
+**Toko Mebel** (bangunan beratap hijau tosca di timur desa): masuk, lalu hadapkan pemain ke kasir untuk katalog atau ke pajangan untuk membeli perabot itu. Perabot langsung terpasang di rumah (slot bergaris putus-putus sampai dibeli):
+
+| Perabot | Harga | Lv | Fungsi |
+| --- | --- | --- | --- |
+| Jam Dinding | 800 G | 2 | Bangun pukul 05:00 |
+| Radio | 2.000 G | 4 | Ikan langka hari ini dan cuaca besok |
+| Lemari Piala | 3.000 G | 5 | +5% hadiah koin festival per piala emas (maks +25%) |
+| Kulkas | 4.000 G | 3 | Simpan 24 slot; dapur memakai bahan dari kulkas |
+| Kasur Besar | 6.000 G | 6 | +15 tenaga bonus setiap pagi |
+
 **Memasak (Lv 3)**: masuk rumah lalu hadapkan pemain ke kompor. 9 resep dari hasil panen, telur, dan ikan; masakan dijual lebih mahal dari bahannya, bisa dimakan dari Tas untuk memulihkan tenaga, atau diserahkan ke festival.
 
 **Tas**: setiap jenis barang memakai 1 slot (maks 99 per slot). Kapasitas awal 12 slot (Tas Kain), upgrade ke Tas Kulit 18 (3.000 G, Lv 2), Ransel Petani 24 (9.000 G, Lv 4), Ransel Besar 30 (20.000 G, Lv 6) dari layar Tas (I) atau toko. Kalau penuh, panen/pancing/telur/belanja ditolak dan tanaman tetap di ladang.

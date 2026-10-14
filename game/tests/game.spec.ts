@@ -365,15 +365,17 @@ test('sawit terbuka di level 12 dan berbuah ulang', async ({ page }) => {
 
 test('save lama (musim subtropis) dikonversi ke tropis', async ({ page }) => {
   const errors = await start(page);
-  await page.evaluate(() => {
-    const s = JSON.parse(JSON.stringify(window.game.registry.get('state')));
-    window.game.destroy(true); // stop the game so it does not save over the old-format save on unload
+  const snapshot = await state(page);
+  // stop the game (Phaser finishes destroying on its next frame) so it cannot save over the old-format save
+  await page.evaluate(() => window.game.destroy(true));
+  await page.waitForTimeout(200);
+  await page.evaluate((s) => {
     s.produce = { lobak: 3, 'kentang@3': 1, 'sup-lobak': 1 };
     s.seeds = { stroberi: 2 };
     s.seed = 'stroberi';
     s.forecasts = ['salju', 'cerah', 'cerah', 'cerah', 'cerah', 'cerah', 'cerah'];
     localStorage.setItem('cropfarm-save-v1', JSON.stringify(s));
-  });
+  }, snapshot);
   await page.goto('/');
   await page.waitForFunction(() => window.game?.scene?.getScene('ui')?.sys.isActive());
   const s = await state(page);
@@ -453,5 +455,50 @@ test('posisi pemain tetap setelah halaman di-refresh', async ({ page }) => {
   await page.waitForFunction(() => window.game?.scene?.getScene('ui')?.sys.isActive());
   await page.waitForTimeout(200);
   expect(await page.evaluate(() => window.game.registry.get('indoors'))).toBe(true);
+  noErrors(errors);
+});
+
+test('toko mebel: masuk, beli kulkas dari pajangan, simpan bahan, masak dari kulkas', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, 's.level = 6; s.coins = 20000; s.produce = { kangkung: 2 }');
+  await at(page, 57, 18, 'up'); // shop door
+  await press(page, 'Space');
+  await page.waitForTimeout(700);
+  expect(await page.evaluate(() => window.game.registry.get('indoors'))).toBe(true);
+
+  await at(page, 167, 11, 'up'); // the kulkas stand
+  await press(page, 'Space');
+  expect(await page.evaluate(() => window.game.registry.get('modal'))).toBe(true);
+  await page.waitForTimeout(150);
+  await page.mouse.click(673, 358); // "Beli" on the kulkas row
+  await page.waitForTimeout(150);
+  let s = await state(page);
+  expect(s.furniture.kulkas).toBe(true);
+  expect(s.coins).toBe(16000);
+  await press(page, 'Escape');
+
+  // store the kangkung in the kulkas, then cook with nothing in the bag
+  await page.evaluate(() => {
+    const st = window.game.registry.get('state');
+    st.fridge = { kangkung: 2 };
+    st.produce = {};
+  });
+  await page.evaluate(() => window.game.events.emit('open-kitchen'));
+  await page.waitForTimeout(150);
+  await page.mouse.click(308, 176); // "Masak" on Tumis Kangkung
+  await page.waitForTimeout(150);
+  s = await state(page);
+  expect(s.fridge).toEqual({});
+  expect(s.produce).toEqual({ 'tumis-kangkung': 1 });
+  noErrors(errors);
+});
+
+test('jam dinding bangun 05:00, kasur besar +15 tenaga', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.furniture = { jam: true, kasur: true }");
+  await sleep(page);
+  const s = await state(page);
+  expect(s.minutes).toBe(5 * 60);
+  expect(s.stamina).toBe(115);
   noErrors(errors);
 });
