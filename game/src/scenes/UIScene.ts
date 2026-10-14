@@ -105,6 +105,12 @@ export class UIScene extends Phaser.Scene {
 
   create() {
     this.state = this.registry.get('state');
+    // the scene is rebuilt when the window is resized: start every per-build collection fresh
+    this.slots = [];
+    this.hiddenHud = [];
+    this.modalLayer = undefined;
+    this.worldBlur = undefined;
+    this.shownWeather = '';
     this.cameras.main.setZoom(UI_SCALE).centerOn(VIEW.w / 2, VIEW.h / 2);
     const { w: W, h: H } = VIEW;
 
@@ -189,7 +195,11 @@ export class UIScene extends Phaser.Scene {
     if (touch) this.buildTouchControls();
 
     this.refresh();
-    if (this.state.day === 1 && this.state.stats.harvested === 0) this.showWelcome();
+    // once per session: a resize rebuilds this scene and must not greet again
+    if (this.state.day === 1 && this.state.stats.harvested === 0 && !this.registry.get('welcomed')) {
+      this.registry.set('welcomed', true);
+      this.showWelcome();
+    }
   }
 
   update() {
@@ -343,6 +353,11 @@ export class UIScene extends Phaser.Scene {
     c.add(this.add.text(W / 2, y + 20, title, txt(20)).setOrigin(0.5, 0));
     this.modalLayer = c;
     return { c, x, y };
+  }
+
+  /** Close any open window (used before the HUD is rebuilt on resize). */
+  closeAll() {
+    this.closeModal(false);
   }
 
   private closeModal(showPending = true) {
@@ -1302,7 +1317,8 @@ export class UIScene extends Phaser.Scene {
   /** Compact pill at the top centre: weather, time, day. Click (or K) for the calendar. */
   private buildClock() {
     const W = VIEW.w;
-    const w = 248, h = 46, x = W / 2 - w / 2, y = 10;
+    const w = 248, h = 46, x = W / 2 - w / 2;
+    const y = W - 2 * 250 < w + 24 ? 132 : 10; // too narrow for three across → below the panels
     const g = this.add.graphics();
     glass(g, x, y, w, h, h / 2, { alpha: 0.8, shadow: 10 });
     g.fillStyle(HEX.hairline, 0.1).fillRect(x + 132, y + 12, 1, h - 24);

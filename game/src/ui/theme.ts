@@ -5,6 +5,16 @@ import Phaser from 'phaser';
 
 /** Layout is designed for 960x540; the canvas renders at 2x for crisp text and glass. */
 export const VIEW = { w: 960, h: 540 };
+
+/**
+ * Match the layout width to the window's aspect ratio (height stays 540) so the
+ * canvas fills the screen with no black bars. Clamped between 4:3 and 21:9.
+ */
+export function fitViewToWindow() {
+  const aspect = Math.min(21 / 9, Math.max(4 / 3, window.innerWidth / Math.max(1, window.innerHeight)));
+  VIEW.w = Math.round(VIEW.h * aspect);
+  return VIEW;
+}
 export const UI_SCALE = 2;
 
 export const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, sans-serif';

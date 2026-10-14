@@ -118,6 +118,10 @@ export class FarmScene extends Phaser.Scene {
 
     const cam = this.cameras.main;
     cam.setZoom(2 * UI_SCALE);
+    // the canvas follows the window's aspect ratio; keep the camera covering all of it
+    const onResize = (size: Phaser.Structs.Size) => cam.setSize(size.width, size.height);
+    this.scale.on('resize', onResize);
+    this.events.once('shutdown', () => this.scale.off('resize', onResize));
     cam.setBounds(0, 0, MAP_W * TILE, MAP_H * TILE);
     cam.startFollow(this.player, true, 0.15, 0.15);
     cam.setRoundPixels(true);

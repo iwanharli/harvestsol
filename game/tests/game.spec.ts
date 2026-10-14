@@ -339,3 +339,25 @@ test('save lama (musim subtropis) dikonversi ke tropis', async ({ page }) => {
   expect(s.forecasts[0]).toBe('cerah');
   noErrors(errors);
 });
+
+test('kanvas mengikuti rasio jendela tanpa pita hitam, termasuk saat diubah', async ({ page }) => {
+  await page.setViewportSize({ width: 1500, height: 868 });
+  const errors = await start(page);
+  const fills = () =>
+    page.evaluate(() => {
+      const c = window.game.canvas.getBoundingClientRect();
+      return { w: Math.round(c.width), h: Math.round(c.height), vw: innerWidth, vh: innerHeight };
+    });
+  let f = await fills();
+  expect(Math.abs(f.w - f.vw)).toBeLessThanOrEqual(2);
+  expect(Math.abs(f.h - f.vh)).toBeLessThanOrEqual(2);
+
+  await page.setViewportSize({ width: 1800, height: 800 }); // live resize to ultrawide (within the 21:9 limit)
+  await page.waitForTimeout(600);
+  f = await fills();
+  expect(Math.abs(f.w - f.vw)).toBeLessThanOrEqual(2);
+  expect(await page.evaluate(() => window.game.scene.getScene('ui').sys.isActive())).toBe(true);
+  await press(page, '2'); // HUD still works after the rebuild
+  expect((await state(page)).tool).toBe('siram');
+  noErrors(errors);
+});
