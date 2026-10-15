@@ -12,8 +12,10 @@ let tab: 'perabot' | 'renovasi' = 'perabot';
 export function openMebel(ui: UIScene, focus?: string) {
   if (focus) tab = 'perabot';
   const s = ui.state;
-  const ROW = 58, gap = 5;
-  const W = 560, H = 110 + FURNITURE.length * (ROW + gap) + 50;
+  // furniture: a 2-column grid of cards; the renovation tab fits in the same window
+  const COLS = 2, CH = 108, gap = 10;
+  const rows = Math.ceil(FURNITURE.length / COLS);
+  const W = 620, H = 104 + rows * (CH + gap) + 56;
   const { c, x, y } = ui.openModal(W, H, 'Toko Mebel');
   c.add(ui.add.text(x + W - 28, y + 24, `${s.coins.toLocaleString('id-ID')} G`, txt(16, C.orange)).setOrigin(1, 0));
   const tabs = ['perabot', 'renovasi'] as const;
@@ -26,10 +28,9 @@ export function openMebel(ui: UIScene, focus?: string) {
   );
   const top = y + 102;
 
-  const row = (i: number, h = ROW) => ({ cx: x + 24, cy: top + i * (h + gap), cw: W - 48 });
   const buyButton = (bx: number, by: number, label: string, price: number, disabled: boolean, onBuy: () => string | null, done: string) => {
-    c.add(ui.add.text(bx + 55, by - 22, `${price.toLocaleString('id-ID')} G`, txt(13, C.orange)).setOrigin(0.5, 0));
-    ui.button(c, bx + 6, by, label, () => {
+    c.add(ui.add.text(bx - 8, by + 17, `${price.toLocaleString('id-ID')} G`, txt(14, C.orange)).setOrigin(1, 0.5));
+    ui.button(c, bx, by, label, () => {
       const err = onBuy();
       if (err) {
         play('error');
@@ -40,29 +41,32 @@ export function openMebel(ui: UIScene, focus?: string) {
       ui.refresh();
       ui.toast(done);
       openMebel(ui);
-    }, 98, disabled);
+    }, 96, disabled);
   };
 
   if (tab === 'perabot') {
+    const cw = (W - 48 - gap) / COLS;
     FURNITURE.forEach((f, i) => {
-      const { cx, cy, cw } = row(i);
+      const cx = x + 24 + (i % COLS) * (cw + gap), cy = top + Math.floor(i / COLS) * (CH + gap);
       const owned = !!s.furniture[f.id];
       const locked = s.level < f.level;
       const g = ui.add.graphics();
-      card(g, cx, cy, cw, ROW, f.id === focus ? 'selected' : owned ? 'ready' : locked ? 'locked' : 'normal', 16);
-      well(g, cx + 36, cy + ROW / 2, 25, locked);
+      card(g, cx, cy, cw, CH, f.id === focus ? 'selected' : owned ? 'ready' : locked ? 'locked' : 'normal', 16);
+      well(g, cx + 38, cy + 40, 26, locked);
       c.add(g);
-      const icon = ui.add.image(cx + 36, cy + ROW / 2, ICON[f.id]);
-      icon.setScale(icon.height > 24 || icon.width > 24 ? 1 : 2);
+      const icon = ui.add.image(cx + 38, cy + 40, ICON[f.id]);
+      icon.setScale(Math.min(2, 34 / Math.max(icon.width, icon.height)));
       if (locked) icon.setTint(0x9a9aa0).setAlpha(0.5);
       c.add(icon);
-      c.add(ui.add.text(cx + 72, cy + 9, f.name, txt(15, locked ? C.disabled : C.ink)));
-      c.add(ui.add.text(cx + 72, cy + 29, f.desc, { ...txt(11, C.secondary, false), wordWrap: { width: cw - 72 - 130, useAdvancedWrap: true } }));
-      const bx = cx + cw - 118;
-      if (owned) c.add(ui.add.text(bx + 55, cy + ROW / 2, 'Sudah dipasang', txt(12, C.green)).setOrigin(0.5));
-      else if (locked) c.add(ui.add.text(bx + 55, cy + ROW / 2, `Level ${f.level}`, txt(12, C.secondary)).setOrigin(0.5));
+      c.add(ui.add.text(cx + 76, cy + 14, f.name, txt(15, locked ? C.disabled : C.ink)));
+      c.add(ui.add.text(cx + 76, cy + 35, f.desc, { ...txt(11, C.secondary, false), lineSpacing: 2, wordWrap: { width: cw - 76 - 14, useAdvancedWrap: true } }));
+      // bottom row: status or price + buy
+      const by = cy + CH - 44, bx = cx + cw - 110;
+      const status = (label: string, color: string) => c.add(ui.add.text(cx + cw - 16, by + 17, label, txt(12, color)).setOrigin(1, 0.5));
+      if (owned) status('✓ Sudah dipasang', C.green);
+      else if (locked) status(`Terbuka di Level ${f.level}`, C.secondary);
       else
-        buyButton(bx, cy + ROW - 37, 'Beli', f.price, s.coins < f.price, () => {
+        buyButton(bx, by, 'Beli', f.price, s.coins < f.price, () => {
           const err = buyFurniture(s, f.id, f.price, f.level);
           if (!err) ui.game.events.emit('furniture-changed');
           return err;
@@ -70,6 +74,7 @@ export function openMebel(ui: UIScene, focus?: string) {
     });
   } else {
     const TROW = 104;
+    const row = (i: number, h: number) => ({ cx: x + 24, cy: top + i * (h + 6), cw: W - 48 });
     HOUSE_TIERS.forEach((t, i) => {
       const { cx, cy, cw } = row(i, TROW);
       const current = s.houseTier === i;
@@ -86,14 +91,14 @@ export function openMebel(ui: UIScene, focus?: string) {
       c.add(icon);
       c.add(ui.add.text(cx + 80, cy + 12, t.name, txt(15, current || done || next ? C.ink : C.disabled)));
       c.add(ui.add.text(cx + 80, cy + 33, `${t.w}×${t.h} petak`, txt(11, C.tertiary)));
-      c.add(ui.add.text(cx + 80, cy + 50, t.perk, { ...txt(11, C.secondary, false), wordWrap: { width: cw - 80 - 130, useAdvancedWrap: true } }));
-      const bx = cx + cw - 118;
-      if (current) c.add(ui.add.text(bx + 55, cy + TROW / 2, 'Rumahmu sekarang', txt(12, C.blue)).setOrigin(0.5));
-      else if (done) c.add(ui.add.text(bx + 55, cy + TROW / 2, 'Sudah', txt(12, C.green)).setOrigin(0.5));
-      else if (!next) c.add(ui.add.text(bx + 55, cy + TROW / 2, 'Renovasi dulu\nyang sebelumnya', { ...txt(11, C.tertiary, false), align: 'center' }).setOrigin(0.5));
-      else if (locked) c.add(ui.add.text(bx + 55, cy + TROW / 2, `Level ${t.level}`, txt(12, C.secondary)).setOrigin(0.5));
+      c.add(ui.add.text(cx + 80, cy + 50, t.perk, { ...txt(11, C.secondary, false), wordWrap: { width: cw - 80 - 230, useAdvancedWrap: true } }));
+      const bx = cx + cw - 112;
+      if (current) c.add(ui.add.text(bx + 48, cy + TROW / 2, 'Rumahmu sekarang', txt(12, C.blue)).setOrigin(0.5));
+      else if (done) c.add(ui.add.text(bx + 48, cy + TROW / 2, 'Sudah', txt(12, C.green)).setOrigin(0.5));
+      else if (!next) c.add(ui.add.text(bx + 48, cy + TROW / 2, 'Renovasi dulu\nyang sebelumnya', { ...txt(11, C.tertiary, false), align: 'center' }).setOrigin(0.5));
+      else if (locked) c.add(ui.add.text(bx + 48, cy + TROW / 2, `Level ${t.level}`, txt(12, C.secondary)).setOrigin(0.5));
       else
-        buyButton(bx, cy + TROW - 44, 'Renovasi', t.price, s.coins < t.price, () => {
+        buyButton(bx, cy + TROW / 2 - 17, 'Renovasi', t.price, s.coins < t.price, () => {
           const err = upgradeHouse(s);
           if (!err) ui.game.events.emit('house-upgraded');
           return err;
