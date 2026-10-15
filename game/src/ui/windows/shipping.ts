@@ -48,7 +48,7 @@ export function openShipping(ui: UIScene) {
       if (starsOf(key) > 1) c.add(ui.add.text(sx + 4, sy + 3, `★${starsOf(key)}`, txt(9, '#a86f00')));
       const z = ui.add.zone(sx, sy, SZ, SZ).setOrigin(0).setInteractive({ useHandCursor: true });
       z.on('pointerdown', () => {
-        pick = { from, key, qty: rec[key] }; // start at "all", adjust below
+        pick = { from, key, qty: 1 }; // start at one; + / Maks to raise
         redraw();
       });
       z.on('pointerover', () => ui.toast(`${produceById(key).name} · ${produceById(key).sellPrice} G/buah`));
@@ -77,16 +77,20 @@ export function openShipping(ui: UIScene) {
     c.add(ui.add.text(px + 46, py + 14, info.name, txt(12)));
     c.add(ui.add.text(px + 46, py + 33, `${p.qty} / ${have}`, txt(16, C.blue)));
     c.add(ui.add.text(px + 46, py + 56, `${(info.sellPrice * p.qty).toLocaleString('id-ID')} G`, txt(11, C.orange)));
-    const step = (label: string, delta: number | 'max', bx: number) =>
+    // a step that cannot change the amount is shown greyed out
+    const step = (label: string, delta: number, bx: number) => {
+      const blocked = delta > 0 ? p.qty >= have : p.qty <= 1;
       ui.button(c, bx, py + 6, label, () => {
-        p.qty = delta === 'max' ? have : Math.max(1, Math.min(have, p.qty + delta));
+        if (blocked) return;
+        p.qty = Math.max(1, Math.min(have, p.qty + delta));
         redraw();
-      }, 34, false, true);
+      }, 34, blocked, true);
+    };
     step('−10', -10, px + 128);
     step('−1', -1, px + 166);
     step('+1', 1, px + 204);
     step('+10', 10, px + 242);
-    ui.button(c, px + 128, py + 42, 'Maks', () => ((p.qty = have), redraw()), 64, false, true);
+    ui.button(c, px + 128, py + 42, 'Maks', () => ((p.qty = have), redraw()), 64, p.qty >= have, true);
     ui.button(c, px + 196, py + 42, p.from === 'bag' ? `Kirim ${p.qty}` : `Ambil ${p.qty}`, () => {
       const err = p.from === 'bag' ? (shipItem(s, p.key, p.qty), null) : unshipItem(s, p.key, p.qty);
       if (err) {

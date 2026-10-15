@@ -573,9 +573,9 @@ test('kotak kirim: pilih barang, ambil kembali, kirim semua', async ({ page }) =
   expect(await page.evaluate(() => window.game.scene.getScene('ui').modalKind)).toBe('shipping');
 
   // window: W 720 × H 474 at (120, 33); bag grid at (148, 137); picker at y 351
-  await page.mouse.click(171, 160); // select kangkung (starts at all 3)
+  await page.mouse.click(171, 160); // select kangkung (starts at 1)
   await page.waitForTimeout(120);
-  await page.mouse.click(331, 374); // "−1"
+  await page.mouse.click(369, 374); // "+1" → 2
   await page.waitForTimeout(120);
   await page.mouse.click(400, 410); // "Kirim 2"
   await page.waitForTimeout(120);
@@ -584,6 +584,8 @@ test('kotak kirim: pilih barang, ambil kembali, kirim semua', async ({ page }) =
   expect(s.produce).toEqual({ kangkung: 1, padi: 2 }); // one kangkung and the padi stay
 
   await page.mouse.click(524, 160); // select the kangkung in the bin
+  await page.waitForTimeout(120);
+  await page.mouse.click(312, 410); // "Maks" → 2
   await page.waitForTimeout(120);
   await page.mouse.click(400, 410); // "Ambil 2"
   await page.waitForTimeout(120);
