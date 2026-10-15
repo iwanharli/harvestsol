@@ -223,7 +223,7 @@ test('memasak di dapur lalu makan untuk tenaga', async ({ page }) => {
   expect(await page.evaluate(() => window.game.registry.get('indoors'))).toBe(true);
 
   // the stove refuses before Lv 3
-  await at(page, 109, 8, 'up');
+  await at(page, 113, 8, 'up');
   await press(page, 'Space');
   expect((await toasts(page)).join()).toContain('Level 3');
 
@@ -257,12 +257,12 @@ test('rumah: masuk, perabot, tidur bangun di kasur, keluar lewat keset', async (
   expect(await page.evaluate(() => window.game.registry.get('modal'))).toBe(true);
   await press(page, 'Escape');
 
-  await at(page, 106, 8, 'up'); // bookshelf → fish book
+  await at(page, 108, 8, 'up'); // bookshelf → fish book
   await press(page, 'Space');
   expect(await page.evaluate(() => window.game.scene.getScene('ui').modalKind)).toBe('fishbook');
   await press(page, 'Escape');
 
-  await at(page, 112, 8, 'right'); // wardrobe → stamina record
+  await at(page, 117, 8, 'right'); // wardrobe → stamina record
   await press(page, 'Space');
   expect(await page.evaluate(() => window.game.registry.get('modal'))).toBe(true);
   await press(page, 'Escape');
@@ -270,7 +270,7 @@ test('rumah: masuk, perabot, tidur bangun di kasur, keluar lewat keset', async (
   await sleep(page); // wake up indoors, next to the bed
   expect(await page.evaluate(() => window.game.registry.get('indoors'))).toBe(true);
 
-  await at(page, 107, 12, 'down'); // step onto the doormat
+  await at(page, 110, 14, 'down'); // step onto the doormat
   await page.keyboard.down('s');
   await page.waitForTimeout(250);
   await page.keyboard.up('s');
@@ -532,7 +532,7 @@ test('renovasi rumah: lebih luas, sofa +20 tenaga, dapur besar 2 porsi', async (
   const inside = await page.evaluate(() => Math.floor(window.game.scene.getScene('farm').player.x / 16));
   expect(inside).toBeGreaterThanOrEqual(220);
 
-  await at(page, 237, 9, 'up'); // facing the sofa
+  await at(page, 243, 10, 'up'); // facing the sofa
   await press(page, 'Space');
   s = await state(page);
   expect(s.stamina).toBe(70);

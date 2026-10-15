@@ -75,7 +75,7 @@ type Spot =
   | 'mebel' | 'counter' | 'display' | 'sofa';
 
 /** The farmhouse interior lives in empty world space east of the map (tiles), so all systems just work inside. */
-const ROOM = { x: 100, y: 4, w: 14, h: 10 }; // Rumah Kecil
+const ROOM = { x: 100, y: 4, w: 20, h: 12 }; // Rumah Kecil
 /** One interior per house tier (renovations), all reached through the farmhouse door. */
 const HOUSE_ROOMS = HOUSE_TIERS.map((t) => (t.x === ROOM.x ? ROOM : { x: t.x, y: 4, w: t.w, h: t.h }));
 /** The Toko Mebel interior, further east. */
@@ -457,24 +457,25 @@ export class FarmScene extends Phaser.Scene {
     this.add.rectangle(X(mid + 1), Y(R.h), X(R.w) - X(mid + 1) + 4, 4, 0x5a3a22).setOrigin(0).setDepth(Y(R.h));
 
     // windows with glass that follows the sky, a calendar between the first two
-    const windows = [3.5, 9.5, ...(tier >= 1 ? [16.5] : []), ...(tier >= 2 ? [22.5] : [])];
+    const windows = [4.5, 12.5, ...(tier >= 1 ? [21.5] : []), ...(tier >= 2 ? [28.5] : [])];
     const glass = this.add.graphics().setDepth(-8.6);
     for (const lx of windows) this.add.image(X(lx), Y(0) + 4, 'in-window').setOrigin(0.5, 0).setDepth(-8.5);
-    this.add.image(X(6.5), Y(0) + 6, 'in-calendar').setOrigin(0.5, 0).setDepth(-8.5);
+    this.add.image(X(8.5), Y(0) + 6, 'in-calendar').setOrigin(0.5, 0).setDepth(-8.5);
 
-    // furniture along the back wall (the same in every tier, so nothing moves when you renovate)
+    // furniture along the back wall, with room to walk between the pieces
+    // (the same in every tier, so nothing moves when you renovate)
     const put = (key: string, lx: number, lyBottom: number, origin = 0.5) =>
       this.add.image(X(lx), Y(lyBottom), key).setOrigin(origin, 1).setDepth(Y(lyBottom));
     this.bedImgs.push({ img: put('in-bed', 1, 5), x: R.x });
     for (const [lx, ly] of [[0, 2], [1, 2], [0, 3], [1, 3], [0, 4], [1, 4]]) spot(lx, ly, 'bed');
-    put('in-tv', 4, 4);
-    for (const lx of [3, 4]) spot(lx, 2, 'tv'), spot(lx, 3, 'tv');
-    put('in-shelf', 6, 4);
-    for (const lx of [5, 6]) spot(lx, 2, 'shelf'), spot(lx, 3, 'shelf');
-    put('in-stove', 9.5, 4);
-    for (const lx of [8, 9, 10]) spot(lx, 2, 'stove'), spot(lx, 3, 'stove');
-    put('in-wardrobe', 13, 5);
-    for (const [lx, ly] of [[12, 2], [13, 2], [12, 3], [13, 3], [12, 4], [13, 4]]) spot(lx, ly, 'wardrobe');
+    put('in-tv', 6, 4);
+    for (const lx of [5, 6]) spot(lx, 2, 'tv'), spot(lx, 3, 'tv');
+    put('in-shelf', 9, 4);
+    for (const lx of [8, 9]) spot(lx, 2, 'shelf'), spot(lx, 3, 'shelf');
+    put('in-stove', 13.5, 4);
+    for (const lx of [12, 13, 14]) spot(lx, 2, 'stove'), spot(lx, 3, 'stove');
+    put('in-wardrobe', 19, 5);
+    for (const [lx, ly] of [[18, 2], [19, 2], [18, 3], [19, 3], [18, 4], [19, 4]]) spot(lx, ly, 'wardrobe');
 
     // furniture slots, filled from the Toko Mebel (dashed outline until bought)
     const slot = (id: string, x: number, y: number, w: number, h: number, key: string, tiles: [number, number][], spotKind: Spot | null) => {
@@ -490,44 +491,44 @@ export class FarmScene extends Phaser.Scene {
       list.push({ img, ph, spot: spotKind });
       this.furnitureObjs.set(id, list);
     };
-    slot('kulkas', X(11), Y(2) - 16, TILE, 32, 'in-fridge', [[11, 2], [11, 3]], 'fridge');
-    slot('radio', X(2), Y(2), TILE, TILE, 'in-radio', [[2, 2]], 'radio');
-    slot('peti', X(0), Y(6), TILE, TILE, 'in-chest', [[0, 6]], 'storage');
-    slot('jam', X(12.5) - 7, Y(0) + 6, 14, 14, 'in-clock', [], null);
-    slot('piala', X(12), Y(6) - 8, 32, 40, 'in-trophy', [[12, 6], [13, 6], [12, 7], [13, 7]], 'trophy');
+    slot('kulkas', X(15), Y(2) - 16, TILE, 32, 'in-fridge', [[15, 2], [15, 3]], 'fridge');
+    slot('radio', X(3), Y(2), TILE, TILE, 'in-radio', [[3, 2]], 'radio');
+    slot('peti', X(0), Y(7), TILE, TILE, 'in-chest', [[0, 7]], 'storage');
+    slot('jam', X(16.5) - 7, Y(0) + 6, 14, 14, 'in-clock', [], null);
+    slot('piala', X(18), Y(7) - 8, 32, 40, 'in-trophy', [[18, 7], [19, 7], [18, 8], [19, 8]], 'trophy');
 
-    // dining corner on a rug
-    this.add.image(X(7), Y(7), 'in-rug').setOrigin(0.5, 0.5).setDepth(-9);
-    put('in-table', 7, 7);
-    spot(6, 6, null);
-    spot(7, 6, null);
-    put('in-chair', 5.5, 7);
-    spot(5, 6, null);
-    put('in-chair', 8.5, 7).setFlipX(true);
-    spot(8, 6, null);
+    // dining corner on a rug, in the middle of the room
+    this.add.image(X(10), Y(8), 'in-rug').setOrigin(0.5, 0.5).setDepth(-9);
+    put('in-table', 10, 8);
+    spot(9, 7, null);
+    spot(10, 7, null);
+    put('in-chair', 8.5, 8);
+    spot(8, 7, null);
+    put('in-chair', 11.5, 8).setFlipX(true);
+    spot(11, 7, null);
 
     // Rumah Sedang: a living room with a sofa (rest once a day)
     if (tier >= 1) {
-      this.add.image(X(17.5), Y(5.5), 'in-rug2').setOrigin(0.5, 0.5).setDepth(-9);
-      put('in-sofa', 17.5, 5);
-      for (const lx of [16, 17, 18]) spot(lx, 4, 'sofa');
-      put('in-coffee', 17.5, 7);
-      spot(17, 6, null);
-      put('in-floorlamp', 15, 5);
-      spot(14, 4, null);
-      this.lamps.push(this.add.image(X(15), Y(3), 'glow').setScale(1.4).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0));
+      this.add.image(X(23.5), Y(6.5), 'in-rug2').setOrigin(0.5, 0.5).setDepth(-9);
+      put('in-sofa', 23.5, 6);
+      for (const lx of [22, 23, 24]) spot(lx, 5, 'sofa');
+      put('in-coffee', 23.5, 8);
+      spot(23, 7, null);
+      put('in-floorlamp', 21, 6);
+      spot(20, 5, null);
+      this.lamps.push(this.add.image(X(21), Y(4), 'glow').setScale(1.4).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0));
     }
     // Rumah Besar: a reading corner with an aquarium, a second shelf and an armchair
     if (tier >= 2) {
-      put('in-aquarium', 21.5, 5);
-      for (const lx of [20, 21, 22]) spot(lx, 3, null), spot(lx, 4, null);
-      put('in-shelf', 24.5, 4);
-      for (const lx of [24, 25]) spot(lx, 2, 'shelf'), spot(lx, 3, 'shelf');
-      put('in-armchair', 23.5, 8);
-      spot(23, 7, null);
-      put('in-floorlamp', 25, 8);
-      spot(24, 7, null);
-      this.lamps.push(this.add.image(X(25), Y(6), 'glow').setScale(1.4).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0));
+      put('in-aquarium', 27.5, 5);
+      for (const lx of [26, 27, 28]) spot(lx, 3, null), spot(lx, 4, null);
+      put('in-shelf', 30.5, 4);
+      for (const lx of [30, 31]) spot(lx, 2, 'shelf'), spot(lx, 3, 'shelf');
+      put('in-armchair', 29.5, 9);
+      spot(29, 8, null);
+      put('in-floorlamp', 31, 9);
+      spot(30, 8, null);
+      this.lamps.push(this.add.image(X(31), Y(7), 'glow').setScale(1.4).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0));
     }
 
     // plants in the front corners, doormat in the middle
@@ -538,9 +539,9 @@ export class FarmScene extends Phaser.Scene {
     this.add.image(X(mid), Y(R.h) - 1, 'in-mat').setOrigin(0.5, 1).setDepth(-8.5);
 
     // lighting: a hanging lamp over the table, and evening dimming
-    const lamp = this.add.image(X(7), Y(4) + 4, 'in-lamp').setOrigin(0.5, 0).setDepth(Y(R.h) + 1);
+    const lamp = this.add.image(X(10), Y(5) + 4, 'in-lamp').setOrigin(0.5, 0).setDepth(Y(R.h) + 1);
     const night = this.add.rectangle(X(0) - 8, Y(0), X(R.w) - X(0) + 16, Y(R.h) - Y(0) + 8, 0x1b1530, 0).setOrigin(0).setDepth(9500);
-    this.lamps.push(this.add.image(X(7), Y(5) + 2, 'glow').setScale(2.4).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0));
+    this.lamps.push(this.add.image(X(10), Y(6) + 2, 'glow').setScale(2.4).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0));
     this.roomViews.push({ R, glass, windows, night, lamp });
   }
 

@@ -422,9 +422,9 @@ export interface HouseTier {
 }
 
 export const HOUSE_TIERS: HouseTier[] = [
-  { name: 'Rumah Kecil', w: 14, h: 10, x: 100, price: 0, level: 1, perk: 'Kamar, dapur, dan meja makan.' },
-  { name: 'Rumah Sedang', w: 20, h: 12, x: 220, price: 12000, level: 5, perk: 'Ruang keluarga dengan sofa: istirahat sekali sehari +20 tenaga.' },
-  { name: 'Rumah Besar', w: 26, h: 14, x: 290, price: 35000, level: 10, perk: 'Dapur besar: setiap masak jadi 2 porsi. Ruang baca dan akuarium.' },
+  { name: 'Rumah Kecil', w: 20, h: 12, x: 100, price: 0, level: 1, perk: 'Kamar, dapur, dan meja makan.' },
+  { name: 'Rumah Sedang', w: 26, h: 14, x: 220, price: 12000, level: 5, perk: 'Ruang keluarga dengan sofa: istirahat sekali sehari +20 tenaga.' },
+  { name: 'Rumah Besar', w: 32, h: 16, x: 290, price: 35000, level: 10, perk: 'Dapur besar: setiap masak jadi 2 porsi. Ruang baca dan akuarium.' },
 ];
 export const SOFA_STAMINA = 20;
 export const SOFA_MINUTES = 30;
