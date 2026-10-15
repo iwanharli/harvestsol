@@ -684,9 +684,9 @@ export function restOnSofa(s: GameState): string | null {
 // ---------- shipping bin ----------
 
 /** Put a whole stack (or everything) from the bag into the shipping bin. */
-export function shipItem(s: GameState, key: string) {
-  const q = s.produce[key] ?? 0;
-  if (!q) return;
+export function shipItem(s: GameState, key: string, n = Infinity) {
+  const q = Math.min(n, s.produce[key] ?? 0);
+  if (q <= 0) return;
   add(s.produce, key, -q);
   add(s.shipping, key, q);
 }
@@ -696,9 +696,9 @@ export function shipAll(s: GameState) {
 }
 
 /** Take items back out of the bin before the night; returns an error message or null. */
-export function unshipItem(s: GameState, key: string): string | null {
-  const q = s.shipping[key] ?? 0;
-  if (!q) return null;
+export function unshipItem(s: GameState, key: string, want = Infinity): string | null {
+  const q = Math.min(want, s.shipping[key] ?? 0);
+  if (q <= 0) return null;
   const n = Math.min(q, roomFor(s, 'produce', key));
   if (!n) return 'Tas penuh.';
   add(s.shipping, key, -n);

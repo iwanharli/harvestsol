@@ -426,9 +426,9 @@ export class UIScene extends Phaser.Scene {
     this.button(c, x + 150, y + h - 52, 'Hore!', () => this.closeModal(), 120);
   }
 
-  button(c: Phaser.GameObjects.Container, x: number, y: number, label: string, onClick: () => void, w = 110, locked = false) {
+  button(c: Phaser.GameObjects.Container, x: number, y: number, label: string, onClick: () => void, w = 110, locked = false, quiet = false) {
     const g = this.add.graphics();
-    const secondary = SECONDARY.has(label);
+    const secondary = quiet || SECONDARY.has(label);
     const draw = (hover: boolean) => {
       g.clear();
       if (locked) g.fillStyle(0x767680, 0.12).fillRoundedRect(x, y, w, 34, 17);
