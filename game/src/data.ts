@@ -347,7 +347,8 @@ export const needsPurchase = (tool: Tool) => BUYABLE_TOOLS.some((t) => t.id === 
 
 // ---------- bag capacity ----------
 
-export const STACK_MAX = 99;
+export const STACK_MAX = 50; // items per bag slot
+export const FRIDGE_STACK_MAX = 99; // items per kulkas slot
 
 export const BAG_TIERS: { name: string; slots: number; price: number; level: number }[] = [
   { name: 'Tas Kain', slots: 12, price: 0, level: 1 },

@@ -41,6 +41,7 @@ import {
   starsOf,
   dishById,
   STACK_MAX,
+  FRIDGE_STACK_MAX,
   FESTIVAL_EVERY,
   FESTIVAL_MAX_ITEMS,
   FESTIVAL_REWARDS,
@@ -755,14 +756,14 @@ function takeFrom(rec: Record<string, number>, id: string, n: number): Record<st
   return taken;
 }
 
-export const fridgeSlotsUsed = (s: GameState) => Object.values(s.fridge).reduce((a, q) => a + Math.ceil(q / STACK_MAX), 0);
+export const fridgeSlotsUsed = (s: GameState) => Object.values(s.fridge).reduce((a, q) => a + Math.ceil(q / FRIDGE_STACK_MAX), 0);
 
 /** Move a whole stack between the bag and the kulkas; returns an error message or null. */
 export function moveToFridge(s: GameState, key: string): string | null {
   const q = s.produce[key] ?? 0;
   if (!q) return null;
   const cur = s.fridge[key] ?? 0;
-  const need = Math.ceil((cur + q) / STACK_MAX) - Math.ceil(cur / STACK_MAX);
+  const need = Math.ceil((cur + q) / FRIDGE_STACK_MAX) - Math.ceil(cur / FRIDGE_STACK_MAX);
   if (fridgeSlotsUsed(s) + need > FRIDGE_SLOTS) return 'Kulkas penuh.';
   add(s.produce, key, -q);
   add(s.fridge, key, q);
