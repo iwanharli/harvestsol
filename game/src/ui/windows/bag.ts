@@ -14,6 +14,7 @@ import {
   produceById,
   seedIcon,
   isBought,
+  isOre,
 } from '../../data';
 import { play } from '../../sfx';
 import { C, HEX, bar as drawBar, card, segmented, txt, well } from '../theme';
@@ -247,6 +248,7 @@ export function openInventory(ui: UIScene) {
       : dishById(baseId(sel.id)) ? 'Masakan'
       : baseId(sel.id).startsWith('ikan') ? 'Ikan'
       : baseId(sel.id).startsWith('telur') ? 'Produk Ternak'
+      : isOre(baseId(sel.id)) ? 'Hasil Tambang'
       : 'Hasil Panen';
     const chip = ui.add.text(dx + dw / 2, dy + 116, kind, txt(11, C.blue)).setOrigin(0.5);
     const cg = ui.add.graphics();

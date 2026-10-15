@@ -68,6 +68,8 @@ Tiap jenis punya jam, musim, dan sebagian butuh hujan (misalnya Belut hanya saat
 
 **Musim tropis** (28 hari per musim): Tanam (awal hujan), Hujan, Panen (pancaroba), dan Kemarau. Tanaman: Kangkung, Timun, Terong, Tomat, Ubi, Padi, Cabai, Singkong, Jagung, Kedelai, Semangka, dan **Sawit (Lv 12)**: benih 6.000 G, tumbuh 14 hari di semua musim, lalu berbuah lagi tiap 7 hari tanpa ditanam ulang; investasi jangka panjang yang baru terbayar di tahun kedua.
 
+**Menambang**: beli **Beliung** di toko (Peralatan, 1.500 G, Lv 3; tombol 6). **Tambang Bukit Kapur** ada di hutan timur, lewat jalan selatan dari alun-alun. Setiap pagi muncul 16 batu baru: Batu (1 pukulan), Batu Tembaga (2), Batu Besi (3, umum mulai Lv 4), dan Batu Emas (4, umum mulai Lv 8). Satu pukulan memakai 4 tenaga. Hasilnya Batu dan Bijih Tembaga/Besi/Emas, yang bisa dijual sekarang dan nanti dipakai untuk upgrade alat. Hasil tambang tidak masuk kulkas atau peti dan tidak bisa ikut festival.
+
 **Cuaca**: Cerah, Hujan, Badai, atau Kabut Asap (Kemarau), diundi dengan prakiraan 7 hari ke depan (lihat Kalender, K). Ikon cuaca dan jam ada di tengah atas layar. Hujan dan badai menyiram semua tanah yang dicangkul (tidak mengurangi kualitas) dan membuat Lele/Ikan Emas 2× lebih sering. Badai merusak sekitar 7% tanaman, ada kilat dan petir, dan warga tinggal di rumah. Ayam berteduh di kandang saat tidak cerah. Hari festival selalu cerah.
 
 **Kualitas tanaman (★1–5)**: ditentukan saat panen. Disiram setiap malam tanpa bolong +★2 (bolong 1 malam +★1), pupuk +★1, ditambah sedikit keberuntungan (naik seiring level). Harga ×1 / ×1,25 / ×1,5 / ×2 / ×3. Kualitas berbeda memakai slot tas terpisah; festival memakai harga berkualitas; permintaan warga dan resep memakai kualitas terendah dulu.

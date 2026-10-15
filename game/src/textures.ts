@@ -1216,6 +1216,49 @@ export function makeTextures(scene: Phaser.Scene) {
     px(c, 2, 4, '#ffffff', 4, 2);
     px(c, 3, 0, '#3b2a1a', 2, 1);
   }, true);
+  // ---------- mining ----------
+  for (const key of ['tool-beliung', 'icon-beliung']) canvas(scene, key, TILE, TILE, (c) => {
+    for (let i = 0; i < 11; i++) px(c, 3 + i, 14 - i, i < 4 ? '#5a3a22' : '#a36c40'); // handle
+    // the curved iron head across the top of the handle
+    px(c, 4, 3, '#5f6f7d', 3, 2);
+    px(c, 6, 2, '#8a9aa8', 5, 2);
+    px(c, 10, 2, '#8a9aa8', 2, 3);
+    px(c, 11, 4, '#5f6f7d', 2, 2);
+    px(c, 12, 6, '#5f6f7d', 2, 3);
+    px(c, 7, 2, '#c8d2dc', 3, 1);
+    px(c, 2, 5, '#5f6f7d', 2, 2);
+  }, true);
+  canvas(scene, 'gravel', TILE, TILE, (c) => {
+    px(c, 0, 0, '#a89c88', 16, 16);
+    const dots: [number, number, string][] = [[2, 3, '#8f8370'], [9, 1, '#c2b8a4'], [12, 7, '#8f8370'], [5, 10, '#c2b8a4'], [1, 13, '#8f8370'], [13, 13, '#c2b8a4'], [7, 6, '#958a76']];
+    for (const [x, y, col] of dots) px(c, x, y, col, 2, 2);
+  });
+  const ORE_LOOK: Record<string, [string, string, string]> = {
+    batu: ['#8a8a8e', '#b4b4b8', '#5e5e62'],
+    'bijih-tembaga': ['#8a8a8e', '#e08a4a', '#5e5e62'],
+    'bijih-besi': ['#7a7e86', '#c8d2e0', '#4e525a'],
+    'bijih-emas': ['#86827a', '#f2c94c', '#5a564e'],
+  };
+  for (const [id, [body, fleck, dark]] of Object.entries(ORE_LOOK)) {
+    // the rock you swing at in the quarry
+    canvas(scene, `rock-${id}`, TILE, TILE, (c) => {
+      px(c, 2, 6, dark, 12, 9);
+      px(c, 3, 4, dark, 10, 2);
+      px(c, 3, 5, body, 10, 9);
+      px(c, 4, 4, body, 8, 1);
+      px(c, 4, 5, '#d0d0d4', 4, 1); // light on top
+      if (id !== 'batu') for (const [x, y] of [[5, 8], [9, 7], [7, 11], [11, 10]]) px(c, x, y, fleck, 2, 2);
+    }, true);
+    // the item in the bag
+    canvas(scene, `icon-${id}`, TILE, TILE, (c) => {
+      px(c, 3, 5, dark, 10, 8);
+      px(c, 4, 4, dark, 8, 1);
+      px(c, 4, 5, body, 8, 7);
+      px(c, 5, 5, '#d0d0d4', 3, 1);
+      if (id !== 'batu') for (const [x, y] of [[5, 7], [9, 6], [8, 9]]) px(c, x, y, fleck, 2, 2);
+    }, true);
+  }
+
   for (const key of ['tool-pancing', 'icon-pancing']) canvas(scene, key, TILE, TILE, (c) => {
     for (let i = 0; i < 12; i++) px(c, 2 + i, 14 - i, i < 4 ? '#5a3a22' : '#a36c40');
     px(c, 13, 2, '#dcdcdc', 1, 9);

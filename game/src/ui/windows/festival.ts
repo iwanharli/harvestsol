@@ -4,6 +4,7 @@ import {
   FESTIVAL_THEME_MULT,
   FESTIVAL_VARIETY_BONUS,
   isBought,
+  isOre,
 } from '../../data';
 import { play } from '../../sfx';
 import { C, card, txt } from '../theme';
@@ -53,7 +54,7 @@ export function openFestival(ui: UIScene) {
   c.add(ui.add.text(x + 32, y + 184, 'Tas kamu (klik untuk menambah):', txt(13)));
   // only your own harvest can compete: items bought at the warung are left out
   const avail = Object.entries(s.produce)
-    .filter(([id]) => !isBought(id))
+    .filter(([id]) => !isBought(id) && !isOre(baseId(id)))
     .map(([id, q]) => [id, q - festivalPick.filter((p) => p === id).length] as const)
     .filter(([, q]) => q > 0);
   if (Object.keys(s.produce).some(isBought))
