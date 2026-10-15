@@ -1052,8 +1052,13 @@ export function genFloor(s: GameState, floor: number, rand = Math.random) {
   };
 }
 
-/** Where the kerekan stops: the start of every zone you have reached. */
-export const liftFloors = (s: GameState) => CAVE_ZONES.map((z) => z.from).filter((f) => f === 1 || f <= (s.cave?.deepest ?? 0));
+/** Where the kerekan stops: the start of every zone you have reached, and the deepest floor itself. */
+export const liftFloors = (s: GameState) => {
+  const deepest = Math.min(CAVE_BOTTOM, s.cave?.deepest ?? 0);
+  const out = CAVE_ZONES.map((z) => z.from).filter((f) => f === 1 || f <= deepest);
+  if (deepest > 1 && !out.includes(deepest)) out.push(deepest);
+  return out;
+};
 
 /** Open the chest at the bottom (once ever); returns an error or null. */
 export function openCaveTreasure(s: GameState): string | null {
