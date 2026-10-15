@@ -74,9 +74,13 @@ export function openShipping(ui: UIScene) {
     p.qty = Math.max(1, Math.min(have, p.qty));
     const info = produceById(p.key);
     c.add(ui.add.image(px + 24, py + 40, `icon-${baseId(p.key)}`).setScale(2));
-    c.add(ui.add.text(px + 46, py + 14, info.name, txt(12)));
+    // name without stars (quality goes on the price line), shrunk to fit left of the buttons
+    const name = ui.add.text(px + 46, py + 14, produceById(baseId(p.key)).name, txt(12));
+    if (name.width > 76) name.setScale(76 / name.width);
+    c.add(name);
     c.add(ui.add.text(px + 46, py + 33, `${p.qty} / ${have}`, txt(16, C.blue)));
-    c.add(ui.add.text(px + 46, py + 56, `${(info.sellPrice * p.qty).toLocaleString('id-ID')} G`, txt(11, C.orange)));
+    const q = starsOf(p.key);
+    c.add(ui.add.text(px + 46, py + 56, `${(info.sellPrice * p.qty).toLocaleString('id-ID')} G${q > 1 ? ` · ★${q}` : ''}`, txt(11, C.orange)));
     // a step that cannot change the amount is shown greyed out
     const step = (label: string, delta: number, bx: number) => {
       const blocked = delta > 0 ? p.qty >= have : p.qty <= 1;
