@@ -913,11 +913,45 @@ test('peti hanya untuk hasil kebun, benih, pupuk, sprinkler; ikan/telur/masakan 
   });
   const noPeti = 'Peti Lumbung hanya untuk hasil kebun, benih, pupuk, dan sprinkler.';
   expect(r.peti).toEqual({ crop: null, fish: noPeti, egg: noPeti, dish: noPeti, seed: null, pupuk: null, sprinkler: null });
-  expect(r.kulkas).toEqual({ fish: null, egg: null, dish: null, seed: 'Benih dan alat tidak masuk kulkas.' });
+  expect(r.kulkas).toEqual({ fish: null, egg: null, dish: null, seed: 'Kulkas hanya untuk makanan: hasil panen, ikan, telur, dan masakan.' });
   expect(r.back).toBeNull();
   expect(r.storage).toEqual({ kangkung: 5, 'benih:kangkung': 4, 'benih:pupuk': 1, 'benih:sprinkler': 1 });
   expect(r.fridge).toEqual({ 'ikan-nila': 2, telur: 3, 'tumis-kangkung': 1 });
   expect(r.seeds).toEqual({ kangkung: 2, pupuk: 1 });
   expect(r.produce).toEqual({});
+  noErrors(errors);
+});
+
+test('tambang: beliung harus dibeli, batu pecah jadi bijih, muncul lagi besok', async ({ page }) => {
+  const errors = await start(page);
+  // one known rock right next to the entrance row
+  await patch(page, "s.level = 4; s.seeds = {}; s.produce = {}; s.mine = { day: s.day, nodes: { '53,45': { ore: 'bijih-besi', hits: 3 } } }");
+  await page.evaluate(() => window.game.scene.getScene('farm').refreshMine());
+  await at(page, 53, 46, 'up');
+  await press(page, 'Space');
+  expect((await toasts(page)).join()).toContain('Butuh Beliung');
+
+  await press(page, '6');
+  expect((await toasts(page)).join()).toContain('belum punya Beliung');
+  await patch(page, "s.ownedTools = ['beliung']");
+  await press(page, '6');
+  for (let i = 0; i < 3; i++) {
+    await press(page, 'Space');
+    await page.waitForTimeout(250);
+  }
+  let s = await state(page);
+  expect(s.mine.nodes['53,45']).toBeUndefined();
+  expect(s.produce['bijih-besi']).toBeGreaterThanOrEqual(1);
+  expect(s.stamina).toBe(100 - 3 * 4);
+
+  // ores stay out of the kulkas, and fresh rocks are there in the morning
+  await sleep(page);
+  s = await state(page);
+  expect(Object.keys(s.mine.nodes).length).toBe(16);
+  for (const k of Object.keys(s.mine.nodes)) {
+    const [x, y] = k.split(',').map(Number);
+    expect(x).toBeGreaterThanOrEqual(52);
+    expect(y).not.toBe(46); // the entrance row stays clear
+  }
   noErrors(errors);
 });

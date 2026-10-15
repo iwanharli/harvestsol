@@ -12,6 +12,7 @@ const PLACES: { name: string; x: number; y: number; lake?: Water }[] = [
   { name: 'Alun-alun', x: 47, y: 10 },
   { name: 'Toko Mebel', x: 58, y: 16 },
   { name: 'Hutan', x: 55, y: 33 },
+  { name: 'Tambang', x: 56, y: 46 },
   { name: 'Kolam', x: 26, y: 12, lake: 'kolam' },
   { name: 'Danau Sirep', x: 24, y: 31, lake: 'danau' },
   { name: 'Rawa Gambut', x: 13, y: 47, lake: 'rawa' },
@@ -72,7 +73,7 @@ export function openWorldMap(ui: UIScene) {
   ly += 10;
   c.add(ui.add.text(lx, ly, 'Lainnya', txt(13)));
   ly += 22;
-  for (const [col, name] of [[0x5b9440, 'Ladang'], [0xd8b67e, 'Jalan'], [0x2f6b34, 'Pohon'], [0xa5623e, 'Bangunan']] as const) {
+  for (const [col, name] of [[0x5b9440, 'Ladang'], [0xd8b67e, 'Jalan'], [0x2f6b34, 'Pohon'], [0xa5623e, 'Bangunan'], [0xa89c88, 'Tambang']] as const) {
     const g = ui.add.graphics();
     g.fillStyle(col, 1).fillRoundedRect(lx, ly + 2, 14, 14, 4);
     c.add(g);

@@ -51,13 +51,14 @@ export const LEGACY_DISHES: Record<string, string> = {
 
 export const cropById = (id: string) => CROPS.find((c) => c.id === id)!;
 
-export type Tool = 'cangkul' | 'siram' | 'benih' | 'tangan' | 'pancing';
+export type Tool = 'cangkul' | 'siram' | 'benih' | 'tangan' | 'pancing' | 'beliung';
 export const TOOLS: { id: Tool; name: string; key: string }[] = [
   { id: 'cangkul', name: 'Cangkul', key: '1' },
   { id: 'siram', name: 'Penyiram', key: '2' },
   { id: 'benih', name: 'Benih', key: '3' },
   { id: 'tangan', name: 'Tangan', key: '4' },
   { id: 'pancing', name: 'Pancing', key: '5' },
+  { id: 'beliung', name: 'Beliung', key: '6' },
 ];
 
 export const WATER_CAN_MAX = 20;
@@ -69,7 +70,7 @@ export const STAMINA_MILESTONE_EVERY = 4;
 export const STAMINA_MILESTONE_CAP_LEVEL = 20;
 export const STAMINA_REWARD = 10; // one-off rewards: Jamu Kuat (first villager at ♥10), complete Fish Book
 export const FRIENDSHIP_MAX = 10;
-export const STAMINA_COST: Record<Tool, number> = { cangkul: 2, siram: 2, benih: 0, tangan: 0, pancing: 4 };
+export const STAMINA_COST: Record<Tool, number> = { cangkul: 2, siram: 2, benih: 0, tangan: 0, pancing: 4, beliung: 4 };
 
 // Clock: 1 real second = 1.5 game minutes, so a day (06:00–24:00) lasts 12 real minutes.
 export const DAY_START_MIN = 6 * 60;
@@ -143,7 +144,27 @@ export const GOLDEN_EGG_AFFECTION = 8;
 export const PRODUCTS: { id: string; name: string; sellPrice: number }[] = [
   { id: 'telur', name: 'Telur', sellPrice: 50 },
   { id: 'telur-emas', name: 'Telur Emas', sellPrice: 150 },
+  // from the Tambang (mining); kept for tool upgrades later, or sold
+  { id: 'batu', name: 'Batu', sellPrice: 4 },
+  { id: 'bijih-tembaga', name: 'Bijih Tembaga', sellPrice: 25 },
+  { id: 'bijih-besi', name: 'Bijih Besi', sellPrice: 45 },
+  { id: 'bijih-emas', name: 'Bijih Emas', sellPrice: 120 },
 ];
+
+// ---------- mining ----------
+
+/** The quarry in the east woods (world tiles); rocks reappear in it every morning. */
+export const QUARRY = { x: 51, y: 41, w: 11, h: 10 };
+export const MINE_NODES = 16;
+export type Ore = 'batu' | 'bijih-tembaga' | 'bijih-besi' | 'bijih-emas';
+/** Rock kinds: how many hits they take, what they drop, and how common they are (gold grows rarer below its level). */
+export const ORES: Record<Ore, { name: string; hits: number; drop: [number, number]; weight: number; level: number }> = {
+  batu: { name: 'Batu', hits: 1, drop: [1, 3], weight: 55, level: 1 },
+  'bijih-tembaga': { name: 'Batu Tembaga', hits: 2, drop: [1, 2], weight: 25, level: 1 },
+  'bijih-besi': { name: 'Batu Besi', hits: 3, drop: [1, 2], weight: 14, level: 4 },
+  'bijih-emas': { name: 'Batu Emas', hits: 4, drop: [1, 1], weight: 6, level: 8 },
+};
+export const isOre = (id: string) => id in ORES;
 
 // ---------- cooking ----------
 
@@ -362,6 +383,7 @@ export const fishXp = (id: string) => 4 + Math.round((fishById(id)?.sellPrice ??
 /** Tools that must be bought once before they can be used. */
 export const BUYABLE_TOOLS: { id: Tool; name: string; price: number; level: number; desc: string }[] = [
   { id: 'pancing', name: 'Pancing', price: 800, level: 2, desc: 'untuk kolam, danau, rawa, telaga, waduk & muara' },
+  { id: 'beliung', name: 'Beliung', price: 1500, level: 3, desc: 'menambang batu dan bijih di Tambang Bukit Kapur' },
 ];
 export const needsPurchase = (tool: Tool) => BUYABLE_TOOLS.some((t) => t.id === tool);
 

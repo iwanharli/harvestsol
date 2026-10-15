@@ -43,6 +43,11 @@ import {
   STACK_MAX,
   FRIDGE_STACK_MAX,
   STORAGE_SLOTS,
+  ORES,
+  QUARRY,
+  MINE_NODES,
+  STAMINA_COST,
+  type Ore,
   FESTIVAL_EVERY,
   FESTIVAL_MAX_ITEMS,
   FESTIVAL_REWARDS,
@@ -55,6 +60,7 @@ import {
   type Season,
   type Tool,
   isBought,
+  isOre,
 } from './data';
 
 export interface Plot {
@@ -131,6 +137,7 @@ export interface GameState {
   sofaDay: number; // last day the sofa rest was used
   fridge: Record<string, number>; // kulkas contents (same keys as produce)
   storage: Record<string, number>; // peti lumbung contents (same keys as produce)
+  mine?: { day: number; nodes: Record<string, { ore: Ore; hits: number }> }; // today's rocks in the quarry, by tile "x,y"
   pos?: { x: number; y: number; dir: 'down' | 'up' | 'left' | 'right' }; // where the player stands (world px) // last day the player chatted with each villager
   stats: { harvested: number; earned: number; requestsDone: number };
 }
@@ -239,12 +246,12 @@ export function load(): GameState {
     const raw = localStorage.getItem(SAVE_KEY);
     if (raw) {
       const s = JSON.parse(raw) as GameState;
-      if (s.version === 1) return refreshRequests(migrate(s));
+      if (s.version === 1) return rollMine(refreshRequests(migrate(s)));
     }
   } catch {
     // corrupted or unavailable storage: start fresh
   }
-  return refreshRequests(newGame());
+  return rollMine(refreshRequests(newGame()));
 }
 
 export function save(s: GameState) {
@@ -365,6 +372,7 @@ export function endDay(s: GameState, passedOut: boolean): DayReport {
   }
 
   refreshRequests(s);
+  rollMine(s);
   return report;
 }
 
@@ -565,7 +573,7 @@ export interface FestivalResult {
 /** Hand in the entry, rank it against the villagers, and pay out rewards. */
 export function enterFestival(s: GameState, items: string[]): FestivalResult {
   const theme = festivalTheme(s.day);
-  const entry = items.filter((k) => !isBought(k)).slice(0, FESTIVAL_MAX_ITEMS); // own harvest only; handed back after judging
+  const entry = items.filter((k) => !isBought(k) && !isOre(baseId(k))).slice(0, FESTIVAL_MAX_ITEMS); // own harvest only; handed back after judging
   const yours = festivalScore(entry, theme.id);
 
   // villagers get stronger as the year goes on
@@ -774,7 +782,7 @@ const bagIdOf = (key: string) => (isSeedKey(key) ? key.slice(6) : key);
 
 /** The peti only takes farm goods: harvested vegetables and fruit, seeds, pupuk and sprinklers. */
 export const storeAllows = (w: Store, key: string) =>
-  w === 'peti' ? isSeedKey(key) || CROPS.some((c) => c.id === baseId(key)) : !isSeedKey(key);
+  w === 'peti' ? isSeedKey(key) || CROPS.some((c) => c.id === baseId(key)) : !isSeedKey(key) && !isOre(baseId(key));
 
 /** What the bag can offer to a store, keyed the way that store keeps it. */
 export function bagFor(s: GameState, w: Store): Record<string, number> {
@@ -793,7 +801,7 @@ export function storeRoom(s: GameState, w: Store, key: string) {
 
 /** Move n of an item (all of it when n is left out) from the bag into the kulkas or peti; returns an error or null. */
 export function moveToStore(s: GameState, w: Store, key: string, n?: number): string | null {
-  if (!storeAllows(w, key)) return w === 'peti' ? 'Peti Lumbung hanya untuk hasil kebun, benih, pupuk, dan sprinkler.' : 'Benih dan alat tidak masuk kulkas.';
+  if (!storeAllows(w, key)) return w === 'peti' ? 'Peti Lumbung hanya untuk hasil kebun, benih, pupuk, dan sprinkler.' : 'Kulkas hanya untuk makanan: hasil panen, ikan, telur, dan masakan.';
   const src = bagRecOf(s, key), id = bagIdOf(key);
   const q = Math.min(n ?? Infinity, src[id] ?? 0);
   if (q <= 0) return null;
@@ -919,4 +927,45 @@ export function sortBag(s: GameState) {
     for (let i = 0; i < ra.length; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i];
     return 0;
   });
+}
+
+// ---------- mining ----------
+
+/** Fresh rocks in the quarry each morning; ores above your level are rarer. */
+export function rollMine(s: GameState, rand = Math.random): GameState {
+  if (s.mine?.day === s.day) return s;
+  const nodes: Record<string, { ore: Ore; hits: number }> = {};
+  const kinds = Object.entries(ORES) as [Ore, (typeof ORES)[Ore]][];
+  const weight = (o: (typeof ORES)[Ore]) => (s.level >= o.level ? o.weight : o.weight / 4);
+  const total = kinds.reduce((a, [, o]) => a + weight(o), 0);
+  let tries = 0;
+  while (Object.keys(nodes).length < MINE_NODES && tries++ < 500) {
+    // keep the entrance column and the edges walkable
+    const x = QUARRY.x + 1 + Math.floor(rand() * (QUARRY.w - 2));
+    const y = QUARRY.y + 1 + Math.floor(rand() * (QUARRY.h - 2));
+    if (y === QUARRY.y + Math.floor(QUARRY.h / 2)) continue; // the entrance row
+    const k = `${x},${y}`;
+    if (nodes[k]) continue;
+    let n = rand() * total;
+    let ore: Ore = 'batu';
+    for (const [id, o] of kinds) if ((n -= weight(o)) < 0) { ore = id; break; }
+    nodes[k] = { ore, hits: ORES[ore].hits };
+  }
+  s.mine = { day: s.day, nodes };
+  return s;
+}
+
+/** One swing at a rock: returns what it dropped when it breaks, an error, or null while it holds. */
+export function mineHit(s: GameState, key: string, rand = Math.random): { error?: string; drop?: { id: Ore; qty: number } } {
+  const node = s.mine?.nodes[key];
+  if (!node) return {};
+  const o = ORES[node.ore];
+  const qty = o.drop[0] + Math.floor(rand() * (o.drop[1] - o.drop[0] + 1));
+  if (node.hits <= 1 && !canAdd(s, 'produce', node.ore, qty)) return { error: 'Tas penuh! Kosongkan slot dulu.' };
+  s.stamina -= STAMINA_COST.beliung;
+  node.hits--;
+  if (node.hits > 0) return {};
+  delete s.mine!.nodes[key];
+  add(s.produce, node.ore, qty);
+  return { drop: { id: node.ore, qty } };
 }

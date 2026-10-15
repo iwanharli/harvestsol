@@ -4,6 +4,7 @@ import {
   FIELD,
   GAME_MIN_PER_SEC,
   MAP_H,
+  QUARRY,
   LAKES,
   type Water,
   FISH,
@@ -60,6 +61,7 @@ import {
   nextFestivalDay,
   plotKey,
   save,
+  mineHit,
   seasonOf,
   type GameState,
 } from '../state';
@@ -73,7 +75,7 @@ const DIR_VEC: Record<Dir, [number, number]> = { down: [0, 1], up: [0, -1], left
 const SPEED = 62; // world px per second
 
 type Spot =
-  | 'door' | 'shop' | 'bin' | 'pond' | 'lakesign' | 'board' | 'coop' | 'stage' | 'house'
+  | 'door' | 'shop' | 'bin' | 'pond' | 'lakesign' | 'minesign' | 'ore' | 'board' | 'coop' | 'stage' | 'house'
   | 'bed' | 'stove' | 'tv' | 'shelf' | 'wardrobe' | 'fridge' | 'storage' | 'radio' | 'trophy' | 'slot'
   | 'mebel' | 'counter' | 'display' | 'sofa';
 
@@ -141,6 +143,7 @@ export class FarmScene extends Phaser.Scene {
   create() {
     this.state = this.registry.get('state');
     this.buildMap();
+    this.refreshMine();
     HOUSE_ROOMS.forEach((R, tier) => this.buildRoom(R, tier));
     this.buildShop();
     this.refreshFurniture();
@@ -185,7 +188,7 @@ export class FarmScene extends Phaser.Scene {
     cam.setRoundPixels(true);
 
     const kb = this.input.keyboard!;
-    this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,E,Q,ONE,TWO,THREE,FOUR,FIVE,SHIFT') as Record<
+    this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,E,Q,ONE,TWO,THREE,FOUR,FIVE,SIX,SHIFT') as Record<
       string,
       Phaser.Input.Keyboard.Key
     >;
@@ -273,6 +276,9 @@ export class FarmScene extends Phaser.Scene {
         rect(22, 64, 46, 64, 's'); // the waduk's dam
     rect(18, 66, 47, 66, 'p');
     rect(48, 63, 52, 63, 'k'); // a jetty into the muara
+    // Tambang Bukit Kapur: a gravel quarry in the east woods, reached from the south road
+    rect(QUARRY.x, QUARRY.y, QUARRY.x + QUARRY.w - 1, QUARRY.y + QUARRY.h - 1, 'q');
+    rect(48, QUARRY.y + Math.floor(QUARRY.h / 2), QUARRY.x - 1, QUARRY.y + Math.floor(QUARRY.h / 2), 'p');
 
     // forest clearing with flowers
     const clearing = { x: 54, y: 32, r: 3.2 };
@@ -293,6 +299,7 @@ export class FarmScene extends Phaser.Scene {
         else if (t === 's') key = 'stone';
         else if (t === 'd') key = 'sand';
         else if (t === 'k') key = 'plank';
+        else if (t === 'q') key = 'gravel';
         else {
           const inClearing = Math.hypot(x - clearing.x, y - clearing.y) < clearing.r;
           const n = r.frac();
@@ -338,6 +345,9 @@ export class FarmScene extends Phaser.Scene {
       this.block(x, y, 'lakesign');
       this.lakeSigns.set(plotKey(x, y), id);
     }
+    const mx = QUARRY.x - 2, my = QUARRY.y + Math.floor(QUARRY.h / 2) - 1;
+    this.add.image((mx + 0.5) * TILE, (my + 1) * TILE, 'signpost').setOrigin(0.5, 1).setDepth((my + 1) * TILE);
+    this.block(mx, my, 'minesign');
 
     // farmhouse (4x4 tiles), door on bottom row
     this.building('house', 3, 2);
@@ -470,6 +480,23 @@ export class FarmScene extends Phaser.Scene {
     this.paintMinimap(G);
   }
 
+  /** Today's rocks in the quarry: draw them, and make each one solid and minable. */
+  private mineImgs = new Map<string, Phaser.GameObjects.Image>();
+  private refreshMine() {
+    for (const [k, img] of this.mineImgs) {
+      img.destroy();
+      this.blocked.delete(k);
+      this.spots.delete(k);
+    }
+    this.mineImgs.clear();
+    for (const [k, n] of Object.entries(this.state.mine?.nodes ?? {})) {
+      const [x, y] = k.split(',').map(Number);
+      this.mineImgs.set(k, this.add.image((x + 0.5) * TILE, (y + 1) * TILE, `rock-${n.ore}`).setOrigin(0.5, 1).setDepth((y + 1) * TILE));
+      this.blocked.add(k);
+      this.spots.set(k, 'ore');
+    }
+  }
+
   /** A small picture of the whole world (MAP_PX per tile) for the map window. */
   private paintMinimap(G: string[][]) {
     if (this.textures.exists('minimap')) this.textures.remove('minimap');
@@ -480,7 +507,7 @@ export class FarmScene extends Phaser.Scene {
       const ch = (sh: number) => Math.round((((base >> sh) & 255) * ((t >> sh) & 255)) / 255);
       return hex((ch(16) << 16) | (ch(8) << 8) | ch(0));
     };
-    const ground: Record<string, string> = { g: '#6fae4c', p: '#d8b67e', s: '#b9b4a8', d: '#ead39a', k: '#8d5a34' };
+    const ground: Record<string, string> = { g: '#6fae4c', p: '#d8b67e', s: '#b9b4a8', d: '#ead39a', k: '#8d5a34', q: '#a89c88' };
     for (let y = 0; y < MAP_H; y++)
       for (let x = 0; x < MAP_W; x++) {
         const k = plotKey(x, y);
@@ -1013,7 +1040,7 @@ export class FarmScene extends Phaser.Scene {
       else if (k === 'escape' || 'wasd'.includes(k) || k.startsWith('arrow')) this.endFishing('Batal memancing.');
       return;
     }
-    const toolIdx = ['1', '2', '3', '4', '5'].indexOf(k);
+    const toolIdx = ['1', '2', '3', '4', '5', '6'].indexOf(k);
     if (toolIdx >= 0) this.setTool(toolIdx);
     else if (k === 'q') this.game.events.emit('cycle-seed');
     else if (k === ' ' || k === 'e' || k === 'enter') this.actionButton();
@@ -1258,6 +1285,29 @@ export class FarmScene extends Phaser.Scene {
     if (spot === 'coop') {
       if (s.level < FEATURE_LEVEL.coop) return this.fail(`Kandang ayam terbuka di Level ${FEATURE_LEVEL.coop}.`);
       return this.tendCoop();
+    }
+    if (spot === 'minesign')
+      return this.toast(`Tambang Bukit Kapur\nBatu dan bijih muncul lagi setiap pagi. Butuh Beliung (6), beli di toko.`);
+    if (spot === 'ore') {
+      if (s.tool !== 'beliung') {
+        if (!s.ownedTools.includes('beliung')) return this.fail('Butuh Beliung untuk menambang. Beli di toko (tab Peralatan).');
+        return this.fail('Pakai Beliung (6) untuk memecah batu.');
+      }
+      if (s.stamina < STAMINA_COST.beliung) return this.fail('Terlalu lelah untuk menambang.');
+      const r = mineHit(s, k);
+      if (r.error) return this.fail(r.error);
+      this.swing();
+      play('hoe');
+      this.splash(tx, ty, 0xb4b4b8);
+      const img = this.mineImgs.get(k);
+      if (img) this.tweens.add({ targets: img, x: img.x + 1.5, duration: 40, yoyo: true, repeat: 2 });
+      if (r.drop) {
+        play('coin');
+        this.toast(`+${r.drop.qty} ${produceById(r.drop.id).name}`);
+        this.xp(r.drop.id === 'batu' ? 1 : 3, tx, ty);
+        this.refreshMine();
+      }
+      return this.changed();
     }
     if (spot === 'lakesign') {
       const lake = LAKES[this.lakeSigns.get(k) ?? 'danau'];
@@ -1696,6 +1746,7 @@ export class FarmScene extends Phaser.Scene {
       // refresh drawn plots (some may have reverted to grass) and all current ones
       for (const k of new Set([...this.soilImgs.keys(), ...this.propImgs.keys(), ...Object.keys(this.state.plots)]))
         this.refreshPlot(k);
+      this.refreshMine();
       save(this.state);
       this.game.events.emit('day-report', report);
       cam.fadeIn(500, 10, 10, 30);
