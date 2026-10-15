@@ -524,6 +524,18 @@ export function makeTextures(scene: Phaser.Scene) {
     px(c, 12, 14, '#8a949e', 1, 8);
     px(c, 3, 3, '#e2434b', 2, 2); // a magnet
   }, true);
+  canvas(scene, 'in-chest', TILE, TILE, (c) => {
+    px(c, 1, 4, '#5a3a22', 14, 11);
+    px(c, 2, 5, '#a36c40', 12, 4);
+    px(c, 2, 10, '#8d5a34', 12, 4);
+    px(c, 1, 9, '#5a3a22', 14, 1);
+    px(c, 2, 5, '#c08552', 12, 1);
+    px(c, 3, 7, '#8d5a34', 10, 1);
+    px(c, 3, 12, '#6f4528', 10, 1);
+    px(c, 7, 8, '#f2c94c', 2, 3); // brass latch
+    px(c, 2, 4, '#3b2a1a', 1, 11);
+    px(c, 13, 4, '#3b2a1a', 1, 11);
+  }, true);
   canvas(scene, 'in-radio', TILE, TILE, (c) => {
     px(c, 1, 5, '#8d5a34', 14, 10);
     px(c, 2, 6, '#a36c40', 12, 8);

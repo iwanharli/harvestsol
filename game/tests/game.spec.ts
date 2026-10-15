@@ -477,7 +477,7 @@ test('toko mebel: masuk, beli kulkas dari pajangan, simpan bahan, masak dari kul
   await press(page, 'Space');
   expect(await page.evaluate(() => window.game.registry.get('modal'))).toBe(true);
   await page.waitForTimeout(150);
-  await page.mouse.click(673, 371); // "Beli" on the kulkas row
+  await page.mouse.click(673, 330); // "Beli" on the kulkas row
   await page.waitForTimeout(150);
   let s = await state(page);
   expect(s.furniture.kulkas).toBe(true);
@@ -735,5 +735,38 @@ test('slot tas maksimal 50, slot kulkas maksimal 99', async ({ page }) => {
     return { bag, fridge: mod.fridgeSlotsUsed(st) }; // 99 + 21
   });
   expect(r).toEqual({ bag: 3, fridge: 2 });
+  noErrors(errors);
+});
+
+test('peti lumbung: 48 slot, simpan dan ambil hasil panen', async ({ page }) => {
+  const errors = await start(page);
+  const r = await page.evaluate(async () => {
+    const st = window.game.registry.get('state');
+    const mod = await import('/src/state.ts');
+    st.produce = { kangkung: 30, 'jagung@3': 5 };
+    st.storage = {};
+    const a = mod.moveToStore(st, 'peti', 'kangkung');
+    const b = mod.moveToStore(st, 'peti', 'jagung@3');
+    const stored = { ...st.storage };
+    st.storage = Object.fromEntries(Array.from({ length: 48 }, (_, i) => [`x${i}`, 1]));
+    st.produce = { kangkung: 1 };
+    const full = mod.moveToStore(st, 'peti', 'kangkung');
+    return { a, b, stored, full };
+  });
+  expect(r).toEqual({ a: null, b: null, stored: { kangkung: 30, 'jagung@3': 5 }, full: 'Peti penuh.' });
+  noErrors(errors);
+});
+
+test('peti lumbung: jendela dibuka dari rumah setelah dibeli', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.furniture.peti = true; s.produce = { kangkung: 4 }; s.storage = {}");
+  await page.evaluate(() => window.game.events.emit('open-storage'));
+  await page.waitForTimeout(150);
+  await page.mouse.click(171, 148); // first bag slot
+  await page.waitForTimeout(120);
+  await page.mouse.click(716, 403); // "Simpan ke peti"
+  await page.waitForTimeout(120);
+  const s = await state(page);
+  expect(s.storage).toEqual({ kangkung: 4 });
   noErrors(errors);
 });

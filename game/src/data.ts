@@ -397,11 +397,13 @@ export const FURNITURE: FurnitureDef[] = [
   { id: 'radio', name: 'Radio', price: 2000, level: 4, desc: 'Siaran desa: ikan langka hari ini dan cuaca besok.' },
   { id: 'piala', name: 'Lemari Piala', price: 3000, level: 5, desc: '+5% hadiah koin festival per piala emas (maks +25%).' },
   { id: 'kulkas', name: 'Kulkas', price: 4000, level: 3, desc: 'Simpan 24 slot barang; dapur memakai bahan dari kulkas.' },
+  { id: 'peti', name: 'Peti Lumbung', price: 2500, level: 3, desc: 'Gudang hasil panen: 48 slot (99/slot), aman disimpan berapa lama pun.' },
   { id: 'kasur', name: 'Kasur Besar', price: 6000, level: 6, desc: 'Tidur nyenyak: +15 tenaga bonus setiap pagi.' },
 ];
 export const furnitureById = (id: string) => FURNITURE.find((f) => f.id === id);
 
 export const FRIDGE_SLOTS = 24;
+export const STORAGE_SLOTS = 48;
 export const BIG_BED_BONUS = 15;
 export const ALARM_WAKE_MIN = 5 * 60;
 export const TROPHY_BONUS = 0.05;

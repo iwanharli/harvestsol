@@ -4,7 +4,7 @@ import { buyFurniture, save, upgradeHouse } from '../../state';
 import { C, card, segmented, txt, well } from '../theme';
 import type { UIScene } from '../../scenes/UIScene';
 
-const ICON: Record<string, string> = { jam: 'in-clock', radio: 'in-radio', piala: 'in-trophy', kulkas: 'in-fridge', kasur: 'in-bigbed' };
+const ICON: Record<string, string> = { jam: 'in-clock', radio: 'in-radio', piala: 'in-trophy', kulkas: 'in-fridge', kasur: 'in-bigbed', peti: 'in-chest' };
 
 let tab: 'perabot' | 'renovasi' = 'perabot';
 
@@ -12,7 +12,7 @@ let tab: 'perabot' | 'renovasi' = 'perabot';
 export function openMebel(ui: UIScene, focus?: string) {
   if (focus) tab = 'perabot';
   const s = ui.state;
-  const ROW = 64, gap = 6;
+  const ROW = 58, gap = 5;
   const W = 560, H = 110 + FURNITURE.length * (ROW + gap) + 50;
   const { c, x, y } = ui.openModal(W, H, 'Toko Mebel');
   c.add(ui.add.text(x + W - 28, y + 24, `${s.coins.toLocaleString('id-ID')} G`, txt(16, C.orange)).setOrigin(1, 0));

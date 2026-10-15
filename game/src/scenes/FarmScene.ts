@@ -71,7 +71,7 @@ const SPEED = 62; // world px per second
 
 type Spot =
   | 'door' | 'shop' | 'bin' | 'pond' | 'board' | 'coop' | 'stage' | 'house'
-  | 'bed' | 'stove' | 'tv' | 'shelf' | 'wardrobe' | 'fridge' | 'radio' | 'trophy' | 'slot'
+  | 'bed' | 'stove' | 'tv' | 'shelf' | 'wardrobe' | 'fridge' | 'storage' | 'radio' | 'trophy' | 'slot'
   | 'mebel' | 'counter' | 'display' | 'sofa';
 
 /** The farmhouse interior lives in empty world space east of the map (tiles), so all systems just work inside. */
@@ -79,7 +79,7 @@ const ROOM = { x: 100, y: 4, w: 14, h: 10 }; // Rumah Kecil
 /** One interior per house tier (renovations), all reached through the farmhouse door. */
 const HOUSE_ROOMS = HOUSE_TIERS.map((t) => (t.x === ROOM.x ? ROOM : { x: t.x, y: 4, w: t.w, h: t.h }));
 /** The Toko Mebel interior, further east. */
-const SHOP = { x: 160, y: 4, w: 12, h: 9 }; // far enough that the house never shows at the screen edge
+const SHOP = { x: 160, y: 4, w: 14, h: 9 }; // far enough that the house never shows at the screen edge
 /** Where each room's doormat leads back to outside (world px, facing down). */
 const ROOMS = [
   ...HOUSE_ROOMS.map((room) => ({ room, exit: { x: 4.5 * TILE + 8, y: 7 * TILE - 2 } })),
@@ -492,6 +492,7 @@ export class FarmScene extends Phaser.Scene {
     };
     slot('kulkas', X(11), Y(2) - 16, TILE, 32, 'in-fridge', [[11, 2], [11, 3]], 'fridge');
     slot('radio', X(2), Y(2), TILE, TILE, 'in-radio', [[2, 2]], 'radio');
+    slot('peti', X(0), Y(6), TILE, TILE, 'in-chest', [[0, 6]], 'storage');
     slot('jam', X(12.5) - 7, Y(0) + 6, 14, 14, 'in-clock', [], null);
     slot('piala', X(12), Y(6) - 8, 32, 40, 'in-trophy', [[12, 6], [13, 6], [12, 7], [13, 7]], 'trophy');
 
@@ -589,7 +590,7 @@ export class FarmScene extends Phaser.Scene {
     this.add.rectangle(X(mid + 1), Y(R.h), X(R.w) - X(mid + 1) + 4, 4, 0x1a5a56).setOrigin(0).setDepth(Y(R.h));
 
     // back wall: shelves of goods and the counter with the shopkeeper
-    for (const lx of [1.5, 10.5]) {
+    for (const lx of [1.5, R.w - 1.5]) {
       this.add.image(X(lx), Y(4), 'in-shelf').setOrigin(0.5, 1).setDepth(Y(4));
       spot(Math.floor(lx - 0.5), 2, null), spot(Math.floor(lx + 0.5), 2, null), spot(Math.floor(lx - 0.5), 3, null), spot(Math.floor(lx + 0.5), 3, null);
     }
@@ -603,12 +604,12 @@ export class FarmScene extends Phaser.Scene {
       .setResolution(4)
       .setDepth(-8.4);
 
-    // five display stands, each showing one piece of furniture and its price
+    // display stands, each showing one piece of furniture and its price
     FURNITURE.forEach((f, i) => {
       const lx = 1 + i * 2;
       const cx = X(lx + 1);
       this.add.image(cx, Y(7) - 2, 'pedestal').setOrigin(0.5, 1).setDepth(Y(7) - 3);
-      const key = { jam: 'in-clock', radio: 'in-radio', piala: 'in-trophy', kulkas: 'in-fridge', kasur: 'in-bigbed' }[f.id] ?? 'in-radio';
+      const key = { jam: 'in-clock', radio: 'in-radio', piala: 'in-trophy', kulkas: 'in-fridge', kasur: 'in-bigbed', peti: 'in-chest' }[f.id] ?? 'in-radio';
       const img = this.add.image(cx, Y(7) - 10, key).setOrigin(0.5, 1).setDepth(Y(7) - 2);
       if (img.height > 34) img.setScale(34 / img.height);
       this.add
@@ -1154,6 +1155,7 @@ export class FarmScene extends Phaser.Scene {
     if (spot === 'counter') return this.game.events.emit('open-mebel');
     if (spot === 'display') return this.game.events.emit('open-mebel', this.furnitureTiles.get(k));
     if (spot === 'fridge') return this.game.events.emit('open-fridge');
+    if (spot === 'storage') return this.game.events.emit('open-storage');
     if (spot === 'radio') return this.radio();
     if (spot === 'trophy') {
       const gold = Math.min(TROPHY_BONUS_MAX, s.festival.trophies.emas ?? 0);

@@ -42,6 +42,7 @@ import {
   dishById,
   STACK_MAX,
   FRIDGE_STACK_MAX,
+  STORAGE_SLOTS,
   FESTIVAL_EVERY,
   FESTIVAL_MAX_ITEMS,
   FESTIVAL_REWARDS,
@@ -129,6 +130,7 @@ export interface GameState {
   houseTier: number; // index into HOUSE_TIERS
   sofaDay: number; // last day the sofa rest was used
   fridge: Record<string, number>; // kulkas contents (same keys as produce)
+  storage: Record<string, number>; // peti lumbung contents (same keys as produce)
   pos?: { x: number; y: number; dir: 'down' | 'up' | 'left' | 'right' }; // where the player stands (world px) // last day the player chatted with each villager
   stats: { harvested: number; earned: number; requestsDone: number };
 }
@@ -170,6 +172,7 @@ export function newGame(): GameState {
     houseTier: 0,
     sofaDay: 0,
     fridge: {},
+    storage: {},
     stats: { harvested: 0, earned: 0, requestsDone: 0 },
   };
 }
@@ -226,6 +229,7 @@ function migrate(s: GameState): GameState {
   s.houseTier ??= 0;
   s.sofaDay ??= 0;
   s.fridge ??= {};
+  s.storage ??= {};
   s.stats.requestsDone ??= 0;
   return s;
 }
@@ -756,29 +760,40 @@ function takeFrom(rec: Record<string, number>, id: string, n: number): Record<st
   return taken;
 }
 
-export const fridgeSlotsUsed = (s: GameState) => Object.values(s.fridge).reduce((a, q) => a + Math.ceil(q / FRIDGE_STACK_MAX), 0);
+export type Store = 'kulkas' | 'peti';
+export const storeOf = (s: GameState, w: Store) => (w === 'kulkas' ? s.fridge : s.storage);
+export const storeCap = (w: Store) => (w === 'kulkas' ? FRIDGE_SLOTS : STORAGE_SLOTS);
+export const storeSlotsUsed = (s: GameState, w: Store) =>
+  Object.values(storeOf(s, w)).reduce((a, q) => a + Math.ceil(q / FRIDGE_STACK_MAX), 0);
+export const fridgeSlotsUsed = (s: GameState) => storeSlotsUsed(s, 'kulkas');
 
-/** Move a whole stack between the bag and the kulkas; returns an error message or null. */
-export function moveToFridge(s: GameState, key: string): string | null {
+/** Move a whole stack from the bag into the kulkas or peti; returns an error message or null. */
+export function moveToStore(s: GameState, w: Store, key: string): string | null {
   const q = s.produce[key] ?? 0;
   if (!q) return null;
-  const cur = s.fridge[key] ?? 0;
+  const rec = storeOf(s, w);
+  const cur = rec[key] ?? 0;
   const need = Math.ceil((cur + q) / FRIDGE_STACK_MAX) - Math.ceil(cur / FRIDGE_STACK_MAX);
-  if (fridgeSlotsUsed(s) + need > FRIDGE_SLOTS) return 'Kulkas penuh.';
+  if (storeSlotsUsed(s, w) + need > storeCap(w)) return w === 'kulkas' ? 'Kulkas penuh.' : 'Peti penuh.';
   add(s.produce, key, -q);
-  add(s.fridge, key, q);
+  add(rec, key, q);
   return null;
 }
 
-export function moveFromFridge(s: GameState, key: string): string | null {
-  const q = s.fridge[key] ?? 0;
+/** Take as much of a stored stack as fits back into the bag. */
+export function moveFromStore(s: GameState, w: Store, key: string): string | null {
+  const rec = storeOf(s, w);
+  const q = rec[key] ?? 0;
   if (!q) return null;
   const n = Math.min(q, roomFor(s, 'produce', key));
   if (!n) return 'Tas penuh.';
-  add(s.fridge, key, -n);
+  add(rec, key, -n);
   add(s.produce, key, n);
   return null;
 }
+
+export const moveToFridge = (s: GameState, key: string) => moveToStore(s, 'kulkas', key);
+export const moveFromFridge = (s: GameState, key: string) => moveFromStore(s, 'kulkas', key);
 
 /** Buy a piece of furniture; returns an error message or null. */
 export function buyFurniture(s: GameState, id: string, price: number, level: number): string | null {
