@@ -38,7 +38,9 @@ export function askSleep(ui: UIScene) {
   const { c, x, y } = ui.openModal(420, 200, 'Tidur?');
   c.add(
     ui.add
-      .text(x + 210, y + 58, `Tidur sampai ${wakeAt} (${Math.round(hours * 10) / 10} jam): tenaga pulih ${pct}%.\nHari berganti sendiri tiap tengah malam.`, {
+      .text(x + 210, y + 58, day
+        ? `Tidur siang ${NAP_HOURS} jam: tenaga +25%.\nAtau tidur sampai besok ${wakeAt}: tenaga pulih ${pct}%.`
+        : `Tidur sampai ${wakeAt} (${Math.round(hours)} jam): tenaga pulih ${pct}%.\nHari berganti sendiri tiap tengah malam.`, {
         ...txt(13, INK, false),
         align: 'center',
         wordWrap: { width: 370 },
@@ -51,7 +53,7 @@ export function askSleep(ui: UIScene) {
   };
   if (day) {
     ui.button(c, x + 20, y + 136, `Tidur siang ${NAP_HOURS} jam`, go('nap'), 150);
-    ui.button(c, x + 176, y + 136, `Sampai ${wakeAt}`, go('bed'), 120);
+    ui.button(c, x + 176, y + 136, `Sampai besok`, go('bed'), 120, false, true);
     ui.button(c, x + 302, y + 136, 'Belum', () => ui.closeModal(), 98);
   } else {
     ui.button(c, x + 60, y + 136, 'Tidur', go('bed'), 140);

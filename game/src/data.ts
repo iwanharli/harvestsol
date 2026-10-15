@@ -168,7 +168,7 @@ export const PRODUCTS: { id: string; name: string; sellPrice: number }[] = [
 // ---------- mining ----------
 
 /** The gravel yard in the east woods with the cave mouth at its back (world tiles). */
-export const QUARRY = { x: 51, y: 41, w: 11, h: 10 };
+export const QUARRY = { x: 53, y: 41, w: 8, h: 7 }; // a small yard; the path comes in along its middle row
 /** The cave interior: one room in empty world space, rebuilt for every floor you reach. */
 export const CAVE_ROOM = { x: 400, y: 4, w: 20, h: 14 };
 export const CAVE_BOTTOM = 50; // the deepest floor, with a treasure chest
