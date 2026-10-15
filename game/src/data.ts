@@ -422,3 +422,6 @@ export const HOUSE_TIERS: HouseTier[] = [
 ];
 export const SOFA_STAMINA = 20;
 export const SOFA_MINUTES = 30;
+
+/** Seeds show as a seed bag; tools and items keep their own icon. */
+export const seedIcon = (id: string) => (CROPS.some((c) => c.id === id) ? `seed-${id}` : `icon-${id}`);

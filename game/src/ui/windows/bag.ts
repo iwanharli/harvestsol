@@ -12,6 +12,7 @@ import {
   itemName,
   npcById,
   produceById,
+  seedIcon,
 } from '../../data';
 import { play } from '../../sfx';
 import { C, HEX, bar as drawBar, card, segmented, txt, well } from '../theme';
@@ -55,7 +56,7 @@ export function openInventory(ui: UIScene) {
   const stacksOf = (bag: 'produce' | 'seeds', rec: Record<string, number>) =>
     Object.entries(rec).flatMap(([id, q]) => {
       const out: Slot[] = [];
-      for (let left = q; left > 0; left -= STACK_MAX) out.push({ bag, id, icon: `icon-${baseId(id)}`, qty: Math.min(STACK_MAX, left) });
+      for (let left = q; left > 0; left -= STACK_MAX) out.push({ bag, id, icon: bag === 'seeds' ? seedIcon(id) : `icon-${baseId(id)}`, qty: Math.min(STACK_MAX, left) });
       return out;
     });
   const produce = stacksOf('produce', s.produce);
@@ -308,7 +309,7 @@ export function describe(ui: UIScene, bag: 'produce' | 'seeds' | 'other', id: st
   const inSeason = crop.seasons.includes(seasonOf(s.day));
   return {
     name: `Benih ${crop.name}`,
-    icon: `icon-${id}`,
+    icon: seedIcon(id),
     lines: [
       `Jumlah: ${s.seeds[id] ?? 0}`,
       crop.allSeasons ? 'Musim: semua musim' : `Musim: ${crop.seasons.join(', ')}${inSeason ? '' : ' (bukan musimnya!)'}`,

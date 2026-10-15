@@ -14,16 +14,30 @@ export function loadKenney(scene: Phaser.Scene) {
 }
 
 /** Crops that use Kenney frames: growth stages 1-3 and the bag icon. Stage 0 (seeds) stays ours. */
-const KENNEY_CROPS: Record<string, { stages: [number, number, number]; icon: number }> = {
-  jagung: { stages: [28, 29, 30], icon: 32 },
-  tomat: { stages: [40, 41, 42], icon: 44 },
-  padi: { stages: [64, 65, 66], icon: 68 },
-  ubi: { stages: [16, 17, 18], icon: 20 },
+const KENNEY_CROPS: Record<string, { stages: [number, number, number]; icon: number; bag: number }> = {
+  jagung: { stages: [28, 29, 30], icon: 32, bag: 33 },
+  tomat: { stages: [40, 41, 42], icon: 44, bag: 45 },
+  padi: { stages: [64, 65, 66], icon: 68, bag: 69 },
+  ubi: { stages: [16, 17, 18], icon: 20, bag: 21 },
+};
+
+/** Seed bags for our own crops: Kenney's bag with a 4x4 emblem painted on its label (at 6,8). */
+const BAG = 9;
+const LABEL = '#fdd6b4';
+const EMBLEM: Record<string, string[]> = {
+  kangkung: ['.G.G', 'GgGg', '.gg.', '.g..'],
+  timun: ['..cC', '.cC.', 'cC..', 'c...'],
+  terong: ['.g..', 'PPp.', 'PPp.', '.p..'],
+  cabai: ['.g.g', 'RrRr', 'RrRr', '.r.r'],
+  singkong: ['...t', '.tt.', 'tT..', 'T...'],
+  kedelai: ['.yY.', 'yYYy', 'yYYy', '.yy.'],
+  semangka: ['DmDm', 'mDmD', 'DmDm', '.DD.'],
+  sawit: ['.gg.', 'OOOo', 'OoOo', '.oo.'],
 };
 
 const PAL: Record<string, string> = {
   G: '#7cc95a', g: '#3f9a3f', D: '#2d6b2d', S: '#8b5a2b', s: '#6b4224',
-  C: '#8fcf5a', c: '#4f8f3a', P: '#9b4fc4', p: '#6c2c8a', R: '#e04040', r: '#a82828',
+  C: '#8fcf5a', c: '#4f8f3a', P: '#9b4fc4', p: '#6c2c8a', R: '#e04040', r: '#a82828', O: '#e8762e', o: '#a84a1a',
   Y: '#e2cf6a', y: '#a8963f', t: '#b8875a', T: '#efe2c4', m: '#7cc95a', W: '#ffffff', k: '#2b2b2b',
 };
 
@@ -305,6 +319,22 @@ export function applyKenney(scene: Phaser.Scene) {
   for (const [id, f] of Object.entries(KENNEY_CROPS)) {
     f.stages.forEach((i, n) => frame(`crop-${id}-${n + 1}`, i));
     frame(`icon-${id}`, f.icon);
+    frame(`seed-${id}`, f.bag);
+  }
+  for (const [id, rows] of Object.entries(EMBLEM)) {
+    redraw(scene, `seed-${id}`, (c) => {
+      c.drawImage(src, (BAG % COLS) * 16, Math.floor(BAG / COLS) * 16, 16, 16, 0, 0, 16, 16);
+      c.fillStyle = LABEL;
+      c.fillRect(6, 8, 4, 4); // blank the label, then paint this crop's emblem
+      rows.forEach((row, y) => {
+        for (let x = 0; x < 4; x++) {
+          const col = PAL[row[x]];
+          if (!col) continue;
+          c.fillStyle = col;
+          c.fillRect(6 + x, 8 + y, 1, 1);
+        }
+      });
+    }, false);
   }
 
   for (const [id, art] of Object.entries(ART)) {
