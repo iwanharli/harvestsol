@@ -358,6 +358,9 @@ export class FarmScene extends Phaser.Scene {
     // the cave mouth at the back of the yard (3 tiles wide), entered from the row in front of it
     this.add.image(56.5 * TILE, 45 * TILE, 'cave-mouth').setOrigin(0.5, 1).setDepth(45 * TILE);
     for (let x = 55; x <= 57; x++) for (let y = 42; y <= 44; y++) this.block(x, y, y === 44 ? 'cave' : undefined);
+    // the kerekan beside it: a rope-and-pulley basket down to the floors you have reached
+    this.add.image(58.5 * TILE, 45 * TILE, 'kerekan').setOrigin(0.5, 1).setDepth(45 * TILE);
+    this.block(58, 44, 'cave');
 
     // farmhouse (4x4 tiles), door on bottom row
     this.building('house', 3, 2);

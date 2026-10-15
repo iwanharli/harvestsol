@@ -1252,6 +1252,17 @@ export function makeTextures(scene: Phaser.Scene) {
     px(c, 12, 14, '#a36c40', 24, 3);
     px(c, 22, 24, '#f2c94c', 4, 3); // a lantern glow deep inside
   }, true);
+  canvas(scene, 'kerekan', TILE, 28, (c) => {
+    px(c, 2, 4, '#8d5a34', 2, 24); // two wooden legs and a crossbar
+    px(c, 12, 4, '#8d5a34', 2, 24);
+    px(c, 1, 3, '#a36c40', 14, 2);
+    px(c, 6, 5, '#5f6f7d', 4, 3); // the pulley wheel
+    px(c, 7, 6, '#c8d2dc', 2, 1);
+    px(c, 8, 8, '#d9c49a', 1, 10); // rope
+    px(c, 5, 18, '#a8783e', 7, 5); // basket
+    px(c, 5, 18, '#c8964e', 7, 1);
+    px(c, 6, 20, '#8a5e2e', 5, 1);
+  }, true);
   canvas(scene, 'cave-wall', TILE, TILE, (c) => {
     px(c, 0, 0, '#3e3a34', 16, 16);
     px(c, 1, 2, '#4e4a44', 6, 4);
