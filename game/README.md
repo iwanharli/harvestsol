@@ -108,7 +108,7 @@ Batu bijih makin keras setiap 15 lantai (Batu biasa tetap 1 pukulan). **Kerekan*
 
 **Kotak Kirim**: jendela dua sisi (Tas ⇄ Kotak). Klik barang lalu tentukan jumlahnya (−10/−1/+1/+10/Maks) dan tekan Kirim/Ambil, atau Kirim Semua / Ambil Semua; barang bisa diambil kembali sebelum tidur. Isi kotak dibayar besok pagi.
 
-Loop: cangkul → tanam → siram tiap hari → tidur (pintu rumah) → panen → kotak kirim → dibayar pagi berikutnya. Isi penyiram di kolam. Hari berakhir saat tidur. Ada pengingat di 22:00 dan 01:30, jam berubah oranye setelah 23:00 dan merah setelah 01:00. Kalau belum tidur sampai 02:00, pemain tertidur di tempat dan tenaga pagi berikutnya hanya 60%. Kalau tertidur di luar rumah, warga mengantar pulang dengan biaya 10% koin (maksimal 500 G). Ikan malam tetap menggigit setelah tengah malam.
+Loop: cangkul → tanam → siram tiap hari → tidur (pintu rumah) → panen → kotak kirim → dibayar pagi berikutnya. Isi penyiram di kolam. Hari berakhir saat tidur. Boleh begadang: mulai 22:00 tenaga berkurang sendiri (10 per jam, 20 per jam setelah tengah malam) dan jam berubah oranye, lalu merah setelah 00:00. Pemain **pingsan saat tenaga habis**, baik karena bekerja maupun karena begadang, dan saat matahari terbit (06:00). Setelah pingsan, tenaga pagi berikutnya hanya 60%; kalau pingsan di luar rumah, warga mengantar pulang dengan biaya 10% koin (maksimal 500 G). Ikan malam tetap menggigit setelah tengah malam.
 
 ## Struktur
 

@@ -248,8 +248,8 @@ export class UIScene extends Phaser.Scene {
     const h = Math.floor(s.minutes / 60) % 24; // after midnight: 00:xx, 01:xx
     const mm = Math.floor(s.minutes % 60);
     this.timeText.setText(`${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
-    // late: orange from 23:00, red in the last hour before 02:00
-    this.timeText.setColor(s.minutes >= 25 * 60 ? C.red : s.minutes >= 23 * 60 ? C.orange : C.ink);
+    // late: orange once tiredness sets in at 22:00, red after midnight when it drains faster
+    this.timeText.setColor(s.minutes >= 24 * 60 ? C.red : s.minutes >= 22 * 60 ? C.orange : C.ink);
   }
 
   refresh() {

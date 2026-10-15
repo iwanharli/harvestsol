@@ -74,11 +74,14 @@ export const STAMINA_COST: Record<Tool, number> = { cangkul: 2, siram: 2, benih:
 
 // Clock: 1 real second = 1.5 game minutes, so a day (06:00–24:00) lasts 12 real minutes.
 export const DAY_START_MIN = 6 * 60;
-export const DAY_END_MIN = 26 * 60; // 02:00: past this you fall asleep wherever you are
-/** Gentle reminders before that: 22:00, and half an hour before 02:00. */
+/** You can stay up as long as your stamina lasts; at sunrise the day ends no matter what. */
+export const DAY_END_MIN = 30 * 60; // 06:00 the next morning
+/** From 22:00 tiredness drains stamina by itself, faster after midnight (stamina per game hour). */
+export const NIGHT_DRAIN = { from: 22 * 60, perHour: 10, afterMidnight: 20 };
+export const LOW_STAMINA = 15; // warn once when stamina drops this low
 export const LATE_WARNINGS: [number, string][] = [
-  [22 * 60, 'Sudah jam 10 malam. Sebaiknya pulang dan tidur.'],
-  [25.5 * 60, '30 menit lagi kamu akan tertidur di mana pun kamu berada!'],
+  [22 * 60, 'Sudah jam 10 malam. Mulai capek: tenaga berkurang sendiri.'],
+  [24 * 60, 'Lewat tengah malam: tenaga berkurang lebih cepat. Kalau habis, kamu pingsan!'],
 ];
 /** Falling asleep outside: a villager carries you home for a small fee. */
 export const PASS_OUT_FINE = { rate: 0.1, max: 500 };

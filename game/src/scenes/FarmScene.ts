@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import {
   DAY_END_MIN,
   LATE_WARNINGS,
+  NIGHT_DRAIN,
+  LOW_STAMINA,
   FIELD,
   GAME_MIN_PER_SEC,
   MAP_H,
@@ -10,7 +12,6 @@ import {
   caveTint,
   zoneOf,
   zoneIndex,
-  mineCost,
   CAVE_BOTTOM,
   CAVE_TREASURE,
   LAKES,
@@ -1226,8 +1227,30 @@ export class FarmScene extends Phaser.Scene {
         this.lateWarned = at;
         if (this.state.minutes < at + 30) this.toast(msg); // not when a save loads already past it
       }
-    if (this.state.minutes >= DAY_END_MIN) {
-      this.toast(this.indoors && this.currentRoom !== CAVE_ROOM ? 'Sudah jam 2 pagi. Kamu tertidur di lantai...' : 'Sudah jam 2 pagi. Kamu tertidur di jalan...');
+    // late at night tiredness wears you down; at 0 stamina (from work or the night) you pass out
+    const s0 = this.state;
+    if (s0.minutes >= NIGHT_DRAIN.from) {
+      const rate = s0.minutes >= 24 * 60 ? NIGHT_DRAIN.afterMidnight : NIGHT_DRAIN.perHour;
+      this.drainAcc += (dt * GAME_MIN_PER_SEC * rate) / 60;
+      if (this.drainAcc >= 1) {
+        const n = Math.floor(this.drainAcc);
+        this.drainAcc -= n;
+        s0.stamina -= n;
+        this.game.events.emit('hud');
+      }
+    }
+    if (s0.stamina <= LOW_STAMINA && !this.lowWarned && s0.stamina > 0) {
+      this.lowWarned = true;
+      this.toast('Tenaga hampir habis! Makan sesuatu atau pulang tidur.');
+    }
+    if (s0.stamina <= 0 || s0.minutes >= DAY_END_MIN) {
+      const home = this.indoors && this.currentRoom !== CAVE_ROOM;
+      s0.stamina = Math.max(0, s0.stamina);
+      this.toast(
+        s0.minutes >= DAY_END_MIN ? 'Matahari sudah terbit. Kamu tertidur kelelahan...'
+        : home ? 'Tenagamu habis. Kamu tertidur di lantai rumah...'
+        : 'Tenagamu habis. Kamu pingsan...',
+      );
       this.sleep(true);
       return;
     }
@@ -1421,8 +1444,6 @@ export class FarmScene extends Phaser.Scene {
         if (!s.ownedTools.includes('beliung')) return this.fail('Butuh Beliung untuk menambang. Beli di toko (tab Peralatan).');
         return this.fail('Pakai Beliung (6) untuk memecah batu.');
       }
-      const cost = mineCost(s.cave?.floor ?? 1);
-      if (s.stamina < cost) return this.fail(cost > 4 ? `Terlalu lelah. Di sini panas, tiap pukulan butuh ${cost} tenaga.` : 'Terlalu lelah untuk menambang.');
       const r = mineHit(s, k);
       if (r.error) return this.fail(r.error);
       this.swing();
@@ -1460,7 +1481,6 @@ export class FarmScene extends Phaser.Scene {
     if (!this.inField(tx, ty)) return;
 
     const plot = s.plots[k];
-    if (s.stamina < STAMINA_COST[s.tool]) return this.fail('Terlalu lelah. Istirahat dulu di rumah.');
 
     switch (s.tool) {
       case 'cangkul': {
@@ -1616,7 +1636,6 @@ export class FarmScene extends Phaser.Scene {
 
   private startFishing(tx: number, ty: number) {
     const s = this.state;
-    if (s.stamina < STAMINA_COST.pancing) return this.fail('Terlalu lelah untuk memancing.');
     s.stamina -= STAMINA_COST.pancing;
     const where = this.waterAt.get(plotKey(tx, ty)) ?? 'danau';
     const bobber = this.add.image((tx + 0.5) * TILE, (ty + 0.5) * TILE, 'bobber').setDepth(9001);
@@ -1855,6 +1874,8 @@ export class FarmScene extends Phaser.Scene {
 
   /** The last late-night warning shown today (minutes), so each shows once. */
   private lateWarned = 0;
+  private drainAcc = 0; // fractional stamina lost to the night
+  private lowWarned = false;
 
   sleep(passedOut = false) {
     if (this.busy) return;
@@ -1873,6 +1894,8 @@ export class FarmScene extends Phaser.Scene {
     cam.once('camerafadeoutcomplete', () => {
       const report = endDay(this.state, passedOut === true, passedOut === true && (!this.indoors || this.currentRoom === CAVE_ROOM));
       this.lateWarned = 0;
+      this.lowWarned = false;
+      this.drainAcc = 0;
       const home = HOUSE_ROOMS[this.state.houseTier] ?? ROOM;
       this.player.setPosition((home.x + 2.5) * TILE, (home.y + 4) * TILE - 2); // wake up beside the bed
       this.dir = 'down';
