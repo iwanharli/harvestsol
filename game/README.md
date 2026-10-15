@@ -75,8 +75,8 @@ Tiap jenis punya jam, musim, dan sebagian butuh hujan (misalnya Belut hanya saat
 | 1–9 | Gua Tanah | Batu dan Tembaga, Besi jarang |
 | 10–19 | Gua Kapur | Besi umum, stalaktit menghalangi jalan |
 | 20–29 | Gua Kristal | Kristal Kuarsa (90 G); tangga hanya di bawah batu bijih |
-| 30–39 | Gua Panas | Emas umum; tiap pukulan 6 tenaga |
-| 40–50 | Perut Bumi | Gelap, Batu Mulia (400 G); 7 tenaga per pukulan; peti harta sekali di lantai 50 (5.000 G, 3 Batu Mulia, 5 Bijih Emas) |
+| 30–39 | Gua Panas | Emas umum; tiap pukulan 3 tenaga |
+| 40–50 | Perut Bumi | Gelap, Batu Mulia (400 G); 4 tenaga per pukulan; peti harta sekali di lantai 50 (5.000 G, 3 Batu Mulia, 5 Bijih Emas) |
 
 Batu bijih makin keras setiap 15 lantai (Batu biasa tetap 1 pukulan). **Kerekan** (keranjang bertali dan katrol) di samping mulut gua menurunkanmu ke lantai terdalam yang pernah dicapai ("Lanjut"), atau ke awal zona yang pernah dicapai: lantai 1, 10, 20, 30, 40. Hasil tambang bisa dijual atau nanti dipakai untuk upgrade alat; tidak masuk kulkas/peti dan tidak ikut festival. Tertidur di dalam gua dihitung tertidur di luar.
 
@@ -108,7 +108,9 @@ Batu bijih makin keras setiap 15 lantai (Batu biasa tetap 1 pukulan). **Kerekan*
 
 **Kotak Kirim**: jendela dua sisi (Tas ⇄ Kotak). Klik barang lalu tentukan jumlahnya (−10/−1/+1/+10/Maks) dan tekan Kirim/Ambil, atau Kirim Semua / Ambil Semua; barang bisa diambil kembali sebelum tidur. Isi kotak dibayar besok pagi.
 
-Loop: cangkul → tanam → siram tiap hari → panen → kotak kirim → dibayar tengah malam. Isi penyiram di kolam. **Hari berganti sendiri tiap 00:00**, tidur atau tidak: tanaman yang sudah disiram tumbuh, kiriman dibayar, cuaca dan permintaan warga baru muncul. **Tidur hanya memulihkan tenaga**, sebanding lamanya (penuh setelah 8 jam): tidur di kasur sampai 06:00 (05:00 dengan Jam Dinding, minimal 3 jam), atau tidur siang 2 jam (+25% tenaga). Laporan pagi muncul saat bangun. Boleh begadang: mulai 22:00 tenaga berkurang sendiri (10 per jam, 20 per jam setelah tengah malam), jam berubah oranye lalu merah. **Pingsan saat tenaga habis** (karena bekerja atau begadang): bangun 4 jam kemudian di rumah dengan 30% tenaga; kalau pingsan di luar rumah, warga mengantar pulang dengan biaya 10% koin (maksimal 500 G). Ikan malam tetap menggigit sampai pagi.
+**Biaya tenaga per aksi**: Cangkul 1, Penyiram 1, Pancing 2, Beliung 2 (3 di Gua Panas, 4 di Perut Bumi); menanam dan memanen gratis.
+
+Loop: cangkul → tanam → siram tiap hari → panen → kotak kirim → dibayar tengah malam. Isi penyiram di kolam. **Hari berganti sendiri tiap 00:00**, tidur atau tidak: tanaman yang sudah disiram tumbuh, kiriman dibayar, cuaca dan permintaan warga baru muncul. **Tidur hanya memulihkan tenaga**, sebanding lamanya (penuh setelah 8 jam): tidur di kasur sampai 06:00 (05:00 dengan Jam Dinding, minimal 3 jam), atau tidur siang 2 jam (+25% tenaga). Laporan pagi muncul saat bangun. Boleh begadang: mulai 22:00 tenaga berkurang sendiri (5 per jam, 10 per jam setelah tengah malam), jam berubah oranye lalu merah. **Pingsan saat tenaga habis** (karena bekerja atau begadang): bangun 4 jam kemudian di rumah dengan 30% tenaga; kalau pingsan di luar rumah, warga mengantar pulang dengan biaya 10% koin (maksimal 500 G). Ikan malam tetap menggigit sampai pagi.
 
 ## Struktur
 

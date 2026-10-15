@@ -100,8 +100,8 @@ const ZONE_HINTS = [
   '',
   'Stalaktit menghalangi jalan, Besi lebih banyak.',
   'Ada Kristal Kuarsa. Tangga hanya tersembunyi di batu bijih.',
-  'Udara panas: tiap pukulan butuh 6 tenaga. Bawa masakan!',
-  'Gelap dan berat (7 tenaga per pukulan). Ada Batu Mulia, dan dasar gua di lantai 50.',
+  'Udara panas: tiap pukulan butuh 3 tenaga. Bawa masakan!',
+  'Gelap dan berat (4 tenaga per pukulan). Ada Batu Mulia, dan dasar gua di lantai 50.',
 ];
 
 /** The farmhouse interior lives in empty world space east of the map (tiles), so all systems just work inside. */
