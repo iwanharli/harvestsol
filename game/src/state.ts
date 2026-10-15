@@ -1,5 +1,8 @@
 import {
   CROPS,
+  DISHES,
+  ITEMS,
+  PRODUCTS,
   NPCS,
   REQUEST_DAYS,
   REQUESTS_PER_DAY,
@@ -92,6 +95,7 @@ export interface GameState {
   seed: string;
   seeds: Record<string, number>;
   produce: Record<string, number>;
+  bagOrder?: string[]; // player-chosen slot order, keys like "produce:jagung@2"
   shipping: Record<string, number>;
   plots: Record<string, Plot>; // key "x,y"
   requests: Request[];
@@ -710,3 +714,43 @@ export function unshipItem(s: GameState, key: string, want = Infinity): string |
 /** What the bin will pay tomorrow morning. */
 export const shippingValue = (s: GameState) =>
   Object.entries(s.shipping).reduce((a, [k, q]) => a + produceById(k).sellPrice * q, 0);
+
+/** Bag entries in the player's order; anything new goes to the end. */
+export function bagOrderKeys(s: GameState): string[] {
+  const present = [
+    ...Object.keys(s.produce).filter((k) => s.produce[k] > 0).map((k) => `produce:${k}`),
+    ...Object.keys(s.seeds).filter((k) => s.seeds[k] > 0).map((k) => `seeds:${k}`),
+  ];
+  const have = new Set(present);
+  const order = (s.bagOrder ?? []).filter((k) => have.has(k));
+  for (const k of present) if (!order.includes(k)) order.push(k);
+  return order;
+}
+
+/** Move one bag entry onto another one's place (or to the end when dropped on an empty slot). */
+export function moveInBag(s: GameState, from: string, to?: string) {
+  const order = bagOrderKeys(s);
+  const target = to ? order.indexOf(to) : order.length;
+  const i = order.indexOf(from);
+  if (i < 0 || from === to) return;
+  order.splice(i, 1);
+  order.splice(Math.min(target, order.length), 0, from);
+  s.bagOrder = order;
+}
+
+/** Auto-tidy: crops, fish, animal products, dishes, then seeds and tools; best quality first. */
+export function sortBag(s: GameState) {
+  const rank = (key: string): number[] => {
+    const [bag, id] = [key.slice(0, key.indexOf(':')), key.slice(key.indexOf(':') + 1)];
+    const b = baseId(id);
+    const lists: { id: string }[][] = bag === 'seeds' ? [CROPS, ITEMS] : [CROPS, FISH, PRODUCTS, DISHES];
+    const group = lists.findIndex((l) => l.some((x) => x.id === b));
+    const pos = group < 0 ? 0 : lists[group].findIndex((x) => x.id === b);
+    return [bag === 'seeds' ? 1 : 0, group < 0 ? 9 : group, pos, -starsOf(id)];
+  };
+  s.bagOrder = bagOrderKeys(s).sort((a, b) => {
+    const ra = rank(a), rb = rank(b);
+    for (let i = 0; i < ra.length; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i];
+    return 0;
+  });
+}
