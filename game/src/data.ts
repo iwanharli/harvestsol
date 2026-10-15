@@ -70,12 +70,12 @@ export const STAMINA_MILESTONE_EVERY = 4;
 export const STAMINA_MILESTONE_CAP_LEVEL = 20;
 export const STAMINA_REWARD = 10; // one-off rewards: Jamu Kuat (first villager at ♥10), complete Fish Book
 export const FRIENDSHIP_MAX = 10;
-export const STAMINA_COST: Record<Tool, number> = { cangkul: 2, siram: 2, benih: 0, tangan: 0, pancing: 4, beliung: 4 };
+export const STAMINA_COST: Record<Tool, number> = { cangkul: 1, siram: 1, benih: 0, tangan: 0, pancing: 2, beliung: 2 };
 
 // Clock: 1 real second = 1.5 game minutes, so a day (06:00–24:00) lasts 12 real minutes.
 export const DAY_START_MIN = 6 * 60;
 /** The date changes at midnight; sleeping only restores stamina. */
-export const NIGHT_DRAIN = { from: 22 * 60, perHour: 10, afterMidnight: 20 }; // tiredness from 22:00, faster 00:00–06:00
+export const NIGHT_DRAIN = { from: 22 * 60, perHour: 5, afterMidnight: 10 }; // tiredness from 22:00, faster 00:00–06:00
 export const FULL_SLEEP_HOURS = 8; // stamina comes back in proportion to sleep, full after 8 hours
 export const NAP_HOURS = 2;
 export const NAP_GAIN = 0.25; // a nap gives back a quarter of max stamina
@@ -196,7 +196,7 @@ export const ORES: Record<Ore, { name: string; hits: number; drop: [number, numb
 /** Ore rocks get one extra hit every 15 floors; plain stone stays easy. */
 export const rockHits = (ore: Ore, floor: number) => ORES[ore].hits + (ore === 'batu' ? 0 : Math.floor(floor / 15));
 /** Swinging in the hot zone and below takes more out of you. */
-export const mineCost = (floor: number) => (floor >= 40 ? 7 : floor >= 30 ? 6 : 4);
+export const mineCost = (floor: number) => (floor >= 40 ? 4 : floor >= 30 ? 3 : 2);
 /** How common each rock is on a floor, by zone. */
 export function oreWeights(floor: number): Record<Ore, number> {
   const z = zoneIndex(floor);

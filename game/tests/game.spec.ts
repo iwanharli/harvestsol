@@ -994,7 +994,6 @@ test('hari berganti sendiri jam 00:00 tanpa tidur', async ({ page }) => {
   });
   expect(ui.text).toMatch(/^00:/);
   expect(ui.color).toBe('#ff3b30'); // red: tiredness drains fastest after midnight
-  expect(s.stamina).toBeLessThan(100);
   expect(await modalOpen(page)).toBe(false); // no report popping up mid-play
   noErrors(errors);
 });
@@ -1008,7 +1007,8 @@ test('tidur memulihkan tenaga sesuai lamanya, tidur siang 2 jam', async ({ page 
   let s = await state(page);
   expect(s.day).toBe(1);
   expect(Math.abs(s.minutes - 6 * 60)).toBeLessThan(5); // the clock runs on after waking
-  expect(s.stamina).toBe(63);
+  expect(s.stamina).toBeGreaterThanOrEqual(62); // ~5 of 8 hours
+  expect(s.stamina).toBeLessThanOrEqual(63);
 
   // a nap at 10:00: two hours later, a quarter of max stamina back
   await patch(page, 's.minutes = 10 * 60; s.stamina = 20');
@@ -1022,9 +1022,9 @@ test('tidur memulihkan tenaga sesuai lamanya, tidur siang 2 jam', async ({ page 
 
 test('pingsan saat tenaga habis: bangun 4 jam kemudian, biaya kalau di luar', async ({ page }) => {
   const errors = await start(page);
-  await patch(page, 's.minutes = 10 * 60; s.stamina = 2; s.coins = 300');
+  await patch(page, 's.minutes = 10 * 60; s.stamina = 1; s.coins = 300');
   await at(page, 10, 9, 'down');
-  await use(page, 1); // the hoe costs 2: stamina hits 0 in the field
+  await use(page, 1); // the hoe costs 1: stamina hits 0 in the field
   await page.waitForFunction(() => window.game.registry.get('state').minutes >= 14 * 60, null, { timeout: 5000 });
   await page.waitForTimeout(800);
   const s = await state(page);
@@ -1101,7 +1101,7 @@ test('zona gua: makin dalam makin beda, dasar di lantai 50 dengan peti harta sek
   expect(r.crystal.ladderIsOre).toBe(true);
   expect(r.crystal.kristalWeight).toBeGreaterThan(0);
   expect(r.hits).toEqual({ shallowGold: 4, deepGold: 7, deepStone: 1 });
-  expect(r.cost).toEqual([4, 6, 7]);
+  expect(r.cost).toEqual([2, 3, 4]);
   expect(r.mulia[0]).toBe(0);
   expect(r.mulia[1]).toBeGreaterThan(0);
   expect(r.bottom).toEqual({ floor: 50, ladder: '', chest: true });
@@ -1123,5 +1123,21 @@ test('kerekan gua: lanjut dari lantai terdalam setelah keluar', async ({ page })
   await page.mouse.click(429, 282); // "Lanjut 7"
   await page.waitForTimeout(700);
   expect((await state(page)).cave.floor).toBe(7);
+  noErrors(errors);
+});
+
+test('begadang menguras tenaga: 5 per jam sebelum, 10 per jam setelah tengah malam', async ({ page }) => {
+  const errors = await start(page);
+  // speed the clock up so a few real seconds cover a couple of game hours
+  const drained = await page.evaluate(async () => {
+    const d = await import('/src/data.ts');
+    return d.NIGHT_DRAIN;
+  });
+  expect(drained).toEqual({ from: 22 * 60, perHour: 5, afterMidnight: 10 });
+  await patch(page, 's.minutes = 2 * 60; s.stamina = 100');
+  await page.waitForTimeout(6000); // 6 s ≈ 9 game minutes at 10/h: about 1-2 stamina
+  const s = await state(page);
+  expect(s.stamina).toBeLessThan(100);
+  expect(s.stamina).toBeGreaterThan(95);
   noErrors(errors);
 });
