@@ -39,7 +39,8 @@ export function openBengkel(ui: UIScene) {
         .text(x + 40, y + 78, ready ? `${name} ${TOOL_TIERS[s.forge.tier]} sudah jadi!` : `Sedang ditempa: ${name} → ${TOOL_TIERS[s.forge.tier]} · siap hari ${dayOfSeason(s.forge.ready)} ${seasonOf(s.forge.ready)}`, txt(13, ready ? C.green : INK))
         .setOrigin(0, 0.5),
     );
-    if (ready) ui.button(c, x + W - 144, y + 61, 'Ambil', () => done(collectUpgrade(s), `${name} ${TOOL_TIERS[s.forge!.tier]} siap dipakai!`), 104);
+    const tierName = TOOL_TIERS[s.forge.tier]; // read before collecting clears the forge
+    if (ready) ui.button(c, x + W - 144, y + 61, 'Ambil', () => done(collectUpgrade(s), `${name} ${tierName} siap dipakai!`), 104);
   }
 
   // one card per tool: now, next tier, cost

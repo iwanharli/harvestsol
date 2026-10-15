@@ -1218,3 +1218,21 @@ test('bengkel buka siang, tutup malam', async ({ page }) => {
   expect(await page.evaluate(() => window.game.scene.getScene('farm').smithy.parts[0].visible)).toBe(true);
   noErrors(errors);
 });
+
+test('bengkel: tombol Ambil memperbarui jendela', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.forge = { tool: 'cangkul', tier: 1, ready: 1 }; s.toolTier = {}");
+  await page.evaluate(() => window.game.events.emit('open-bengkel'));
+  await page.waitForTimeout(150);
+  await page.mouse.click(708, 101); // "Ambil"
+  await page.waitForTimeout(150);
+  const s = await state(page);
+  expect(s.forge).toBeUndefined();
+  expect(s.toolTier.cangkul).toBe(1);
+  const texts = await page.evaluate(() =>
+    (window.game.scene.getScene('ui').modalLayer.list as Phaser.GameObjects.GameObject[]).filter((o) => o.type === 'Text').map((o) => (o as Phaser.GameObjects.Text).text),
+  );
+  expect(texts.join('|')).toContain('Tungku kosong'); // the window redrew
+  expect(texts).toContain('Tembaga'); // the hoe's card shows its new tier
+  noErrors(errors);
+});
