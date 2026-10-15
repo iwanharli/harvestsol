@@ -19,6 +19,9 @@ import { play } from '../../sfx';
 import { C, HEX, bar as drawBar, card, segmented, txt, well } from '../theme';
 import {
   bagCapacity,
+  bagOrderKeys,
+  moveInBag,
+  sortBag,
   eat,
   festivalTheme,
   isFestivalDay,
@@ -60,8 +63,14 @@ export function openInventory(ui: UIScene) {
       for (let left = q; left > 0; left -= STACK_MAX) out.push({ bag, id, icon: bag === 'seeds' ? seedIcon(id) : `icon-${baseId(id)}`, qty: Math.min(STACK_MAX, left) });
       return out;
     });
-  const produce = stacksOf('produce', s.produce);
-  const seeds = stacksOf('seeds', s.seeds);
+  // follow the player's order (drag to rearrange, "Rapikan" to auto-sort)
+  const ordered = bagOrderKeys(s).flatMap((k) => {
+    const bag = k.startsWith('seeds:') ? 'seeds' : 'produce';
+    const id = k.slice(bag.length + 1);
+    return stacksOf(bag, { [id]: (bag === 'seeds' ? s.seeds : s.produce)[id] });
+  });
+  const produce = ordered.filter((sl) => sl.bag === 'produce');
+  const seeds = ordered.filter((sl) => sl.bag === 'seeds');
   const eggs = Object.values(s.coopEggs).reduce((a, b) => a + b, 0);
   const livestock: Slot[] =
     s.level >= FEATURE_LEVEL.coop
@@ -72,6 +81,7 @@ export function openInventory(ui: UIScene) {
         ]
       : [];
 
+  const items0 = () => ordered.length > 1;
   // tabs
   const tabs: { id: InvTab; name: string; empty: string }[] = [
     { id: 'semua', name: 'Semua', empty: 'Tas masih kosong' },
@@ -89,9 +99,17 @@ export function openInventory(ui: UIScene) {
     }, 112),
   );
 
+  ui.button(c, x + W - 130, y + 54, 'Rapikan', () => {
+    play('click');
+    sortBag(s);
+    save(s);
+    ui.toast('Tas dirapikan.');
+    openInventory(ui);
+  }, 102, !items0(), true);
+
   // every tab shows a full grid: items first, then empty slots, then locked ones ("Semua")
   type Cell = Slot | 'empty' | 'locked';
-  const items: Slot[] = invTab === 'semua' ? [...produce, ...seeds] : invTab === 'panen' ? produce : invTab === 'benih' ? seeds : livestock;
+  const items: Slot[] = invTab === 'semua' ? ordered : invTab === 'panen' ? produce : invTab === 'benih' ? seeds : livestock;
   const COLS = 6; // 6 x 5 = BAG_MAX_SLOTS
   const cells: Cell[] = [...items];
   for (let i = items.length; i < BAG_MAX_SLOTS; i++) cells.push(invTab === 'semua' && i >= cap ? 'locked' : 'empty');
@@ -147,13 +165,56 @@ export function openInventory(ui: UIScene) {
     const z = ui.add.zone(sx, sy, SZ, SZ).setOrigin(0).setInteractive({ useHandCursor: true });
     z.on('pointerover', () => draw(true));
     z.on('pointerout', () => draw(false));
-    z.on('pointerdown', () => {
-      play('click');
-      invSel = { bag: cl.bag, id: cl.id };
-      openInventory(ui);
-    });
+    z.on('pointerdown', (p: Phaser.Input.Pointer) => startDrag(cl, p));
     c.add(z);
   });
+  // drag a slot onto another to move it there; a plain click just selects it
+  const cellAt = (wx: number, wy: number) => {
+    const col = Math.floor((wx - gx) / (SZ + GAP)), row = Math.floor((wy - gy) / (SZ + GAP));
+    if (col < 0 || col >= COLS || row < 0 || (wx - gx) % (SZ + GAP) > SZ || (wy - gy) % (SZ + GAP) > SZ) return -1;
+    const i = row * COLS + col;
+    return i < cells.length ? i : -1;
+  };
+  const startDrag = (cl: Slot, p: Phaser.Input.Pointer) => {
+    if (cl.bag === 'other') {
+      play('click');
+      invSel = { bag: cl.bag, id: cl.id };
+      return openInventory(ui);
+    }
+    const cam = ui.cameras.main;
+    const start = cam.getWorldPoint(p.x, p.y);
+    let ghost: Phaser.GameObjects.Image | undefined;
+    const move = (q: Phaser.Input.Pointer) => {
+      const w = cam.getWorldPoint(q.x, q.y);
+      if (!ghost && Math.hypot(w.x - start.x, w.y - start.y) < 6) return;
+      ghost ??= ui.add.image(w.x, w.y, cl.icon).setScale(2.6).setAlpha(0.85).setDepth(10000);
+      ghost.setPosition(w.x, w.y);
+    };
+    const up = (q: Phaser.Input.Pointer) => {
+      ui.input.off('pointermove', move);
+      ui.input.off('pointerup', up);
+      const w = cam.getWorldPoint(q.x, q.y);
+      const dragged = !!ghost;
+      ghost?.destroy();
+      invSel = { bag: cl.bag, id: cl.id };
+      if (dragged) {
+        const i = cellAt(w.x, w.y);
+        if (i >= 0) {
+          const t = cells[i];
+          const to = typeof t === 'object' ? `${t.bag}:${t.id}` : undefined;
+          if (t !== 'locked' && (typeof t !== 'object' || t.bag !== 'other')) {
+            moveInBag(s, `${cl.bag}:${cl.id}`, to);
+            save(s);
+            play('plant');
+          }
+        }
+      } else play('click');
+      openInventory(ui);
+    };
+    ui.input.on('pointermove', move);
+    ui.input.on('pointerup', up);
+  };
+
   if (!items.length) {
     const gw = COLS * (SZ + GAP) - GAP;
     const m = ui.add.text(gx + gw / 2, gy + SZ + GAP / 2, tab.empty, txt(13, C.secondary, false)).setOrigin(0.5);

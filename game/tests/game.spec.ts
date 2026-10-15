@@ -636,3 +636,23 @@ test('barang dari warung tidak bisa ikut festival', async ({ page }) => {
   expect((await state(page)).festival.enteredDay).toBe(0);
   noErrors(errors);
 });
+
+test('tas: geser slot dan rapikan otomatis', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.produce = { 'ikan-nila': 2, kangkung: 3, 'kangkung@3': 1 }; s.seeds = { kangkung: 4 }; s.bagOrder = undefined");
+  await press(page, 'KeyI');
+  await page.waitForTimeout(200);
+  // drag slot 1 (ikan-nila) onto slot 3 (kangkung@3)
+  const slot = (i: number) => [183 + (i % 6) * 58, 153 + Math.floor(i / 6) * 58] as const;
+  await page.mouse.move(...slot(0));
+  await page.mouse.down();
+  await page.mouse.move(slot(1)[0], slot(1)[1], { steps: 4 });
+  await page.mouse.move(...slot(2), { steps: 4 });
+  await page.mouse.up();
+  await page.waitForTimeout(150);
+  expect((await state(page)).bagOrder).toEqual(['produce:kangkung', 'produce:kangkung@3', 'produce:ikan-nila', 'seeds:kangkung']);
+  await page.mouse.click(751, 101); // Rapikan
+  await page.waitForTimeout(150);
+  expect((await state(page)).bagOrder).toEqual(['produce:kangkung@3', 'produce:kangkung', 'produce:ikan-nila', 'seeds:kangkung']);
+  noErrors(errors);
+});
