@@ -770,3 +770,23 @@ test('peti lumbung: jendela dibuka dari rumah setelah dibeli', async ({ page }) 
   expect(s.storage).toEqual({ kangkung: 4 });
   noErrors(errors);
 });
+
+test('mencopot sprinkler minta konfirmasi', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.level = 5; s.seeds = {}; s.plots['11,10'] = { tilled: false, watered: false, sprinkler: true }");
+  await page.evaluate(() => window.game.events.emit('plots-changed'));
+  await at(page, 11, 9, 'down');
+  await use(page, 4); // Tangan
+  expect(await modalOpen(page)).toBe(true);
+  await page.mouse.click(551, 315); // "Batal"
+  await page.waitForTimeout(120);
+  let s = await state(page);
+  expect(s.plots['11,10'].sprinkler).toBe(true);
+  await use(page, 4);
+  await page.mouse.click(409, 315); // "Copot"
+  await page.waitForTimeout(120);
+  s = await state(page);
+  expect(s.plots['11,10']).toBeUndefined();
+  expect(s.seeds.sprinkler).toBe(1);
+  noErrors(errors);
+});

@@ -41,7 +41,7 @@ import { openBoard } from '../ui/windows/board';
 import { openFestival } from '../ui/windows/festival';
 import { openCalendar } from '../ui/windows/calendar';
 import { openFishBook } from '../ui/windows/fishbook';
-import { showReport, showWelcome, askSleep } from '../ui/windows/report';
+import { showReport, showWelcome, askSleep, askConfirm, type Confirm } from '../ui/windows/report';
 
 const INK = C.ink;
 
@@ -162,6 +162,7 @@ export class UIScene extends Phaser.Scene {
       ['area', (name: string) => this.areaBanner(name)],
       ['level-up', (lv: number[]) => this.queueLevelUp(lv)],
       ['ask-sleep', () => askSleep(this)],
+      ['ask-confirm', (q: Confirm) => askConfirm(this, q)],
       ['day-report', (r: DayReport) => showReport(this, r)],
     ];
     for (const [e, h] of handlers) ev.on(e, h, this);

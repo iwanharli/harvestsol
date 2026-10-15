@@ -1275,12 +1275,20 @@ export class FarmScene extends Phaser.Scene {
       case 'tangan': {
         if (plot?.sprinkler) {
           if (!canAdd(s, 'seeds', 'sprinkler')) return this.fail('Tas penuh! Kosongkan slot dulu (tekan I).');
-          delete s.plots[k];
-          this.blocked.delete(k);
-          add(s.seeds, 'sprinkler', 1);
-          play('place');
-          this.toast('Sprinkler diambil.');
-          break;
+          return this.game.events.emit('ask-confirm', {
+            title: 'Copot sprinkler?',
+            body: 'Sprinkler kembali ke tas. Petak di sekitarnya tidak disiram otomatis lagi besok pagi.',
+            ok: 'Copot',
+            onOk: () => {
+              if (!s.plots[k]?.sprinkler || !canAdd(s, 'seeds', 'sprinkler')) return;
+              delete s.plots[k];
+              this.blocked.delete(k);
+              add(s.seeds, 'sprinkler', 1);
+              play('place');
+              this.toast('Sprinkler diambil.');
+              this.changed();
+            },
+          });
         }
         const crop = plot?.crop;
         if (!crop || crop.dead) return;

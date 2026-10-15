@@ -34,6 +34,19 @@ export function askSleep(ui: UIScene) {
   ui.button(c, x + 210, y + 108, 'Belum', () => ui.closeModal());
 }
 
+export type Confirm = { title: string; body: string; ok: string; onOk: () => void };
+
+/** A small yes/no question; the action only runs on the first button. */
+export function askConfirm(ui: UIScene, q: Confirm) {
+  const { c, x, y } = ui.openModal(400, 180, q.title);
+  c.add(ui.add.text(x + 200, y + 60, q.body, { ...txt(13, INK, false), align: 'center', wordWrap: { width: 340 } }).setOrigin(0.5, 0));
+  ui.button(c, x + 64, y + 118, q.ok, () => {
+    ui.closeModal();
+    q.onOk();
+  }, 130);
+  ui.button(c, x + 206, y + 118, 'Batal', () => ui.closeModal(), 130);
+}
+
 /** Morning report: a header, an iOS-style grouped list, sales detail and notices. */
 export function showReport(ui: UIScene, r: DayReport) {
   const s = ui.state;
