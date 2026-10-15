@@ -974,33 +974,46 @@ test('gua tambang: masuk, pecahkan batu, temukan tangga, turun, kerekan di awal 
   noErrors(errors);
 });
 
-test('larut malam: peringatan, jam merah, tertidur jam 02:00 di luar kena biaya', async ({ page }) => {
+test('begadang: tenaga berkurang sendiri di malam hari, pingsan saat habis', async ({ page }) => {
   const errors = await start(page);
-  await patch(page, 's.minutes = 22 * 60 - 0.5; s.coins = 3000');
+  await patch(page, 's.minutes = 22 * 60 - 0.5; s.coins = 3000; s.stamina = 100');
   await page.waitForTimeout(800);
   expect((await toasts(page)).join()).toContain('jam 10 malam');
 
-  // past midnight the clock reads 00:xx/01:xx, night fish still bite, and it turns red
-  await patch(page, 's.minutes = 25 * 60 + 29');
+  // after midnight the clock reads 00:xx, turns red, and tiredness drains faster
+  await patch(page, 's.minutes = 24 * 60 + 5; s.stamina = 100');
+  await page.waitForTimeout(2500);
+  const night = await page.evaluate(() => ({
+    clock: window.game.scene.getScene('ui').timeText.text,
+    color: window.game.scene.getScene('ui').timeText.style.color,
+    stamina: window.game.registry.get('state').stamina,
+  }));
+  expect(night.clock).toMatch(/^00:/);
+  expect(night.color).toBe('#ff3b30');
+  expect(night.stamina).toBeLessThan(100);
+  expect(night.stamina).toBeGreaterThan(90);
+
+  // still awake at 03:00 as long as there is stamina left
+  await patch(page, 's.minutes = 27 * 60; s.stamina = 50');
   await page.waitForTimeout(300);
-  const clock = await page.evaluate(() => {
-    const t = window.game.scene.getScene('ui').timeText;
-    return { text: t.text, color: t.style.color };
-  });
-  expect(clock.text).toMatch(/^01:(29|30)$/);
-  expect(clock.color).toBe('#ff3b30');
-  const night = await page.evaluate(async () => (await import('/src/data.ts')).fishAvailable('telaga', 'Tanam', 25, false).map((f) => f.id));
-  expect(night).toContain('ikan-sidat');
+  expect((await state(page)).day).toBe(1);
 
-  await page.waitForTimeout(800);
-  expect((await toasts(page)).join()).toContain('30 menit lagi');
-
-  await patch(page, 's.minutes = 26 * 60 - 0.5');
-  await page.waitForFunction(() => window.game.registry.get('state').day === 2, null, { timeout: 5000 });
+  // at 0 stamina you pass out: outside costs a carry-home fee
+  await patch(page, 's.stamina = 1');
+  await page.waitForFunction(() => window.game.registry.get('state').day === 2, null, { timeout: 8000 });
   await page.waitForTimeout(800);
   const s = await state(page);
-  expect(s.coins).toBe(2700); // 10% fee for being carried home
+  expect(s.coins).toBe(2700);
   expect(s.stamina).toBe(60);
+  noErrors(errors);
+});
+
+test('pingsan juga kalau tenaga habis karena bekerja di siang hari', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, 's.minutes = 10 * 60; s.stamina = 2');
+  await at(page, 10, 9, 'down');
+  await use(page, 1); // the hoe costs 2: stamina hits 0
+  await page.waitForFunction(() => window.game.registry.get('state').day === 2, null, { timeout: 5000 });
   noErrors(errors);
 });
 
