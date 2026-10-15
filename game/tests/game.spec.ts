@@ -668,7 +668,7 @@ test('kulkas: klik barang menampilkan detail, lalu simpan', async ({ page }) => 
   await page.mouse.click(171, 155); // first bag slot: only selects
   await page.waitForTimeout(120);
   expect((await state(page)).fridge).toEqual({});
-  await page.mouse.click(716, 420); // "Simpan ke kulkas"
+  await page.mouse.click(704, 443); // "Simpan ke kulkas"
   await page.waitForTimeout(120);
   const s = await state(page);
   expect(s.fridge).toEqual({ kangkung: 3 });
@@ -764,7 +764,7 @@ test('peti lumbung: jendela dibuka dari rumah setelah dibeli', async ({ page }) 
   await page.waitForTimeout(150);
   await page.mouse.click(171, 148); // first bag slot
   await page.waitForTimeout(120);
-  await page.mouse.click(716, 420); // "Simpan ke peti"
+  await page.mouse.click(704, 443); // "Simpan ke peti"
   await page.waitForTimeout(120);
   const s = await state(page);
   expect(s.storage).toEqual({ kangkung: 4 });
@@ -854,5 +854,32 @@ test('peta dunia: tombol P, gambar peta, dan posisi pemain', async ({ page }) =>
   expect(info.dot.y).toBeCloseTo(info.img.y + (40.5 / 72) * info.img.h, 0);
   await press(page, 'p'); // P again closes it
   expect(await modalOpen(page)).toBe(false);
+  noErrors(errors);
+});
+
+test('kulkas: hanya slot yang dipilih yang pindah, jumlahnya bisa diatur', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.furniture.kulkas = true; s.seeds = {}; s.produce = { kangkung: 60 }; s.fridge = {}");
+  await page.evaluate(() => window.game.events.emit('open-fridge'));
+  await page.waitForTimeout(150);
+  await page.mouse.click(224, 161); // second bag slot: the stack of 10
+  await page.waitForTimeout(100);
+  await page.mouse.click(704, 443); // "Simpan 10"
+  await page.waitForTimeout(100);
+  let s = await state(page);
+  expect(s.produce).toEqual({ kangkung: 50 });
+  expect(s.fridge).toEqual({ kangkung: 10 });
+
+  await page.mouse.click(524, 161); // the kulkas stack of 10
+  await page.waitForTimeout(100);
+  for (let i = 0; i < 6; i++) {
+    await page.mouse.click(584, 401); // −1
+    await page.waitForTimeout(60);
+  }
+  await page.mouse.click(704, 443); // "Ambil 4"
+  await page.waitForTimeout(100);
+  s = await state(page);
+  expect(s.fridge).toEqual({ kangkung: 6 });
+  expect(s.produce).toEqual({ kangkung: 54 });
   noErrors(errors);
 });

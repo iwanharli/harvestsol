@@ -1,11 +1,12 @@
 import { CROPS, DISHES, FISH, FRIDGE_STACK_MAX, STACK_MAX, baseId, dishById, isBought, produceById, starsOf } from '../../data';
 import { play } from '../../sfx';
-import { bagCapacity, moveFromStore, moveToStore, save, slotsUsed, storeCap, storeOf, storeSlotsUsed, type Store } from '../../state';
+import { bagCapacity, moveFromStore, moveToStore, roomFor, save, slotsUsed, storeCap, storeOf, storeRoom, storeSlotsUsed, type Store } from '../../state';
 import { C, HEX, bar as drawBar, card, segmented, txt, well } from '../theme';
 import type { UIScene } from '../../scenes/UIScene';
 
 /** The stack being looked at, and which side it is on. */
 let pick: { side: 'bag' | 'fridge'; key: string } | undefined;
+let amount = 1; // how many to move: starts at the tapped slot's stack
 let page = 0; // the peti has more slots than one grid shows
 let lastKind: Store | undefined;
 
@@ -77,6 +78,7 @@ export function openStore(ui: UIScene, kind: Store) {
       z.on('pointerdown', () => {
         play('click');
         pick = { side: which, key };
+        amount = q;
         reopen();
       });
       c.add(z);
@@ -126,19 +128,42 @@ export function openStore(ui: UIScene, kind: Store) {
       dish ? `Masakan · dimakan +${dish.stamina} tenaga` : uses.length ? `Bahan untuk: ${uses.join(', ')}` : 'Tidak dipakai di resep mana pun',
       ...(isBought(key) ? ['Dibeli di warung · tidak bisa ikut festival'] : []),
     ];
-    c.add(ui.add.text(dx + 90, dy + 38, info.join('\n'), { ...txt(12, C.secondary, false), lineSpacing: 3, wordWrap: { width: dw - 90 - 190 } }));
-    ui.button(c, dx + dw - 176, dy + dh / 2 - 17, at === 'bag' ? `Simpan ke ${where} →` : '← Ambil ke tas', () => {
-      const err = at === 'bag' ? moveToStore(s, kind, key) : moveFromStore(s, kind, key);
+    c.add(ui.add.text(dx + 90, dy + 38, info.join('\n'), { ...txt(12, C.secondary, false), lineSpacing: 3, wordWrap: { width: dw - 90 - 300 } }));
+
+    // how many to move: limited by what you have and the room on the other side
+    const most = Math.max(0, Math.min(qty, at === 'bag' ? storeRoom(s, kind, key) : roomFor(s, 'produce', key)));
+    amount = Math.max(1, Math.min(amount, Math.max(1, most)));
+    const rx = dx + dw - 292, ry = dy + 10;
+    const step = (label: string, delta: number, bx: number) => {
+      const blocked = delta > 0 ? amount >= most : amount <= 1;
+      ui.button(c, bx, ry, label, () => {
+        if (blocked) return;
+        amount = Math.max(1, Math.min(most, amount + delta));
+        reopen();
+      }, 40, blocked, true);
+    };
+    step('−10', -10, rx);
+    step('−1', -1, rx + 44);
+    c.add(ui.add.text(rx + 138, ry + 17, `${amount}`, txt(18, C.blue)).setOrigin(0.5));
+    step('+1', 1, rx + 192);
+    step('+10', 10, rx + 236);
+    ui.button(c, rx, ry + 42, 'Semua', () => ((amount = Math.max(1, most)), reopen()), 84, amount >= most, true);
+    const label = at === 'bag' ? `Simpan ${amount} →` : `← Ambil ${amount}`;
+    ui.button(c, rx + 92, ry + 42, most < 1 ? (at === 'bag' ? `${where[0].toUpperCase()}${where.slice(1)} penuh` : 'Tas penuh') : label, () => {
+      const err = at === 'bag' ? moveToStore(s, kind, key, amount) : moveFromStore(s, kind, key, amount);
       if (err) {
         play('error');
         return ui.toast(err);
       }
       play('click');
-      pick = { side: at === 'bag' ? 'fridge' : 'bag', key };
+      // keep looking at what is left here, or follow the item across when this side is empty
+      const left = (at === 'bag' ? s.produce : rec)[key] ?? 0;
+      if (!left) pick = { side: at === 'bag' ? 'fridge' : 'bag', key };
+      amount = 1;
       save(s);
       ui.refresh();
       reopen();
-    }, 160);
+    }, 184, most < 1);
   }
   ui.button(c, x + W / 2 - 60, y + H - 48, 'Tutup', () => ui.closeModal(), 120);
 }
