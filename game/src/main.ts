@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { FarmScene } from './scenes/FarmScene';
 import { UIScene } from './scenes/UIScene';
 import { makeTextures } from './textures';
+import { applyKenney, loadKenney } from './kenney';
 import { load, resetSave } from './state';
 import { UI_SCALE, VIEW, fitViewToWindow } from './ui/theme';
 
@@ -16,8 +17,13 @@ class BootScene extends Phaser.Scene {
     super('boot');
   }
 
+  preload() {
+    loadKenney(this);
+  }
+
   create() {
     makeTextures(this);
+    applyKenney(this);
     this.registry.set('state', load());
     this.registry.set('modal', false);
     this.scene.start('farm');

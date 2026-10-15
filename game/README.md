@@ -89,6 +89,7 @@ Loop: cangkul → tanam → siram tiap hari → tidur (pintu rumah) → panen �
 - `src/data.ts` — konstanta, daftar tanaman, musim, alat
 - `src/state.ts` — state game, save/load (localStorage), logika pergantian hari
 - `src/textures.ts` — semua grafis pixel dibuat prosedural (ganti dengan asset pack nanti)
+- `src/kenney.ts` — tanaman (jagung, tomat, padi, ubi) dan ayam dari Kenney Tiny Farm (CC0), plus tanaman tropis yang digambar dengan gaya Kenney; lihat `assets/kenney/README.md`
 - `src/scenes/FarmScene.ts` — peta, pemain, tabrakan, aksi, jam
 - `src/sfx.ts` — efek suara disintesis dengan Web Audio (tanpa file audio)
 - `src/music.ts` — musik latar prosedural: lagu berbeda per musim, lebih tenang di malam hari, lebih meriah di hari festival
