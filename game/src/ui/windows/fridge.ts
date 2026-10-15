@@ -1,13 +1,22 @@
-import { DISHES, FRIDGE_STACK_MAX, STACK_MAX, baseId, dishById, isBought, produceById, starsOf } from '../../data';
+import { CROPS, DISHES, FISH, FRIDGE_STACK_MAX, STACK_MAX, baseId, dishById, isBought, produceById, starsOf } from '../../data';
 import { play } from '../../sfx';
 import { bagCapacity, moveFromStore, moveToStore, save, slotsUsed, storeCap, storeOf, storeSlotsUsed, type Store } from '../../state';
-import { C, HEX, bar as drawBar, card, txt, well } from '../theme';
+import { C, HEX, bar as drawBar, card, segmented, txt, well } from '../theme';
 import type { UIScene } from '../../scenes/UIScene';
 
 /** The stack being looked at, and which side it is on. */
 let pick: { side: 'bag' | 'fridge'; key: string } | undefined;
 let page = 0; // the peti has more slots than one grid shows
 let lastKind: Store | undefined;
+
+/** Sub-tabs: show one kind of goods at a time in both grids. */
+const CATS = [
+  { name: 'Semua', has: () => true },
+  { name: 'Hasil Panen', has: (id: string) => CROPS.some((c) => c.id === id) },
+  { name: 'Ikan & Telur', has: (id: string) => FISH.some((f) => f.id === id) || id.startsWith('telur') },
+  { name: 'Masakan', has: (id: string) => !!dishById(id) },
+];
+let cat = 0;
 
 export const openFridge = (ui: UIScene) => openStore(ui, 'kulkas');
 export const openStorage = (ui: UIScene) => openStore(ui, 'peti');
@@ -16,25 +25,32 @@ export const openStorage = (ui: UIScene) => openStore(ui, 'peti');
 export function openStore(ui: UIScene, kind: Store) {
   const s = ui.state;
   if (lastKind !== kind) (pick = undefined), (page = 0), (lastKind = kind);
-  const W = 720, H = 514;
+  const W = 720, H = 536;
   const name = kind === 'kulkas' ? 'Kulkas' : 'Peti Lumbung';
   const where = kind === 'kulkas' ? 'kulkas' : 'peti';
   const rec = storeOf(s, kind);
   const reopen = () => openStore(ui, kind);
   const { c, x, y } = ui.openModal(W, H, name);
-  const hint = kind === 'kulkas' ? 'Dapur memakai bahan dari kulkas.' : 'Simpan hasil panen sebanyak apa pun, ambil kapan saja.';
-  c.add(ui.add.text(x + W / 2, y + 50, `Klik barang untuk melihat detailnya. ${hint}`, txt(12, C.secondary, false)).setOrigin(0.5, 0));
+  const segW = 132;
+  c.add(
+    segmented(ui, x + W / 2 - (segW * CATS.length + 4) / 2, y + 56, CATS.map((k) => k.name), cat, (i) => {
+      play('click');
+      cat = i;
+      page = 0;
+      reopen();
+    }, segW),
+  );
 
   const SZ = 46, GAP = 7, COLS = 6, ROWS = 4;
   const gridW = COLS * SZ + (COLS - 1) * GAP;
   const side = (label: string, used: number, cap: number, gx: number, rec: Record<string, number>, which: 'bag' | 'fridge', first = 0) => {
-    const gy = y + 104;
-    c.add(ui.add.text(gx, y + 78, label, txt(14)));
-    c.add(ui.add.text(gx + gridW, y + 78, `${used}/${cap}`, txt(12, used >= cap ? C.red : C.secondary)).setOrigin(1, 0));
+    const gy = y + 128;
+    c.add(ui.add.text(gx, y + 102, label, txt(14)));
+    c.add(ui.add.text(gx + gridW, y + 102, `${used}/${cap}`, txt(12, used >= cap ? C.red : C.secondary)).setOrigin(1, 0));
     const bg = ui.add.graphics();
-    drawBar(bg, gx, y + 96, gridW, used / cap, used >= cap ? HEX.red : HEX.blue);
+    drawBar(bg, gx, y + 120, gridW, used / cap, used >= cap ? HEX.red : HEX.blue);
     c.add(bg);
-    const stacks = Object.entries(rec).flatMap(([k, q]) => {
+    const stacks = Object.entries(rec).filter(([k]) => CATS[cat].has(baseId(k))).flatMap(([k, q]) => {
       const out: [string, number][] = [];
       const per = which === 'bag' ? STACK_MAX : FRIDGE_STACK_MAX;
       for (let left = q; left > 0; left -= per) out.push([k, Math.min(per, left)]);
@@ -48,7 +64,7 @@ export function openStore(ui: UIScene, kind: Store) {
       c.add(g);
       const st = stacks[i];
       if (!st) {
-        card(g, px, sy, SZ, SZ, i < cap ? 'muted' : 'locked', 12);
+        card(g, px, sy, SZ, SZ, i < cap || cat > 0 ? 'muted' : 'locked', 12);
         continue;
       }
       const [key, q] = st;
@@ -66,7 +82,7 @@ export function openStore(ui: UIScene, kind: Store) {
       c.add(z);
     }
   };
-  side('Tas (hasil panen)', slotsUsed(s), bagCapacity(s), x + 28, s.produce, 'bag');
+  side('Tas', slotsUsed(s), bagCapacity(s), x + 28, s.produce, 'bag');
   const cap = storeCap(kind);
   const pages = Math.ceil(cap / (COLS * ROWS));
   page = Math.min(page, pages - 1);
@@ -75,7 +91,7 @@ export function openStore(ui: UIScene, kind: Store) {
   if (pages > 1) {
     // page dots under the grid
     for (let p = 0; p < pages; p++) {
-      const label = ui.add.text(sx + gridW / 2 + (p - (pages - 1) / 2) * 56, y + 330, `Hal ${p + 1}`, txt(11, p === page ? C.blue : C.tertiary)).setOrigin(0.5, 0);
+      const label = ui.add.text(sx + gridW / 2 + (p - (pages - 1) / 2) * 56, y + 352, `Hal ${p + 1}`, txt(11, p === page ? C.blue : C.tertiary)).setOrigin(0.5, 0);
       label.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
         play('click');
         page = p;
@@ -85,11 +101,11 @@ export function openStore(ui: UIScene, kind: Store) {
     }
   }
   // arrows between the two grids
-  c.add(ui.add.text(x + W / 2, y + 218, '⇄', txt(26, C.tertiary)).setOrigin(0.5));
+  c.add(ui.add.text(x + W / 2, y + 242, '⇄', txt(26, C.tertiary)).setOrigin(0.5));
 
   // detail strip: what the picked item is, and the button to move it across
-  if (pick && !((pick.side === 'bag' ? s.produce : rec)[pick.key] > 0)) pick = undefined;
-  const dx = x + 28, dy = y + 350, dw = W - 56, dh = 92;
+  if (pick && (!((pick.side === 'bag' ? s.produce : rec)[pick.key] > 0) || !CATS[cat].has(baseId(pick.key)))) pick = undefined;
+  const dx = x + 28, dy = y + 372, dw = W - 56, dh = 92;
   const dg = ui.add.graphics();
   card(dg, dx, dy, dw, dh, 'normal', 16);
   c.add(dg);
