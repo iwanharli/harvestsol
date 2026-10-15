@@ -985,3 +985,23 @@ test('larut malam: peringatan, jam merah, tertidur jam 02:00 di luar kena biaya'
   expect(s.stamina).toBe(60);
   noErrors(errors);
 });
+
+test('kulkas dan peti bisa dirapikan', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.furniture.kulkas = true; s.fridge = { 'tumis-kangkung': 1, 'ikan-nila': 2, kangkung: 4, 'kangkung@3': 1 }");
+  await page.evaluate(() => window.game.events.emit('open-fridge'));
+  await page.waitForTimeout(150);
+  await page.mouse.click(761, 33); // "Rapikan"
+  await page.waitForTimeout(120);
+  expect(Object.keys((await state(page)).fridge)).toEqual(['kangkung@3', 'kangkung', 'ikan-nila', 'tumis-kangkung']);
+
+  const peti = await page.evaluate(async () => {
+    const st = window.game.registry.get('state');
+    const m = await import('/src/state.ts');
+    st.storage = { 'benih:pupuk': 1, jagung: 2, 'benih:kangkung': 3, kangkung: 1 };
+    m.sortStore(st, 'peti');
+    return Object.keys(st.storage);
+  });
+  expect(peti).toEqual(['kangkung', 'jagung', 'benih:kangkung', 'benih:pupuk']);
+  noErrors(errors);
+});
