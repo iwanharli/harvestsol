@@ -656,3 +656,19 @@ test('tas: geser slot dan rapikan otomatis', async ({ page }) => {
   expect((await state(page)).bagOrder).toEqual(['produce:kangkung@3', 'produce:kangkung', 'produce:ikan-nila', 'seeds:kangkung']);
   noErrors(errors);
 });
+
+test('kulkas: klik barang menampilkan detail, lalu simpan', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.furniture.kulkas = true; s.produce = { kangkung: 3 }; s.fridge = {}");
+  await page.evaluate(() => window.game.events.emit('open-fridge'));
+  await page.waitForTimeout(150);
+  await page.mouse.click(171, 155); // first bag slot: only selects
+  await page.waitForTimeout(120);
+  expect((await state(page)).fridge).toEqual({});
+  await page.mouse.click(716, 402); // "Simpan ke kulkas"
+  await page.waitForTimeout(120);
+  const s = await state(page);
+  expect(s.fridge).toEqual({ kangkung: 3 });
+  expect(s.produce).toEqual({});
+  noErrors(errors);
+});
