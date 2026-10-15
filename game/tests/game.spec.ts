@@ -616,7 +616,23 @@ test('warung bahan: tutup pagi buta, beli bahan standar', async ({ page }) => {
   await page.mouse.click(620, 50 + 84 + 170 + 42 + 17);
   await page.waitForTimeout(120);
   const s = await state(page);
-  expect(s.produce).toEqual({ kangkung: 1 }); // standard quality: no star suffix
+  expect(s.produce).toEqual({ 'kangkung@0': 1 }); // standard quality, marked as bought
   expect(s.coins).toBe(1000 - 95);
+  noErrors(errors);
+});
+
+test('barang dari warung tidak bisa ikut festival', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.day = 7; s.minutes = 600; s.level = 2; s.produce = { 'kangkung@0': 5 }");
+  await at(page, 50, 7, 'up'); // stage
+  await press(page, 'Space');
+  await page.waitForTimeout(150);
+  for (let i = 0; i < 5; i++) {
+    await page.mouse.click(242, 304); // where the first bag item would be
+    await page.waitForTimeout(80);
+  }
+  await page.mouse.click(405, 435); // "Ikut Lomba" (stays disabled: nothing eligible)
+  await page.waitForTimeout(120);
+  expect((await state(page)).festival.enteredDay).toBe(0);
   noErrors(errors);
 });

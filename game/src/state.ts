@@ -47,6 +47,7 @@ import {
   xpToNext,
   type Season,
   type Tool,
+  isBought,
 } from './data';
 
 export interface Plot {
@@ -431,7 +432,7 @@ export interface FestivalResult {
 /** Hand in the entry, rank it against the villagers, and pay out rewards. */
 export function enterFestival(s: GameState, items: string[]): FestivalResult {
   const theme = festivalTheme(s.day);
-  const entry = items.slice(0, FESTIVAL_MAX_ITEMS); // shown to the judges, then handed back
+  const entry = items.filter((k) => !isBought(k)).slice(0, FESTIVAL_MAX_ITEMS); // own harvest only; handed back after judging
   const yours = festivalScore(entry, theme.id);
 
   // villagers get stronger as the year goes on
