@@ -518,7 +518,7 @@ test('renovasi rumah: lebih luas, sofa +20 tenaga, dapur besar 2 porsi', async (
   await page.waitForTimeout(150);
   await page.mouse.click(436, 87); // "Renovasi Rumah" tab
   await page.waitForTimeout(150);
-  await page.mouse.click(673, 304); // "Renovasi" on Rumah Sedang
+  await page.mouse.click(702, 277); // "Renovasi" on Rumah Sedang
   await page.waitForTimeout(150);
   let s = await state(page);
   expect(s.houseTier).toBe(1);
