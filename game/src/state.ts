@@ -46,9 +46,13 @@ import {
   PASS_OUT_FINE,
   ORES,
   CAVE_ROOM,
-  CAVE_LIFT_EVERY,
+  CAVE_BOTTOM,
+  CAVE_ZONES,
+  CAVE_TREASURE,
+  rockHits,
+  mineCost,
+  zoneIndex,
   oreWeights,
-  STAMINA_COST,
   type Ore,
   FESTIVAL_EVERY,
   FESTIVAL_MAX_ITEMS,
@@ -140,6 +144,7 @@ export interface GameState {
   fridge: Record<string, number>; // kulkas contents (same keys as produce)
   storage: Record<string, number>; // peti lumbung contents (same keys as produce)
   cave?: CaveState;
+  caveTreasure?: boolean; // the chest at the bottom has been opened
   pos?: { x: number; y: number; dir: 'down' | 'up' | 'left' | 'right' }; // where the player stands (world px) // last day the player chatted with each villager
   stats: { harvested: number; earned: number; requestsDone: number };
 }
@@ -958,40 +963,73 @@ export interface CaveState {
   floor: number; // the floor you are on (0 = outside)
   deepest: number; // the deepest floor ever reached
   nodes: Record<string, { ore: Ore; hits: number }>; // rocks on this floor, by world tile "x,y"
-  ladder: string; // the rock hiding the way down
+  ladder: string; // the rock hiding the way down ('' on the bottom floor)
   ladderOpen: boolean;
+  pillars?: string[]; // stalactite columns from the Gua Kapur down: in the way, cannot be mined
+  chest?: string; // the treasure chest tile on the bottom floor
 }
 
-/** Lay out a fresh floor: more rocks deeper down, one of them hides the ladder. */
+/** Lay out a fresh floor: more rocks deeper down, harder ones, stalactites, one rock hiding the ladder. */
 export function genFloor(s: GameState, floor: number, rand = Math.random) {
   const R = CAVE_ROOM;
+  floor = Math.min(CAVE_BOTTOM, Math.max(1, floor));
   const nodes: CaveState['nodes'] = {};
   const w = oreWeights(floor);
-  const kinds = Object.keys(w) as Ore[];
+  const kinds = (Object.keys(w) as Ore[]).filter((k) => w[k] > 0);
   const total = kinds.reduce((a, k) => a + w[k], 0);
-  const count = 14 + Math.min(10, Math.floor(floor / 2));
-  let tries = 0;
-  while (Object.keys(nodes).length < count && tries++ < 800) {
+  const spotIn = () => {
     // inside the walls, away from the entrance ladder at the bottom middle
     const x = R.x + 1 + Math.floor(rand() * (R.w - 2));
     const y = R.y + 2 + Math.floor(rand() * (R.h - 5));
-    const k = `${x},${y}`;
-    if (nodes[k]) continue;
+    return `${x},${y}`;
+  };
+  const pillars: string[] = [];
+  const zone = zoneIndex(floor);
+  for (let i = 0, n = zone >= 1 ? 3 + Math.min(4, zone) : 0; i < n; i++) {
+    const k = spotIn();
+    if (!pillars.includes(k)) pillars.push(k);
+  }
+  const bottom = floor >= CAVE_BOTTOM;
+  const chest = bottom && !s.caveTreasure ? `${R.x + Math.floor(R.w / 2)},${R.y + 3}` : undefined;
+  const count = 14 + Math.min(10, Math.floor(floor / 2));
+  let tries = 0;
+  while (Object.keys(nodes).length < count && tries++ < 800) {
+    const k = spotIn();
+    if (nodes[k] || pillars.includes(k) || k === chest) continue;
     let n = rand() * total;
     let ore: Ore = 'batu';
     for (const id of kinds) if ((n -= w[id]) < 0) { ore = id; break; }
-    nodes[k] = { ore, hits: ORES[ore].hits };
+    nodes[k] = { ore, hits: rockHits(ore, floor) };
   }
+  // from the Gua Kristal down the ladder only hides under an ore rock
   const keys = Object.keys(nodes);
-  s.cave = { floor, deepest: Math.max(s.cave?.deepest ?? 0, floor), nodes, ladder: keys[Math.floor(rand() * keys.length)], ladderOpen: false };
+  const ores = zone >= 2 ? keys.filter((k) => nodes[k].ore !== 'batu') : keys;
+  const pool = ores.length ? ores : keys;
+  s.cave = {
+    floor,
+    deepest: Math.max(s.cave?.deepest ?? 0, floor),
+    nodes,
+    ladder: bottom ? '' : pool[Math.floor(rand() * pool.length)],
+    ladderOpen: false,
+    pillars: pillars.filter((k) => k !== chest),
+    chest,
+  };
 }
 
-/** Floors the kerekan (rope-and-pulley basket) can lower you to: 1, then every 5th floor you have reached. */
-export const liftFloors = (s: GameState) => {
-  const out = [1];
-  for (let f = CAVE_LIFT_EVERY; f <= (s.cave?.deepest ?? 0); f += CAVE_LIFT_EVERY) out.push(f);
-  return out;
-};
+/** Where the kerekan stops: the start of every zone you have reached. */
+export const liftFloors = (s: GameState) => CAVE_ZONES.map((z) => z.from).filter((f) => f === 1 || f <= (s.cave?.deepest ?? 0));
+
+/** Open the chest at the bottom (once ever); returns an error or null. */
+export function openCaveTreasure(s: GameState): string | null {
+  if (s.caveTreasure || !s.cave?.chest) return 'Peti ini sudah kosong.';
+  for (const [id, q] of Object.entries(CAVE_TREASURE.items)) if (!canAdd(s, 'produce', id, q)) return 'Tas penuh! Kosongkan slot dulu.';
+  for (const [id, q] of Object.entries(CAVE_TREASURE.items)) add(s.produce, id, q);
+  s.coins += CAVE_TREASURE.coins;
+  s.stats.earned += CAVE_TREASURE.coins;
+  s.caveTreasure = true;
+  s.cave.chest = undefined;
+  return null;
+}
 
 /** One swing at a rock: what it dropped when it breaks (and whether the ladder showed), an error, or {} while it holds. */
 export function mineHit(s: GameState, key: string, rand = Math.random): { error?: string; drop?: { id: Ore; qty: number }; ladder?: boolean } {
@@ -1000,7 +1038,7 @@ export function mineHit(s: GameState, key: string, rand = Math.random): { error?
   const o = ORES[node.ore];
   const qty = o.drop[0] + Math.floor(rand() * (o.drop[1] - o.drop[0] + 1));
   if (node.hits <= 1 && !canAdd(s, 'produce', node.ore, qty)) return { error: 'Tas penuh! Kosongkan slot dulu.' };
-  s.stamina -= STAMINA_COST.beliung;
+  s.stamina -= mineCost(s.cave!.floor);
   node.hits--;
   if (node.hits > 0) return {};
   delete s.cave!.nodes[key];
