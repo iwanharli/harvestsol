@@ -18,7 +18,7 @@ import { startMusic } from '../music';
 import { C, HEX, UI_SCALE, VIEW, bar as drawBar, card, glass, txt } from '../ui/theme';
 import {
   bagCapacity,
-  countBase,
+  requestReady,
   isFestivalDay,
   dayOfSeason,
   seasonOf,
@@ -264,7 +264,7 @@ export class UIScene extends Phaser.Scene {
     const status: string[] = [];
     const ship = Object.values(s.shipping).reduce((a, b) => a + b, 0);
     if (ship) status.push(`Kirim: ${ship}`);
-    const ready = s.requests.filter((r) => countBase(s, r.crop) >= r.qty).length;
+    const ready = s.requests.filter((r) => requestReady(s, r)).length;
     if (ready) status.push(`Permintaan siap: ${ready}`);
     if (s.animals.length) status.push(`Pakan: ${s.feed}`);
     this.bagText.setText(status.join(' · '));

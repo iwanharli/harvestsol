@@ -19,6 +19,7 @@ import { play } from '../../sfx';
 import { C, HEX, bar as drawBar, card, segmented, txt, well } from '../theme';
 import {
   bagCapacity,
+  wantsItem,
   bagOrderKeys,
   moveInBag,
   sortBag,
@@ -365,8 +366,8 @@ export function describe(ui: UIScene, bag: 'produce' | 'seeds' | 'other', id: st
     const lines = [`Jumlah: ${qty}`, `Jual: ${p.sellPrice} G / buah`, `Total: ${(p.sellPrice * qty).toLocaleString('id-ID')} G`];
     const dishInfo = dishById(id);
     if (dishInfo) lines.push(`Makan: +${dishInfo.stamina} tenaga`);
-    const want = s.requests.filter((r) => r.crop === baseId(id));
-    if (want.length) lines.push(`Diminta: ${want.map((r) => `${npcById(r.npc).name} (${r.qty})`).join(', ')}`);
+    const want = s.requests.filter((r) => wantsItem(r, baseId(id)));
+    if (want.length) lines.push(`Diminta: ${want.map((r) => npcById(r.npc).name).join(', ')}`);
     if (isFestivalDay(s.day) && festivalTheme(s.day).id === baseId(id)) lines.push('Tema festival hari ini ×2!');
     if (starsOf(id) > 1) lines.splice(1, 0, `Kualitas: ${'★'.repeat(starsOf(id))}`);
     if (isBought(id)) lines.push('Asal: Warung · tidak bisa ikut festival');

@@ -47,7 +47,7 @@ import {
   canAdd,
   restOnSofa,
   checkStaminaRewards,
-  countBase,
+  requestReady,
   harvestStars,
   roomFor,
   dayOfSeason,
@@ -873,7 +873,7 @@ export class FarmScene extends Phaser.Scene {
       }
     }
     this.boardBubble.setVisible(
-      s.level >= FEATURE_LEVEL.board && s.requests.some((r) => countBase(s, r.crop) >= r.qty),
+      s.level >= FEATURE_LEVEL.board && s.requests.some((r) => requestReady(s, r)),
     );
     this.coopLock.setVisible(s.level < FEATURE_LEVEL.coop);
     this.bunting.setVisible(isFestivalDay(s.day));
