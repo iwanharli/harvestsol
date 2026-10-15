@@ -883,3 +883,41 @@ test('kulkas: hanya slot yang dipilih yang pindah, jumlahnya bisa diatur', async
   expect(s.produce).toEqual({ kangkung: 54 });
   noErrors(errors);
 });
+
+test('peti hanya untuk hasil kebun, benih, pupuk, sprinkler; ikan/telur/masakan ke kulkas', async ({ page }) => {
+  const errors = await start(page);
+  const r = await page.evaluate(async () => {
+    const st = window.game.registry.get('state');
+    const m = await import('/src/state.ts');
+    st.produce = { kangkung: 5, 'ikan-nila': 2, telur: 3, 'tumis-kangkung': 1 };
+    st.seeds = { kangkung: 6, pupuk: 2, sprinkler: 1 };
+    st.storage = {};
+    st.fridge = {};
+    const peti = {
+      crop: m.moveToStore(st, 'peti', 'kangkung'),
+      fish: m.moveToStore(st, 'peti', 'ikan-nila'),
+      egg: m.moveToStore(st, 'peti', 'telur'),
+      dish: m.moveToStore(st, 'peti', 'tumis-kangkung'),
+      seed: m.moveToStore(st, 'peti', 'benih:kangkung', 4),
+      pupuk: m.moveToStore(st, 'peti', 'benih:pupuk'),
+      sprinkler: m.moveToStore(st, 'peti', 'benih:sprinkler'),
+    };
+    const kulkas = {
+      fish: m.moveToStore(st, 'kulkas', 'ikan-nila'),
+      egg: m.moveToStore(st, 'kulkas', 'telur'),
+      dish: m.moveToStore(st, 'kulkas', 'tumis-kangkung'),
+      seed: m.moveToStore(st, 'kulkas', 'benih:kangkung'),
+    };
+    const back = m.moveFromStore(st, 'peti', 'benih:pupuk', 1);
+    return { peti, kulkas, back, storage: st.storage, fridge: st.fridge, seeds: st.seeds, produce: st.produce };
+  });
+  const noPeti = 'Peti Lumbung hanya untuk hasil kebun, benih, pupuk, dan sprinkler.';
+  expect(r.peti).toEqual({ crop: null, fish: noPeti, egg: noPeti, dish: noPeti, seed: null, pupuk: null, sprinkler: null });
+  expect(r.kulkas).toEqual({ fish: null, egg: null, dish: null, seed: 'Benih dan alat tidak masuk kulkas.' });
+  expect(r.back).toBeNull();
+  expect(r.storage).toEqual({ kangkung: 5, 'benih:kangkung': 4, 'benih:pupuk': 1, 'benih:sprinkler': 1 });
+  expect(r.fridge).toEqual({ 'ikan-nila': 2, telur: 3, 'tumis-kangkung': 1 });
+  expect(r.seeds).toEqual({ kangkung: 2, pupuk: 1 });
+  expect(r.produce).toEqual({});
+  noErrors(errors);
+});

@@ -416,8 +416,8 @@ export const FURNITURE: FurnitureDef[] = [
   { id: 'jam', name: 'Jam Dinding', price: 800, level: 2, desc: 'Alarm pagi: bangun pukul 05:00, satu jam ekstra setiap hari.' },
   { id: 'radio', name: 'Radio', price: 2000, level: 4, desc: 'Siaran desa: ikan langka hari ini dan cuaca besok.' },
   { id: 'piala', name: 'Lemari Piala', price: 3000, level: 5, desc: '+5% hadiah koin festival per piala emas (maks +25%).' },
-  { id: 'kulkas', name: 'Kulkas', price: 4000, level: 3, desc: 'Simpan 24 slot barang; dapur memakai bahan dari kulkas.' },
-  { id: 'peti', name: 'Peti Lumbung', price: 2500, level: 3, desc: 'Gudang hasil panen di rumah: 48 slot, 99 per slot.' },
+  { id: 'kulkas', name: 'Kulkas', price: 4000, level: 3, desc: 'Simpan bahan, ikan, telur, dan masakan; dapur memakai isinya.' },
+  { id: 'peti', name: 'Peti Lumbung', price: 2500, level: 3, desc: 'Gudang kebun: hasil panen, benih, pupuk, sprinkler. 48 slot.' },
   { id: 'kasur', name: 'Kasur Besar', price: 6000, level: 6, desc: 'Tidur nyenyak: +15 tenaga bonus setiap pagi.' },
 ];
 export const furnitureById = (id: string) => FURNITURE.find((f) => f.id === id);

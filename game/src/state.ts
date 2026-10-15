@@ -767,6 +767,23 @@ export const storeSlotsUsed = (s: GameState, w: Store) =>
   Object.values(storeOf(s, w)).reduce((a, q) => a + Math.ceil(q / FRIDGE_STACK_MAX), 0);
 export const fridgeSlotsUsed = (s: GameState) => storeSlotsUsed(s, 'kulkas');
 
+/** Seeds, pupuk and sprinklers sit in a store under "benih:<id>"; produce uses its own key. */
+export const isSeedKey = (key: string) => key.startsWith('benih:');
+const bagRecOf = (s: GameState, key: string) => (isSeedKey(key) ? s.seeds : s.produce);
+const bagIdOf = (key: string) => (isSeedKey(key) ? key.slice(6) : key);
+
+/** The peti only takes farm goods: harvested vegetables and fruit, seeds, pupuk and sprinklers. */
+export const storeAllows = (w: Store, key: string) =>
+  w === 'peti' ? isSeedKey(key) || CROPS.some((c) => c.id === baseId(key)) : !isSeedKey(key);
+
+/** What the bag can offer to a store, keyed the way that store keeps it. */
+export function bagFor(s: GameState, w: Store): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [k, q] of Object.entries(s.produce)) if (q > 0 && storeAllows(w, k)) out[k] = q;
+  if (w === 'peti') for (const [k, q] of Object.entries(s.seeds)) if (q > 0) out[`benih:${k}`] = q;
+  return out;
+}
+
 /** How many more of an item fit in the kulkas or peti. */
 export function storeRoom(s: GameState, w: Store, key: string) {
   const cur = storeOf(s, w)[key] ?? 0;
@@ -776,10 +793,12 @@ export function storeRoom(s: GameState, w: Store, key: string) {
 
 /** Move n of an item (all of it when n is left out) from the bag into the kulkas or peti; returns an error or null. */
 export function moveToStore(s: GameState, w: Store, key: string, n?: number): string | null {
-  const q = Math.min(n ?? Infinity, s.produce[key] ?? 0);
+  if (!storeAllows(w, key)) return w === 'peti' ? 'Peti Lumbung hanya untuk hasil kebun, benih, pupuk, dan sprinkler.' : 'Benih dan alat tidak masuk kulkas.';
+  const src = bagRecOf(s, key), id = bagIdOf(key);
+  const q = Math.min(n ?? Infinity, src[id] ?? 0);
   if (q <= 0) return null;
   if (q > storeRoom(s, w, key)) return w === 'kulkas' ? 'Kulkas penuh.' : 'Peti penuh.';
-  add(s.produce, key, -q);
+  add(src, id, -q);
   add(storeOf(s, w), key, q);
   return null;
 }
@@ -789,12 +808,13 @@ export function moveFromStore(s: GameState, w: Store, key: string, n?: number): 
   const rec = storeOf(s, w);
   const q = Math.min(n ?? Infinity, rec[key] ?? 0);
   if (q <= 0) return null;
-  const room = roomFor(s, 'produce', key);
+  const id = bagIdOf(key);
+  const room = roomFor(s, isSeedKey(key) ? 'seeds' : 'produce', id);
   if (!room) return 'Tas penuh.';
   if (n !== undefined && q > room) return `Tas hanya muat ${room} lagi.`;
   const m = Math.min(q, room);
   add(rec, key, -m);
-  add(s.produce, key, m);
+  add(bagRecOf(s, key), id, m);
   return null;
 }
 
