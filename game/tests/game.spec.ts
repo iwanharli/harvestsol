@@ -612,7 +612,8 @@ test('warung bahan: tutup pagi buta, beli bahan standar', async ({ page }) => {
   await press(page, 'Space');
   await page.waitForTimeout(150);
   expect(await page.evaluate(() => window.game.scene.getScene('ui').modalKind)).toBe('market');
-  await page.mouse.click(258, 171); // "+1" on the first ingredient (kangkung)
+  // window 720×440 at (120, 50); kangkung is selected first; "Beli 1" sits in the detail panel
+  await page.mouse.click(620, 50 + 84 + 170 + 42 + 17);
   await page.waitForTimeout(120);
   const s = await state(page);
   expect(s.produce).toEqual({ kangkung: 1 }); // standard quality: no star suffix
