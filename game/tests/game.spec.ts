@@ -1200,3 +1200,21 @@ test('alat tingkat tinggi: cangkul 3 petak, penyiram 3x3, alat di bengkel tidak 
   expect(await modalOpen(page)).toBe(true);
   noErrors(errors);
 });
+
+test('bengkel buka siang, tutup malam', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, 's.minutes = 20 * 60');
+  await page.waitForTimeout(150);
+  await at(page, 49, 38, 'up');
+  await press(page, 'Space');
+  expect(await modalOpen(page)).toBe(false);
+  expect((await toasts(page)).join()).toContain('Bengkel tutup');
+  expect(await page.evaluate(() => window.game.scene.getScene('farm').smithy.parts[0].visible)).toBe(false);
+
+  await patch(page, 's.minutes = 10 * 60');
+  await page.waitForTimeout(150);
+  await press(page, 'Space');
+  expect(await modalOpen(page)).toBe(true);
+  expect(await page.evaluate(() => window.game.scene.getScene('farm').smithy.parts[0].visible)).toBe(true);
+  noErrors(errors);
+});

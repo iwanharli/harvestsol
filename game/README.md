@@ -108,7 +108,7 @@ Batu bijih makin keras setiap 15 lantai (Batu biasa tetap 1 pukulan). **Kerekan*
 
 **Kotak Kirim**: jendela dua sisi (Tas ⇄ Kotak). Klik barang lalu tentukan jumlahnya (−10/−1/+1/+10/Maks) dan tekan Kirim/Ambil, atau Kirim Semua / Ambil Semua; barang bisa diambil kembali sebelum tidur. Isi kotak dibayar besok pagi.
 
-**Bengkel Pandai Besi** (di jalan selatan, dekat gua): alat naik **satu tingkat demi satu tingkat**, Biasa → Tembaga → Besi → Emas. Hanya satu alat di tungku; selama ditempa alat itu tidak bisa dipakai (titik warna di toolbar menunjukkan tingkatnya).
+**Bengkel Pandai Besi** (los tempa terbuka di jalan selatan, dekat gua; pandai besi bekerja 08:00–18:00, malam hari tutup): alat naik **satu tingkat demi satu tingkat**, Biasa → Tembaga → Besi → Emas. Hanya satu alat di tungku; selama ditempa alat itu tidak bisa dipakai (titik warna di toolbar menunjukkan tingkatnya).
 
 | Tingkat | Biaya | Lama | Level |
 |---|---|---|---|
