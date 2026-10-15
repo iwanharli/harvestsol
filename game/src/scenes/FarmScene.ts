@@ -7,6 +7,9 @@ import {
   FISH,
   FURNITURE,
   HOUSE_TIERS,
+  MARKET_CLOSE,
+  MARKET_OPEN,
+  MARKET_OWNER,
   SOFA_STAMINA,
   NPC_HOMES,
   TROPHY_BONUS,
@@ -1168,7 +1171,12 @@ export class FarmScene extends Phaser.Scene {
     }
     if (spot === 'stage') return this.visitStage();
     if (spot === 'house') {
-      const npc = npcById(this.houseOwner.get(k)!);
+      const owner = this.houseOwner.get(k)!;
+      const npc = npcById(owner);
+      if (owner === MARKET_OWNER) {
+        if (s.minutes < MARKET_OPEN || s.minutes >= MARKET_CLOSE) return this.fail('Warung Bahan buka pukul 07:00–20:00.');
+        return this.game.events.emit('open-market');
+      }
       return this.toast(`Rumah ${npc.name}, ${npc.role}.`);
     }
     if (spot === 'coop') {

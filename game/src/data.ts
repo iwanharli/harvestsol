@@ -425,3 +425,29 @@ export const SOFA_MINUTES = 30;
 
 /** Seeds show as a seed bag; tools and items keep their own icon. */
 export const seedIcon = (id: string) => (CROPS.some((c) => c.id === id) ? `seed-${id}` : `icon-${id}`);
+
+// ---------- Warung Bahan (ingredient shop) ----------
+
+export const MARKET_OPEN = 7 * 60;
+export const MARKET_CLOSE = 20 * 60;
+export const MARKET_OWNER = 'sari'; // Bu Ratu Atit's family warung
+
+/**
+ * Every ingredient a recipe uses, at standard (1-star) quality. Prices start at twice the sell
+ * price and are raised where needed so buying ingredients to cook and sell never makes a profit,
+ * even with the Rumah Besar kitchen's two portions.
+ */
+export const MARKET_ITEMS: { id: string; price: number }[] = (() => {
+  const ids = [...new Set(DISHES.flatMap((d) => Object.keys(d.ingredients)))];
+  const price: Record<string, number> = Object.fromEntries(ids.map((id) => [id, produceById(id).sellPrice * 2]));
+  for (let pass = 0; pass < 5; pass++)
+    for (const d of DISHES) {
+      const cost = Object.entries(d.ingredients).reduce((a, [id, n]) => a + price[id] * n, 0);
+      const best = d.sellPrice * 2; // two portions in the big kitchen
+      if (cost <= best) {
+        const k = (best + 5) / cost; // lift this dish's ingredients just above the dish price
+        for (const id of Object.keys(d.ingredients)) price[id] = Math.ceil(price[id] * k);
+      }
+    }
+  return ids.map((id) => ({ id, price: Math.ceil(price[id] / 5) * 5 }));
+})();
