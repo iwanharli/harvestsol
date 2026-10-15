@@ -12,7 +12,7 @@ const PLACES: { name: string; x: number; y: number; lake?: Water }[] = [
   { name: 'Alun-alun', x: 47, y: 10 },
   { name: 'Toko Mebel', x: 58, y: 16 },
   { name: 'Hutan', x: 55, y: 33 },
-  { name: 'Tambang', x: 56, y: 46 },
+  { name: 'Gua Tambang', x: 56, y: 47 },
   { name: 'Kolam', x: 26, y: 12, lake: 'kolam' },
   { name: 'Danau Sirep', x: 24, y: 31, lake: 'danau' },
   { name: 'Rawa Gambut', x: 13, y: 47, lake: 'rawa' },
@@ -47,7 +47,7 @@ export function openWorldMap(ui: UIScene) {
   const farm = ui.scene.get('farm') as unknown as { player: { x: number; y: number } };
   let tx = Math.floor(farm.player.x / TILE), ty = Math.floor(farm.player.y / TILE);
   const indoors = !!ui.registry.get('indoors');
-  if (tx >= MAP_W) [tx, ty] = tx >= 150 && tx < 200 ? [57, 18] : [4, 6];
+  if (tx >= MAP_W) [tx, ty] = tx >= 400 ? [56, 45] : tx >= 150 && tx < 200 ? [57, 18] : [4, 6];
   const { px, py } = at(tx, ty);
   const ring = ui.add.circle(px, py, 9, HEX.red, 0.3);
   const dot = ui.add.circle(px, py, 4.5, HEX.red).setStrokeStyle(2, 0xffffff);

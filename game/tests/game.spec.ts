@@ -922,37 +922,55 @@ test('peti hanya untuk hasil kebun, benih, pupuk, sprinkler; ikan/telur/masakan 
   noErrors(errors);
 });
 
-test('tambang: beliung harus dibeli, batu pecah jadi bijih, muncul lagi besok', async ({ page }) => {
+test('gua tambang: masuk, pecahkan batu, temukan tangga, turun, lift tiap 5 lantai', async ({ page }) => {
   const errors = await start(page);
-  // one known rock right next to the entrance row
-  await patch(page, "s.level = 4; s.seeds = {}; s.produce = {}; s.mine = { day: s.day, nodes: { '53,45': { ore: 'bijih-besi', hits: 3 } } }");
-  await page.evaluate(() => window.game.scene.getScene('farm').refreshMine());
-  await at(page, 53, 46, 'up');
+  await at(page, 56, 45, 'up'); // in front of the cave mouth
   await press(page, 'Space');
-  expect((await toasts(page)).join()).toContain('Butuh Beliung');
+  expect((await toasts(page)).join()).toContain('Bawa Beliung');
 
+  await patch(page, "s.ownedTools = ['beliung']; s.seeds = {}; s.produce = {}");
   await press(page, '6');
-  expect((await toasts(page)).join()).toContain('belum punya Beliung');
-  await patch(page, "s.ownedTools = ['beliung']");
-  await press(page, '6');
-  for (let i = 0; i < 3; i++) {
-    await press(page, 'Space');
-    await page.waitForTimeout(250);
-  }
+  await press(page, 'Space');
+  await page.waitForTimeout(700);
   let s = await state(page);
-  expect(s.mine.nodes['53,45']).toBeUndefined();
-  expect(s.produce['bijih-besi']).toBeGreaterThanOrEqual(1);
-  expect(s.stamina).toBe(100 - 3 * 4);
+  expect(s.cave.floor).toBe(1);
+  expect(await page.evaluate(() => window.game.registry.get('indoors'))).toBe(true);
 
-  // ores stay out of the kulkas, and fresh rocks are there in the morning
-  await sleep(page);
+  // put the ladder rock right above the player and break it
+  const [px, py] = await page.evaluate(() => {
+    const p = window.game.scene.getScene('farm').player;
+    return [Math.floor(p.x / 16), Math.floor((p.y - 4) / 16)];
+  });
+  const key = `${px},${py - 1}`;
+  await patch(page, `s.cave.nodes = { '${key}': { ore: 'bijih-tembaga', hits: 2 } }; s.cave.ladder = '${key}'; s.cave.ladderOpen = false`);
+  await page.evaluate(() => window.game.scene.getScene('farm').refreshCave());
+  await press(page, 'Space');
+  await page.waitForTimeout(250);
+  await press(page, 'Space');
+  await page.waitForTimeout(250);
   s = await state(page);
-  expect(Object.keys(s.mine.nodes).length).toBe(16);
-  for (const k of Object.keys(s.mine.nodes)) {
-    const [x, y] = k.split(',').map(Number);
-    expect(x).toBeGreaterThanOrEqual(52);
-    expect(y).not.toBe(46); // the entrance row stays clear
-  }
+  expect(s.produce['bijih-tembaga']).toBeGreaterThanOrEqual(1);
+  expect(s.cave.ladderOpen).toBe(true);
+  expect((await toasts(page)).join()).toContain('tangga ke bawah');
+
+  // the open hole takes you one floor down, with fresh rocks
+  await press(page, 'Space');
+  await page.waitForTimeout(700);
+  s = await state(page);
+  expect(s.cave.floor).toBe(2);
+  expect(s.cave.deepest).toBe(2);
+  expect(Object.keys(s.cave.nodes).length).toBeGreaterThanOrEqual(14);
+
+  // deeper floors hold better ore, and the lift offers every 5th floor reached
+  const r = await page.evaluate(async () => {
+    const st = window.game.registry.get('state');
+    const m = await import('/src/state.ts');
+    const d = await import('/src/data.ts');
+    st.cave.deepest = 12;
+    return { lift: m.liftFloors(st), shallowGold: d.oreWeights(1)['bijih-emas'], deepGold: d.oreWeights(16)['bijih-emas'] };
+  });
+  expect(r.lift).toEqual([1, 5, 10]);
+  expect(r.deepGold).toBeGreaterThan(r.shallowGold * 10);
   noErrors(errors);
 });
 
@@ -1003,5 +1021,19 @@ test('kulkas dan peti bisa dirapikan', async ({ page }) => {
     return Object.keys(st.storage);
   });
   expect(peti).toEqual(['kangkung', 'jagung', 'benih:kangkung', 'benih:pupuk']);
+  noErrors(errors);
+});
+
+test('lift gua: pilih lantai yang pernah dicapai', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.ownedTools = ['beliung']; s.cave = { floor: 0, deepest: 12, nodes: {}, ladder: '', ladderOpen: false }");
+  await at(page, 56, 45, 'up');
+  await press(page, 'Space');
+  expect(await modalOpen(page)).toBe(true);
+  await page.mouse.click(531, 282); // "Lantai 10"
+  await page.waitForTimeout(700);
+  const s = await state(page);
+  expect(s.cave.floor).toBe(10);
+  expect(s.cave.deepest).toBe(12);
   noErrors(errors);
 });
