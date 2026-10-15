@@ -600,3 +600,22 @@ test('kotak kirim: pilih barang, ambil kembali, kirim semua', async ({ page }) =
   expect(s.shipping).toEqual({ kangkung: 3, padi: 2 });
   noErrors(errors);
 });
+
+test('warung bahan: tutup pagi buta, beli bahan standar', async ({ page }) => {
+  const errors = await start(page);
+  await at(page, 37, 6, 'up'); // Bu Ratu Atit's door
+  await patch(page, 's.minutes = 6 * 60; s.coins = 1000');
+  await press(page, 'Space');
+  expect((await toasts(page)).join()).toContain('07:00');
+
+  await patch(page, 's.minutes = 10 * 60');
+  await press(page, 'Space');
+  await page.waitForTimeout(150);
+  expect(await page.evaluate(() => window.game.scene.getScene('ui').modalKind)).toBe('market');
+  await page.mouse.click(258, 171); // "+1" on the first ingredient (kangkung)
+  await page.waitForTimeout(120);
+  const s = await state(page);
+  expect(s.produce).toEqual({ kangkung: 1 }); // standard quality: no star suffix
+  expect(s.coins).toBe(1000 - 95);
+  noErrors(errors);
+});

@@ -74,6 +74,8 @@ Item di toko (masuk slot 3, ganti dengan Q):
 
 **Renovasi rumah** (Toko Mebel, tab Renovasi Rumah): Rumah Kecil 14×10 → **Rumah Sedang** 20×12 (12.000 G, Lv 5: ruang keluarga dengan sofa, istirahat sekali sehari +20 tenaga) → **Rumah Besar** 26×14 (35.000 G, Lv 10: dapur besar memasak 2 porsi, ruang baca dengan akuarium). Perabot lama tetap di tempatnya; kamera menyesuaikan ukuran rumah.
 
+**Warung Bahan Bu Ratu Atit** (pintu rumahnya di desa, buka 07:00–20:00): beli 11 bahan resep di semua musim, kualitas standar ★1. Harga dihitung otomatis sekitar 2,5–4× harga jual supaya membeli bahan lalu memasak dan menjual tidak pernah untung, bahkan dengan 2 porsi di Rumah Besar.
+
 **Memasak (Lv 3)**: masuk rumah lalu hadapkan pemain ke kompor. 9 resep dari hasil panen, telur, dan ikan; masakan dijual lebih mahal dari bahannya, bisa dimakan dari Tas untuk memulihkan tenaga, atau diserahkan ke festival.
 
 **Tas**: setiap jenis barang memakai 1 slot (maks 99 per slot). Kapasitas awal 12 slot (Tas Kain), upgrade ke Tas Kulit 18 (3.000 G, Lv 2), Ransel Petani 24 (9.000 G, Lv 4), Ransel Besar 30 (20.000 G, Lv 6) dari layar Tas (I) atau toko. Kalau penuh, panen/pancing/telur/belanja ditolak dan tanaman tetap di ladang.
