@@ -477,7 +477,7 @@ test('toko mebel: masuk, beli kulkas dari pajangan, simpan bahan, masak dari kul
   await press(page, 'Space');
   expect(await page.evaluate(() => window.game.registry.get('modal'))).toBe(true);
   await page.waitForTimeout(150);
-  await page.mouse.click(673, 330); // "Beli" on the kulkas row
+  await page.mouse.click(707, 312); // "Beli" on the kulkas card
   await page.waitForTimeout(150);
   let s = await state(page);
   expect(s.furniture.kulkas).toBe(true);
