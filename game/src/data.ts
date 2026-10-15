@@ -74,7 +74,14 @@ export const STAMINA_COST: Record<Tool, number> = { cangkul: 2, siram: 2, benih:
 
 // Clock: 1 real second = 1.5 game minutes, so a day (06:00–24:00) lasts 12 real minutes.
 export const DAY_START_MIN = 6 * 60;
-export const DAY_END_MIN = 24 * 60;
+export const DAY_END_MIN = 26 * 60; // 02:00: past this you fall asleep wherever you are
+/** Gentle reminders before that: 22:00, and half an hour before 02:00. */
+export const LATE_WARNINGS: [number, string][] = [
+  [22 * 60, 'Sudah jam 10 malam. Sebaiknya pulang dan tidur.'],
+  [25.5 * 60, '30 menit lagi kamu akan tertidur di mana pun kamu berada!'],
+];
+/** Falling asleep outside: a villager carries you home for a small fee. */
+export const PASS_OUT_FINE = { rate: 0.1, max: 500 };
 export const GAME_MIN_PER_SEC = 1.5;
 
 // Non-seed items that live in the same bag as seeds (tool slot 3).
@@ -354,7 +361,7 @@ export function fishAvailable(where: Water, season: Season, hour: number, rainy:
       f.where.includes(where) &&
       (!f.seasons || f.seasons.includes(season)) &&
       hour >= f.hours[0] &&
-      hour < f.hours[1] &&
+      (hour < f.hours[1] || (f.hours[1] === 24 && hour >= 24)) && // night fish keep biting after midnight
       (f.rain !== 'only' || rainy),
   );
 }

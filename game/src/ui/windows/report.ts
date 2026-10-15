@@ -61,6 +61,8 @@ export function showReport(ui: UIScene, r: DayReport) {
   if (r.sprinkled) rows.push({ icon: 'icon-sprinkler', label: 'Disiram sprinkler', value: `${r.sprinkled} petak` });
   if (r.eggs) rows.push({ icon: 'icon-telur', label: 'Telur di kandang', value: `${r.eggs} butir` });
   const warnings: string[] = [];
+  if (r.passedOut === 'luar') warnings.push(`Kamu tertidur di luar. Warga mengantarmu pulang${r.fine ? ` (biaya ${r.fine.toLocaleString('id-ID')} G)` : ''}. Tenaga hanya 60%.`);
+  if (r.passedOut === 'rumah') warnings.push('Kamu tertidur di lantai rumah. Tenaga hanya 60%.');
   if (isWet(s.weather)) warnings.push('Hujan menyiram ladang otomatis hari ini.');
   if (s.weather === 'kabut') warnings.push('Kabut asap dari kebakaran lahan. Siram tanamanmu sendiri.');
   if (r.stormDamage) warnings.push(`Badai merusak ${r.stormDamage} tanaman.`);
