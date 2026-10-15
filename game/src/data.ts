@@ -554,6 +554,7 @@ export const MARKET_ITEMS: { id: string; price: number }[] = (() => {
 /** Tools go up one tier at a time: Biasa → Tembaga → Besi → Emas. */
 export const TOOL_TIERS = ['Biasa', 'Tembaga', 'Besi', 'Emas'];
 export const TIER_COLORS = [0x000000, 0xd0803e, 0xb8c4d0, 0xf2c94c];
+export const BENGKEL_HOURS = [8, 18]; // the smith works from 08:00 to 18:00
 export const UPGRADABLE: Tool[] = ['siram', 'cangkul', 'pancing', 'beliung'];
 /** Cost of reaching tier 1..3: coins, ore, days at the forge, and the level it unlocks at. */
 export const UPGRADE_COST: { coins: number; ore: string; qty: number; days: number; level: number }[] = [

@@ -341,7 +341,6 @@ export function makeTextures(scene: Phaser.Scene) {
     'house-rani': { roof: ['#4f9a4a', '#6cbf62', '#3a7a36', '#2f652c'], wall: ['#f4ead2', '#e2d6b6', '#cdbf99'] },
     'house-joyo': { roof: ['#7a5a3a', '#9c7a52', '#5f452c', '#4c3723'], wall: ['#e6d8bc', '#d4c3a2', '#bfac88'] },
     'house-mebel': { roof: ['#2f8f8a', '#4fb3ad', '#21706b', '#1a5a56'], wall: ['#f4ead2', '#e2d6b6', '#cdbf99'] },
-    'house-bengkel': { roof: ['#4a4a52', '#6a6a74', '#36363c', '#26262c'], wall: ['#c8b8a0', '#b4a48a', '#9c8c74'] },
     'house-dina': { roof: ['#b05a8f', '#d07ab0', '#8a4570', '#71385c'], wall: ['#fbeee2', '#ebdac8', '#d6c2ac'] },
   };
   for (const [key, { roof, wall }] of Object.entries(houses)) {
@@ -929,6 +928,7 @@ export function makeTextures(scene: Phaser.Scene) {
     darto: { H: '#d8d8d8', h: '#ffffff', C: '#2f5590', c: '#264577', l: '#5a8fd0', P: '#3a3a46', p: '#2a2a33' },
     rani: { H: '#1f1b2e', h: '#3a3352', C: '#f4f1e8', c: '#d8d2c2', l: '#ffffff', P: '#4f9a4a', p: '#3a7a36' },
     joyo: { H: '#bdbdbd', h: '#e6e6e6', C: '#6b8f71', c: '#4f6f55', l: '#8fb595', P: '#5f452c', p: '#4c3723', S: '#e0b07e', s: '#c08e5e' },
+    smith: { H: '#1f1a16', h: '#3a302a', C: '#6a4a2e', c: '#4e3620', l: '#8a6440', P: '#3a3a46', p: '#2a2a33', S: '#d8a070', s: '#b47e52' }, // leather apron
     mebel: { H: '#2b2b2b', h: '#4a4a4a', C: '#2f8f8a', c: '#21706b', l: '#4fb3ad', P: '#5a4a3a', p: '#40342a' }, // shopkeeper in a work apron
     dina: { H: '#3a3a3a', h: '#6a6a6a', C: '#7a5a3a', c: '#5f452c', l: '#b08a52', P: '#2a2a33', p: '#1f1f26' }, // batik shirt
   };
@@ -1280,6 +1280,39 @@ export function makeTextures(scene: Phaser.Scene) {
     px(c, 3, 4, '#f2c94c', 1, 11);
     px(c, 12, 4, '#f2c94c', 1, 11);
     px(c, 7, 8, '#fff3a8', 2, 3); // lock
+  }, true);
+  // the smithy: an open shed on posts with a stone forge and a chimney
+  canvas(scene, 'smithy', 64, 72, (c) => {
+    px(c, 6, 0, '#5e5850', 10, 18); // chimney
+    px(c, 7, 0, '#7a7468', 3, 18);
+    px(c, 2, 22, '#5a3a22', 60, 30); // back wall: dark planks
+    for (let y = 26; y < 52; y += 6) px(c, 2, y, '#4a2e1a', 60, 1);
+    px(c, 4, 34, '#7a7468', 22, 30); // stone forge
+    px(c, 5, 35, '#8e887c', 20, 2);
+    px(c, 8, 44, '#2a1a10', 14, 12); // forge mouth
+    px(c, 0, 12, '#4a4a52', 64, 12); // tin roof
+    px(c, 0, 12, '#6a6a74', 64, 2);
+    for (let x = 2; x < 64; x += 8) px(c, x, 14, '#3a3a42', 1, 10);
+    px(c, 0, 24, '#36363c', 64, 2);
+    px(c, 0, 26, '#8d5a34', 4, 46); // posts
+    px(c, 60, 26, '#8d5a34', 4, 46);
+    px(c, 0, 66, '#6e5a46', 64, 6); // dirt floor
+    px(c, 40, 40, '#a36c40', 18, 3); // tool rack with tongs and hammers
+    px(c, 43, 34, '#5f6f7d', 2, 8);
+    px(c, 48, 33, '#5f6f7d', 4, 3);
+    px(c, 49, 36, '#8d5a34', 1, 6);
+    px(c, 54, 34, '#5f6f7d', 2, 8);
+  }, true);
+  canvas(scene, 'forge-fire', 14, 12, (c) => {
+    px(c, 1, 6, '#c8401e', 12, 6);
+    px(c, 3, 3, '#f07a2a', 8, 8);
+    px(c, 5, 1, '#f8c84a', 4, 8);
+    px(c, 6, 0, '#fff3a8', 2, 4);
+  }, true);
+  canvas(scene, 'smith-hammer', 10, 6, (c) => {
+    px(c, 0, 2, '#8d5a34', 7, 2); // handle, pivot on the left
+    px(c, 6, 0, '#4e525a', 4, 6);
+    px(c, 7, 0, '#8a949e', 1, 6);
   }, true);
   canvas(scene, 'anvil', TILE, TILE, (c) => {
     px(c, 2, 5, '#3a3a42', 12, 3); // the anvil's face and horn

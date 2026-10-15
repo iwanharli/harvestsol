@@ -9,6 +9,7 @@ import {
   GAME_MIN_PER_SEC,
   MAP_H,
   QUARRY,
+  BENGKEL_HOURS,
   CAVE_ROOM,
   caveTint,
   zoneOf,
@@ -411,17 +412,40 @@ export class FarmScene extends Phaser.Scene {
       .setResolution(4)
       .setDepth(18 * TILE + 2);
 
-    // Bengkel Pandai Besi, beside the road south to the cave
-    this.building('house-bengkel', 48, 34);
-    this.spots.set(plotKey(49, 37), 'bengkel').set(plotKey(50, 37), 'bengkel');
-    this.windowGlow(48, 34);
+    // Bengkel Pandai Besi: an open smithy beside the road south to the cave
+    this.shadow(50 * TILE, 38 * TILE - 1, 66);
+    this.add.image(50 * TILE, 38 * TILE, 'smithy').setOrigin(0.5, 1).setDepth(36 * TILE);
     this.add
-      .text(50 * TILE, 34 * TILE + 30, 'BENGKEL', { fontFamily: 'monospace', fontSize: '7px', color: '#fffbe6', stroke: '#26262c', strokeThickness: 3, fontStyle: 'bold' })
+      .text(50 * TILE, 33 * TILE + 13, 'BENGKEL', { fontFamily: 'monospace', fontSize: '7px', color: '#fffbe6', stroke: '#26262c', strokeThickness: 3, fontStyle: 'bold' })
       .setOrigin(0.5)
       .setResolution(4)
-      .setDepth(38 * TILE + 2);
-    this.add.image(52.5 * TILE, 38 * TILE, 'anvil').setOrigin(0.5, 1).setDepth(38 * TILE);
-    this.block(52, 37);
+      .setDepth(36 * TILE + 1);
+    for (let x = 48; x <= 51; x++) for (let y = 34; y <= 37; y++) this.block(x, y, y === 37 && (x === 49 || x === 50) ? 'bengkel' : undefined);
+    const fire = this.add.image(48.5 * TILE - 1, 37 * TILE - 2, 'forge-fire').setOrigin(0.5, 1).setDepth(36 * TILE + 2);
+    const fireGlow = this.add.image(48.5 * TILE, 36.6 * TILE, 'glow').setScale(1.1).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600);
+    const smith = this.add.image(50.3 * TILE, 38 * TILE - 1, 'npc-smith-0').setOrigin(0.5, 1).setDepth(37 * TILE + 4);
+    const anvil = this.add.image(49.3 * TILE, 38 * TILE, 'anvil').setOrigin(0.5, 1).setDepth(37 * TILE + 3);
+    const hammer = this.add.image(50 * TILE, 37 * TILE + 6, 'smith-hammer').setOrigin(0.9, 0.5).setDepth(37 * TILE + 5);
+    this.tweens.add({ targets: fire, scaleY: 1.15, alpha: 0.85, duration: 260, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    // the smith swings: hammer up, then down onto the anvil with a few sparks
+    this.tweens.add({
+      targets: hammer,
+      angle: { from: 70, to: -10 },
+      duration: 220,
+      hold: 60,
+      repeatDelay: 420,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Quad.In',
+      onYoyo: () => {
+        if (!this.smithy.open) return;
+        for (let i = 0; i < 4; i++) {
+          const sp = this.add.rectangle(anvil.x + 2, anvil.y - 11, 1.5, 1.5, i % 2 ? 0xfff3a8 : 0xf8a03a).setDepth(37 * TILE + 6);
+          this.tweens.add({ targets: sp, x: sp.x + Phaser.Math.Between(-10, 10), y: sp.y - Phaser.Math.Between(4, 12), alpha: 0, duration: 380, onComplete: () => sp.destroy() });
+        }
+      },
+    });
+    this.smithy = { open: true, parts: [smith, hammer], fire, fireGlow };
 
     // plaza: shop, board, stage, fountain, lamps, benches, flowers
     this.shadow(47 * TILE, 7 * TILE - 1, 36);
@@ -772,6 +796,8 @@ export class FarmScene extends Phaser.Scene {
   private waterAt = new Map<string, Water>();
   private lakeSigns = new Map<string, Water>();
   private treeTiles = new Set<string>();
+  /** The smith works by day: hammer and sparks, a lit forge; at night the shed is dark and empty. */
+  private smithy!: { open: boolean; parts: Phaser.GameObjects.Image[]; fire: Phaser.GameObjects.Image; fireGlow: Phaser.GameObjects.Image };
 
   /** Show bought furniture and dashed placeholders for the rest. */
   private refreshFurniture() {
@@ -1103,6 +1129,13 @@ export class FarmScene extends Phaser.Scene {
       s.level >= FEATURE_LEVEL.board && s.requests.some((r) => requestReady(s, r)),
     );
     this.coopLock.setVisible(s.level < FEATURE_LEVEL.coop);
+    const open = s.minutes >= BENGKEL_HOURS[0] * 60 && s.minutes < BENGKEL_HOURS[1] * 60;
+    if (open !== this.smithy.open) {
+      this.smithy.open = open;
+      for (const p of this.smithy.parts) p.setVisible(open);
+      this.smithy.fire.setVisible(open);
+    }
+    this.smithy.fireGlow.setAlpha(open ? 0.6 + this.darkness() * 0.3 : 0);
     this.bunting.setVisible(isFestivalDay(s.day));
     this.coopLockText.setVisible(s.level < FEATURE_LEVEL.coop);
     const d = this.darkness();
@@ -1461,7 +1494,10 @@ export class FarmScene extends Phaser.Scene {
       if (s.level < FEATURE_LEVEL.coop) return this.fail(`Kandang ayam terbuka di Level ${FEATURE_LEVEL.coop}.`);
       return this.tendCoop();
     }
-    if (spot === 'bengkel') return this.game.events.emit('open-bengkel');
+    if (spot === 'bengkel') {
+      if (!this.smithy.open) return this.fail(`Bengkel tutup. Pandai besi sudah pulang (buka ${BENGKEL_HOURS[0]}:00–${BENGKEL_HOURS[1]}:00).`);
+      return this.game.events.emit('open-bengkel');
+    }
     if (spot === 'minesign')
       return this.toast(`Gua Tambang Bukit Kapur\nMakin dalam, makin bagus bijihnya. Terdalam: lantai ${s.cave?.deepest ?? 0}. Butuh Beliung (6).`);
     if (spot === 'cave') {
