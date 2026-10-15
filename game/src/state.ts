@@ -44,6 +44,11 @@ import {
   FRIDGE_STACK_MAX,
   STORAGE_SLOTS,
   PASS_OUT_FINE,
+  NAP_HOURS,
+  NAP_GAIN,
+  PASS_OUT_HOURS,
+  PASS_OUT_STAMINA,
+  FULL_SLEEP_HOURS,
   ORES,
   CAVE_ROOM,
   CAVE_BOTTOM,
@@ -302,15 +307,13 @@ export interface DayReport {
 }
 
 /** Advance to the next morning: sell shipped goods, grow watered crops, reset daily resources. */
-export function endDay(s: GameState, passedOut: boolean, outside = false): DayReport {
+/**
+ * Midnight: the date changes whether or not you are asleep. Shipped goods are paid,
+ * watered crops grow, the weather turns over, villagers post requests. The clock wraps to 00:xx.
+ */
+export function rollover(s: GameState): DayReport {
   const report: DayReport = { income: 0, sold: [], grown: 0, withered: 0, sprinkled: 0, eggs: 0, hungry: 0, stormDamage: 0 };
-  if (passedOut) {
-    report.passedOut = outside ? 'luar' : 'rumah';
-    if (outside) {
-      report.fine = Math.min(PASS_OUT_FINE.max, Math.floor(s.coins * PASS_OUT_FINE.rate));
-      s.coins -= report.fine;
-    }
-  }
+  s.minutes = Math.max(0, s.minutes - 24 * 60);
   for (const [id, qty] of Object.entries(s.shipping)) {
     const c = produceById(id);
     const total = c.sellPrice * qty;
@@ -370,8 +373,6 @@ export function endDay(s: GameState, passedOut: boolean, outside = false): DayRe
       }
   }
 
-  s.minutes = s.furniture?.jam ? ALARM_WAKE_MIN : DAY_START_MIN;
-  s.stamina = passedOut ? Math.round(maxStamina(s) * 0.6) : maxStamina(s) + (s.furniture?.kasur ? BIG_BED_BONUS : 0);
   // chickens: fed ones lay an egg and grow fonder, hungry ones sulk
   for (const a of s.animals) {
     if (a.fed) {
@@ -389,6 +390,41 @@ export function endDay(s: GameState, passedOut: boolean, outside = false): DayRe
 
   refreshRequests(s);
   return report;
+}
+
+export type RestKind = 'bed' | 'nap' | 'passout';
+
+/**
+ * Sleep (or pass out): time moves on, crossing midnight if it must, and stamina comes back
+ * by how long you slept. A night in bed lasts until the morning wake-up (at least 3 hours);
+ * a nap is 2 hours; passing out costs 4 hours, little stamina, and a fee if it happened outside.
+ */
+export function rest(s: GameState, kind: RestKind, outside = false): { report?: DayReport; hours: number; fine: number } {
+  const max = maxStamina(s);
+  const wake = s.furniture?.jam ? ALARM_WAKE_MIN : DAY_START_MIN;
+  let hours = kind === 'nap' ? NAP_HOURS : kind === 'passout' ? PASS_OUT_HOURS : 0;
+  if (kind === 'bed') {
+    let d = (((wake - s.minutes) % 1440) + 1440) % 1440;
+    if (d === 0) d = 1440;
+    hours = Math.max(3, d / 60);
+  }
+  let fine = 0;
+  if (kind === 'passout' && outside) {
+    fine = Math.min(PASS_OUT_FINE.max, Math.floor(s.coins * PASS_OUT_FINE.rate));
+    s.coins -= fine;
+  }
+  s.minutes += hours * 60;
+  const report = s.minutes >= 24 * 60 ? rollover(s) : undefined;
+  if (kind === 'bed') {
+    const full = hours >= FULL_SLEEP_HOURS;
+    s.stamina = Math.max(s.stamina, Math.round(max * Math.min(1, hours / FULL_SLEEP_HOURS)) + (full && s.furniture?.kasur ? BIG_BED_BONUS : 0));
+  } else if (kind === 'nap') s.stamina = Math.max(s.stamina, Math.min(max, s.stamina + Math.round(max * NAP_GAIN)));
+  else s.stamina = Math.round(max * PASS_OUT_STAMINA);
+  if (report && kind === 'passout') {
+    report.passedOut = outside ? 'luar' : 'rumah';
+    report.fine = fine;
+  }
+  return { report, hours, fine };
 }
 
 export const shopStock = (s: GameState) => CROPS.filter((c) => c.seasons.includes(seasonOf(s.day)));

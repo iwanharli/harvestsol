@@ -74,15 +74,17 @@ export const STAMINA_COST: Record<Tool, number> = { cangkul: 2, siram: 2, benih:
 
 // Clock: 1 real second = 1.5 game minutes, so a day (06:00–24:00) lasts 12 real minutes.
 export const DAY_START_MIN = 6 * 60;
-/** You can stay up as long as your stamina lasts; at sunrise the day ends no matter what. */
-export const DAY_END_MIN = 30 * 60; // 06:00 the next morning
-/** From 22:00 tiredness drains stamina by itself, faster after midnight (stamina per game hour). */
-export const NIGHT_DRAIN = { from: 22 * 60, perHour: 10, afterMidnight: 20 };
+/** The date changes at midnight; sleeping only restores stamina. */
+export const NIGHT_DRAIN = { from: 22 * 60, perHour: 10, afterMidnight: 20 }; // tiredness from 22:00, faster 00:00–06:00
+export const FULL_SLEEP_HOURS = 8; // stamina comes back in proportion to sleep, full after 8 hours
+export const NAP_HOURS = 2;
+export const NAP_GAIN = 0.25; // a nap gives back a quarter of max stamina
+export const PASS_OUT_HOURS = 4;
+export const PASS_OUT_STAMINA = 0.3;
 export const LOW_STAMINA = 15; // warn once when stamina drops this low
-export const LATE_WARNINGS: [number, string][] = [
-  [22 * 60, 'Sudah jam 10 malam. Mulai capek: tenaga berkurang sendiri.'],
-  [24 * 60, 'Lewat tengah malam: tenaga berkurang lebih cepat. Kalau habis, kamu pingsan!'],
-];
+export const LATE_WARNINGS: [number, string][] = [[22 * 60, 'Sudah jam 10 malam. Mulai capek: tenaga berkurang sendiri.']];
+/** Night hours: from 22:00, through midnight, until 06:00. */
+export const isNight = (minutes: number) => minutes >= 22 * 60 || minutes < 6 * 60;
 /** Falling asleep outside: a villager carries you home for a small fee. */
 export const PASS_OUT_FINE = { rate: 0.1, max: 500 };
 export const GAME_MIN_PER_SEC = 1.5;
@@ -394,6 +396,7 @@ export const fishById = (id: string) => FISH.find((f) => f.id === id);
 
 /** Fish that can bite here and now (any-season fish always count; rain-only fish need rain). */
 export function fishAvailable(where: Water, season: Season, hour: number, rainy: boolean) {
+  if (hour < 6) hour += 24; // 00:00–06:00 is the tail of the night before
   return FISH.filter(
     (f) =>
       f.where.includes(where) &&
