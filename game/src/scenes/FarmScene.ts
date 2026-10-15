@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {
-  DAY_END_MIN,
+  isNight,
+  WEEKDAYS,
   LATE_WARNINGS,
   NIGHT_DRAIN,
   LOW_STAMINA,
@@ -63,7 +64,10 @@ import {
   harvestStars,
   roomFor,
   dayOfSeason,
-  endDay,
+  rollover,
+  rest,
+  type RestKind,
+  type DayReport,
   festivalTheme,
   gainXp,
   isFestivalDay,
@@ -919,7 +923,7 @@ export class FarmScene extends Phaser.Scene {
   /** Window glass follows the sky; the room dims gently at night while the lamp glows. */
   private updateRoomLight(darkness: number) {
     const hr = this.state.minutes / 60;
-    const sky = hr < 7 ? 0xf2b07a : hr < 17 ? 0x9fd8f5 : hr < 19.5 ? 0xf0905a : 0x1d2a4a;
+    const sky = hr < 5 ? 0x1d2a4a : hr < 7 ? 0xf2b07a : hr < 17 ? 0x9fd8f5 : hr < 19.5 ? 0xf0905a : 0x1d2a4a;
     for (const v of this.roomViews) {
       v.glass.clear().fillStyle(sky, 1);
       for (const lx of v.windows) v.glass.fillRect((v.R.x + lx) * TILE - 14, v.R.y * TILE + 6, 28, 18); // the window's glass opening
@@ -1057,7 +1061,8 @@ export class FarmScene extends Phaser.Scene {
   /** 0 = full day, 1 = deep night. */
   private darkness() {
     const hr = this.state.minutes / 60;
-    if (hr < 7) return 0.35 * (7 - hr);
+    if (hr < 5) return 1; // after midnight it is still deep night
+    if (hr < 7) return Math.min(1, 0.35 * (7 - hr));
     if (hr < 17) return 0;
     if (hr < 20) return (hr - 17) / 3;
     return 1;
@@ -1093,7 +1098,7 @@ export class FarmScene extends Phaser.Scene {
     for (const b of this.butterflies) b.setAlpha(s.weather === 'cerah' ? 1 - Math.min(1, d * 2) : 0);
     const hour = this.state.minutes / 60;
     setMood(seasonOf(s.day), hour >= 19 || hour < 6, isFestivalDay(s.day), isWet(s.weather));
-    const home = this.state.minutes >= 20 * 60 || s.weather === 'badai';
+    const home = this.state.minutes >= 20 * 60 || this.state.minutes < 6 * 60 || s.weather === 'badai';
     const sheltered = s.weather !== 'cerah'; // chickens stay in the coop
     for (const h of this.hens.values()) h.setVisible(!sheltered);
     for (const v of this.villagers.values()) v.setVisible(!home);
@@ -1227,10 +1232,13 @@ export class FarmScene extends Phaser.Scene {
         this.lateWarned = at;
         if (this.state.minutes < at + 30) this.toast(msg); // not when a save loads already past it
       }
+    // midnight: a new day starts whether or not you are asleep
+    if (this.state.minutes >= 24 * 60) this.midnight();
+
     // late at night tiredness wears you down; at 0 stamina (from work or the night) you pass out
     const s0 = this.state;
-    if (s0.minutes >= NIGHT_DRAIN.from) {
-      const rate = s0.minutes >= 24 * 60 ? NIGHT_DRAIN.afterMidnight : NIGHT_DRAIN.perHour;
+    if (isNight(s0.minutes)) {
+      const rate = s0.minutes < 6 * 60 ? NIGHT_DRAIN.afterMidnight : NIGHT_DRAIN.perHour;
       this.drainAcc += (dt * GAME_MIN_PER_SEC * rate) / 60;
       if (this.drainAcc >= 1) {
         const n = Math.floor(this.drainAcc);
@@ -1243,15 +1251,11 @@ export class FarmScene extends Phaser.Scene {
       this.lowWarned = true;
       this.toast('Tenaga hampir habis! Makan sesuatu atau pulang tidur.');
     }
-    if (s0.stamina <= 0 || s0.minutes >= DAY_END_MIN) {
+    if (s0.stamina <= 0) {
+      s0.stamina = 0;
       const home = this.indoors && this.currentRoom !== CAVE_ROOM;
-      s0.stamina = Math.max(0, s0.stamina);
-      this.toast(
-        s0.minutes >= DAY_END_MIN ? 'Matahari sudah terbit. Kamu tertidur kelelahan...'
-        : home ? 'Tenagamu habis. Kamu tertidur di lantai rumah...'
-        : 'Tenagamu habis. Kamu pingsan...',
-      );
-      this.sleep(true);
+      this.toast(home ? 'Tenagamu habis. Kamu tertidur di lantai rumah...' : 'Tenagamu habis. Kamu pingsan...');
+      this.sleep('passout');
       return;
     }
 
@@ -1877,7 +1881,36 @@ export class FarmScene extends Phaser.Scene {
   private drainAcc = 0; // fractional stamina lost to the night
   private lowWarned = false;
 
-  sleep(passedOut = false) {
+  /** A report from a midnight you were awake for, shown the next time you wake up. */
+  private pendingReport?: DayReport;
+
+  /** The date changes at 00:00 while you play: grow, pay, new requests, a fresh cave. */
+  private midnight() {
+    const report = rollover(this.state);
+    this.lateWarned = 0;
+    this.redrawAfterRollover();
+    this.pendingReport = report;
+    const money = report.income ? ` Kiriman terjual +${report.income.toLocaleString('id-ID')} G.` : '';
+    this.toast(`Tengah malam: hari baru, ${WEEKDAYS[(this.state.day - 1) % 7]} ${seasonOf(this.state.day)} ${dayOfSeason(this.state.day)}.${money} Tenaga makin cepat berkurang!`);
+    save(this.state);
+    this.game.events.emit('hud');
+  }
+
+  private redrawAfterRollover() {
+    for (const k of new Set([...this.soilImgs.keys(), ...this.propImgs.keys(), ...Object.keys(this.state.plots)]))
+      this.refreshPlot(k);
+    this.refreshCave();
+    this.time.delayedCall(600, () => this.spraySprinklers());
+  }
+
+  /**
+   * Sleep in bed until morning (the default), nap for two hours, or pass out where you stand.
+   * Time moves on, crossing midnight if it must, and you wake beside your bed.
+   */
+  sleep(kind: RestKind | boolean = 'bed') {
+    if (kind === true) kind = 'passout';
+    if (kind === false) kind = 'bed';
+    const mode: RestKind = kind;
     if (this.busy) return;
     if (this.fishing) {
       this.fishing.timer.remove();
@@ -1892,7 +1925,8 @@ export class FarmScene extends Phaser.Scene {
     duck(2200);
     cam.fadeOut(500, 10, 10, 30);
     cam.once('camerafadeoutcomplete', () => {
-      const report = endDay(this.state, passedOut === true, passedOut === true && (!this.indoors || this.currentRoom === CAVE_ROOM));
+      const outside = mode === 'passout' && (!this.indoors || this.currentRoom === CAVE_ROOM);
+      const { report, hours, fine } = rest(this.state, mode, outside);
       this.lateWarned = 0;
       this.lowWarned = false;
       this.drainAcc = 0;
@@ -1900,15 +1934,21 @@ export class FarmScene extends Phaser.Scene {
       this.player.setPosition((home.x + 2.5) * TILE, (home.y + 4) * TILE - 2); // wake up beside the bed
       this.dir = 'down';
       this.state.pos = { x: Math.round(this.player.x), y: Math.round(this.player.y), dir: 'down' };
-      // refresh drawn plots (some may have reverted to grass) and all current ones
-      for (const k of new Set([...this.soilImgs.keys(), ...this.propImgs.keys(), ...Object.keys(this.state.plots)]))
-        this.refreshPlot(k);
-      this.refreshCave();
+      if (report) this.redrawAfterRollover();
       save(this.state);
-      this.game.events.emit('day-report', report);
+      // a morning report for the day that began while you slept (or one you stayed up for)
+      const shown = report ?? this.pendingReport;
+      this.pendingReport = undefined;
+      if (shown && (mode !== 'nap' || report)) {
+        if (!report && mode === 'passout') (shown.passedOut = outside ? 'luar' : 'rumah'), (shown.fine = fine);
+        this.game.events.emit('day-report', shown);
+      } else {
+        const h = Math.round(hours * 10) / 10;
+        this.toast(mode === 'nap' ? `Tidur siang ${h} jam. Tenaga ${this.state.stamina}.` : `Bangun setelah ${h} jam. Tenaga ${this.state.stamina}.${fine ? ` Biaya diantar warga ${fine} G.` : ''}`);
+      }
+      this.game.events.emit('hud');
       cam.fadeIn(500, 10, 10, 30);
       this.busy = false;
-      this.time.delayedCall(600, () => this.spraySprinklers());
     });
   }
 

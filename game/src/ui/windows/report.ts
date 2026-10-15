@@ -1,3 +1,4 @@
+import { ALARM_WAKE_MIN, DAY_START_MIN, FULL_SLEEP_HOURS, NAP_HOURS } from '../../data';
 import { WEEKDAYS, WEATHER_INFO, isWet } from '../../data';
 import { C, HEX, card, txt, well } from '../theme';
 import { festivalTheme, isFestivalDay, dayOfSeason, seasonOf, type DayReport } from '../../state';
@@ -25,13 +26,37 @@ export function showWelcome(ui: UIScene) {
 }
 
 export function askSleep(ui: UIScene) {
-  const { c, x, y } = ui.openModal(380, 170, 'Tidur dan akhiri hari?');
-  c.add(ui.add.text(x + 190, y + 62, 'Tanaman yang disiram akan tumbuh.', txt(14, INK, false)).setOrigin(0.5, 0));
-  ui.button(c, x + 60, y + 108, 'Tidur', () => {
+  const s = ui.state;
+  const wake = s.furniture?.jam ? ALARM_WAKE_MIN : DAY_START_MIN;
+  let d = (((wake - s.minutes) % 1440) + 1440) % 1440;
+  if (d === 0) d = 1440;
+  const hours = Math.max(3, d / 60);
+  const pct = Math.round(Math.min(1, hours / FULL_SLEEP_HOURS) * 100);
+  const hh = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(Math.floor(m % 60)).padStart(2, '0')}`;
+  const wakeAt = hh(s.minutes + hours * 60);
+  const day = s.minutes >= 6 * 60 && s.minutes < 18 * 60; // daytime: offer a short nap too
+  const { c, x, y } = ui.openModal(420, 200, 'Tidur?');
+  c.add(
+    ui.add
+      .text(x + 210, y + 58, `Tidur sampai ${wakeAt} (${Math.round(hours * 10) / 10} jam): tenaga pulih ${pct}%.\nHari berganti sendiri tiap tengah malam.`, {
+        ...txt(13, INK, false),
+        align: 'center',
+        wordWrap: { width: 370 },
+      })
+      .setOrigin(0.5, 0),
+  );
+  const go = (kind: 'bed' | 'nap') => () => {
     ui.closeModal();
-    ui.game.events.emit('do-sleep');
-  });
-  ui.button(c, x + 210, y + 108, 'Belum', () => ui.closeModal());
+    ui.game.events.emit('do-sleep', kind);
+  };
+  if (day) {
+    ui.button(c, x + 20, y + 136, `Tidur siang ${NAP_HOURS} jam`, go('nap'), 150);
+    ui.button(c, x + 176, y + 136, `Sampai ${wakeAt}`, go('bed'), 120);
+    ui.button(c, x + 302, y + 136, 'Belum', () => ui.closeModal(), 98);
+  } else {
+    ui.button(c, x + 60, y + 136, 'Tidur', go('bed'), 140);
+    ui.button(c, x + 220, y + 136, 'Belum', () => ui.closeModal(), 140);
+  }
 }
 
 export type Confirm = { title: string; body: string; ok: string; onOk: () => void };
