@@ -87,11 +87,14 @@ test('fitur terkunci sampai levelnya', async ({ page }) => {
 
 test('menyerahkan permintaan warga', async ({ page }) => {
   const errors = await start(page);
-  const r = (await state(page)).requests[0];
-  await patch(page, `s.level = 2; s.produce = { ${JSON.stringify(r.crop)}: ${r.qty} }`);
+  const st = await state(page);
+  expect(st.requests.length).toBe(2); // day 1 always shows two simple requests
+  const r = st.requests[0];
+  const it = r.items[0];
+  await patch(page, `s.level = 2; s.produce = { ${JSON.stringify(it.id)}: ${it.qty} }`);
   await at(page, 44, 7, 'up');
   await press(page, 'Space');
-  await page.mouse.click(680, 181); // first card's "Serahkan"
+  await page.mouse.click(700, 231); // first card's "Serahkan"
   const s = await state(page);
   expect(s.coins).toBe(300 + r.reward);
   expect(s.friendship[r.npc]).toBe(1);
@@ -320,7 +323,7 @@ test('permintaan warga memakai kualitas terendah dulu', async ({ page }) => {
   );
   await at(page, 44, 7, 'up');
   await press(page, 'Space');
-  await page.mouse.click(680, 265); // one request → shorter window, button sits lower
+  await page.mouse.click(700, 281); // one request → shorter window, button sits lower
   expect((await state(page)).produce).toEqual({ 'kangkung@4': 2 });
   noErrors(errors);
 });
@@ -670,5 +673,51 @@ test('kulkas: klik barang menampilkan detail, lalu simpan', async ({ page }) => 
   const s = await state(page);
   expect(s.fridge).toEqual({ kangkung: 3 });
   expect(s.produce).toEqual({});
+  noErrors(errors);
+});
+
+test('permintaan kualitas hanya menerima hasil sendiri berbintang cukup', async ({ page }) => {
+  const errors = await start(page);
+  await patch(
+    page,
+    "s.level = 2; s.produce = { 'kangkung@0': 5, 'kangkung@2': 2, 'kangkung@3': 1 }; s.requests = [{ id: 98, npc: 'dina', kind: 'kualitas', items: [{ id: 'kangkung', qty: 2, minStars: 3 }], reward: 200, note: 'tes', until: 99 }]",
+  );
+  await at(page, 44, 7, 'up');
+  await press(page, 'Space');
+  await page.mouse.click(700, 281);
+  let s = await state(page);
+  expect(s.requests.length).toBe(1); // only one ★3+, not enough
+  await patch(page, "s.produce['kangkung@4'] = 1");
+  await press(page, 'Escape');
+  await press(page, 'Space');
+  await page.mouse.click(700, 281);
+  s = await state(page);
+  expect(s.requests.length).toBe(0);
+  expect(s.produce).toEqual({ 'kangkung@0': 5, 'kangkung@2': 2 });
+  expect(s.friendship.dina).toBe(2);
+  noErrors(errors);
+});
+
+test('permintaan baru muncul acak sekali sehari, papan bisa kosong', async ({ page }) => {
+  const errors = await start(page);
+  const counts = await page.evaluate(async () => {
+    const st = window.game.registry.get('state');
+    const mod = await import('/src/state.ts');
+    const out: number[] = [];
+    st.level = 5;
+    for (let d = 2; d < 60; d++) {
+      st.requests = [];
+      st.day = d;
+      mod.refreshRequests(st);
+      const n = st.requests.length;
+      mod.refreshRequests(st); // same day again: nothing new
+      if (st.requests.length !== n) return [-1];
+      out.push(n);
+    }
+    return out;
+  });
+  expect(counts).not.toContain(-1);
+  expect(counts).toContain(0);
+  expect(Math.max(...counts)).toBeLessThanOrEqual(2);
   noErrors(errors);
 });

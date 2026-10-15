@@ -102,7 +102,7 @@ export const NPCS: { id: string; name: string; role: string }[] = [
   { id: 'dina', name: 'Pak Sahrul Lempo', role: 'mantan pejabat pertanian' },
 ];
 export const npcById = (id: string) => NPCS.find((n) => n.id === id)!;
-export const REQUESTS_PER_DAY = 3;
+export const REQUESTS_MAX = 4; // the board holds at most this many
 export const REQUEST_DAYS = 3;
 
 // ---------- levels ----------

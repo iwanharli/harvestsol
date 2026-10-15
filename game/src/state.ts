@@ -5,7 +5,9 @@ import {
   PRODUCTS,
   NPCS,
   REQUEST_DAYS,
-  REQUESTS_PER_DAY,
+  REQUESTS_MAX,
+  QUALITY_MULT,
+  FEATURE_LEVEL,
   DAY_START_MIN,
   DAYS_PER_SEASON,
   SEASONS,
@@ -61,12 +63,24 @@ export interface Plot {
   sprinkler?: boolean; // a placed sprinkler occupies this tile
 }
 
+export type RequestKind = 'biasa' | 'paket' | 'kualitas' | 'kilat';
+
+export interface RequestItem {
+  id: string;
+  qty: number;
+  minStars: number; // 0 also accepts warung goods; 1+ means your own harvest, of at least that quality
+}
+
 export interface Request {
   id: number;
   npc: string;
-  crop: string;
-  qty: number;
+  kind?: RequestKind;
+  items?: RequestItem[];
+  crop?: string; // legacy single-item requests
+  qty?: number;
   reward: number;
+  bonusSeeds?: { id: string; qty: number }; // extra seeds handed over with the coins
+  note?: string;
   until: number; // last day the request can be delivered
 }
 
@@ -99,6 +113,7 @@ export interface GameState {
   shipping: Record<string, number>;
   plots: Record<string, Plot>; // key "x,y"
   requests: Request[];
+  requestDay?: number; // last day new requests were rolled
   animals: Animal[];
   feed: number;
   coopEggs: Record<string, number>; // eggs waiting in the coop
@@ -177,7 +192,7 @@ function migrateTropical(s: GameState) {
   s.seeds = renameKeys(s.seeds, map);
   s.shipping = renameKeys(s.shipping, map);
   for (const p of Object.values(s.plots)) if (p.crop) p.crop.id = map(p.crop.id);
-  for (const r of s.requests ?? []) r.crop = map(r.crop);
+  for (const r of s.requests ?? []) if (r.crop) r.crop = map(r.crop);
   s.seed = map(s.seed);
   const snow = (w: string) => (w === 'salju' ? 'cerah' : w) as Weather;
   if (s.weather) s.weather = snow(s.weather);
@@ -352,39 +367,148 @@ export const shopStock = (s: GameState) => CROPS.filter((c) => c.seasons.include
 
 const randInt = (a: number, b: number) => a + Math.floor(Math.random() * (b - a + 1));
 
-/** Drop expired requests and top the board up with new ones for this season. */
+/** The items a request asks for (old saves stored a single crop). */
+export const reqItems = (r: Request): RequestItem[] => r.items ?? [{ id: r.crop!, qty: r.qty!, minStars: 0 }];
+
+/** How many of the bag's items count toward one line of a request. */
+export function countFor(s: GameState, it: RequestItem) {
+  let n = 0;
+  for (const [k, q] of Object.entries(s.produce)) if (baseId(k) === it.id && starsOf(k) >= it.minStars) n += q;
+  return n;
+}
+
+export const requestReady = (s: GameState, r: Request) => reqItems(r).every((it) => countFor(s, it) >= it.qty);
+export const wantsItem = (r: Request, id: string) => reqItems(r).some((it) => it.id === id);
+
+const pickOne = <T>(a: T[]) => a[randInt(0, a.length - 1)];
+const round5 = (n: number) => Math.max(5, Math.round(n / 5) * 5);
+
+/** What could reasonably be delivered this season: crops you can plant, fish that bite, eggs, dishes. */
+function requestPool(s: GameState) {
+  const season = seasonOf(s.day);
+  const crops = shopStock(s).filter((c) => c.level <= s.level);
+  const fish = FISH.filter((f) => f.weight >= 10 && (!f.seasons || f.seasons.includes(season)) && f.rain !== 'only');
+  const eggs = s.level >= FEATURE_LEVEL.coop && s.animals.length ? ['telur'] : [];
+  const have = new Set([...crops.map((c) => c.id), ...fish.map((f) => f.id), ...eggs]);
+  const dishes = s.level >= FEATURE_LEVEL.kitchen ? DISHES.filter((d) => Object.keys(d.ingredients).every((k) => have.has(k))) : [];
+  return { crops, fish, eggs, dishes };
+}
+
+/** Days needed to get hold of an item from scratch. */
+function leadDays(id: string): number {
+  const crop = CROPS.find((c) => c.id === id);
+  if (crop) return crop.days;
+  const dish = DISHES.find((d) => d.id === id);
+  if (dish) return Math.max(...Object.keys(dish.ingredients).map(leadDays));
+  return 2; // fish and eggs
+}
+
+const NOTES: Record<RequestKind, string[]> = {
+  biasa: ['Buat stok di rumah.', 'Lagi pengin masak yang segar.', 'Titipan saudara dari kota.'],
+  paket: ['Untuk hajatan di balai desa.', 'Mau bikin parsel untuk tamu.', 'Isi dapur umum minggu ini.'],
+  kualitas: ['Yang paling bagus, untuk dipamerkan.', 'Mau difoto untuk laporan, jangan yang jelek.', 'Untuk tamu penting.'],
+  kilat: ['Butuh sekarang juga, tamunya sudah datang!', 'Lupa belanja, besok pagi sudah dipakai.', 'Mendadak, tolong ya!'],
+};
+
+/** Build one random request; null when nothing fits right now. */
+export function makeRequest(s: GameState, kind: RequestKind, npc: string): Request | null {
+  const { crops, fish, eggs, dishes } = requestPool(s);
+  const ids = [...crops.map((c) => c.id), ...fish.map((f) => f.id), ...eggs, ...dishes.map((d) => d.id)];
+  if (!ids.length) return null;
+  // villagers have tastes: the fisherman wants fish, the cook wants dishes
+  const taste: Record<string, string[]> = {
+    joyo: fish.map((f) => f.id),
+    rani: dishes.length ? dishes.map((d) => d.id) : crops.map((c) => c.id),
+    dina: crops.map((c) => c.id),
+  };
+  const pool = taste[npc]?.length && Math.random() < 0.7 ? taste[npc] : ids;
+  const qtyOf = (id: string) => {
+    const lead = leadDays(id);
+    const price = produceById(id).sellPrice;
+    return price >= 150 ? 1 : lead <= 3 ? randInt(2, 5) : lead <= 5 ? randInt(1, 3) : randInt(1, 2);
+  };
+  let items: RequestItem[];
+  let mult: number;
+  if (kind === 'paket') {
+    const picks = [...new Set([pickOne(pool), pickOne(ids), pickOne(ids)])].slice(0, randInt(2, 3));
+    if (picks.length < 2) return null;
+    items = picks.map((id) => ({ id, qty: qtyOf(id), minStars: 1 }));
+    mult = 1.9;
+  } else if (kind === 'kualitas') {
+    const cropIds = crops.map((c) => c.id).filter((id) => pool.includes(id) || pool === ids);
+    const id = pickOne(cropIds.length ? cropIds : crops.map((c) => c.id));
+    if (!id) return null;
+    const min = s.level >= 6 && Math.random() < 0.4 ? 4 : 3;
+    items = [{ id, qty: randInt(1, 2), minStars: min }];
+    mult = 1.6 * QUALITY_MULT[min] * 1.15;
+  } else if (kind === 'kilat') {
+    // only things you could already have: what is in the bag, or quick crops
+    const inBag = [...new Set(Object.keys(s.produce).map(baseId))].filter((id) => ids.includes(id));
+    const quick = ids.filter((id) => leadDays(id) <= 2);
+    const id = pickOne(inBag.length ? inBag : quick.length ? quick : ids);
+    items = [{ id, qty: Math.max(1, Math.ceil(qtyOf(id) / 2)), minStars: 1 }];
+    mult = 2.2;
+  } else {
+    const id = pickOne(pool);
+    items = [{ id, qty: qtyOf(id), minStars: 0 }];
+    mult = 1.6;
+  }
+  const value = items.reduce((a, it) => a + produceById(it.id).sellPrice * it.qty, 0);
+  const lead = Math.max(...items.map((it) => leadDays(it.id)));
+  const until = kind === 'kilat' ? s.day + 1 : s.day + lead + REQUEST_DAYS - 1 + (kind === 'paket' ? 2 : 0);
+  const seedable = crops.filter((c) => c.level <= s.level);
+  const bonusSeeds = kind !== 'biasa' && seedable.length && Math.random() < 0.35 ? { id: pickOne(seedable).id, qty: randInt(3, 6) } : undefined;
+  return { id: s.nextRequestId++, npc, kind, items, reward: round5(value * mult), bonusSeeds, note: pickOne(NOTES[kind]), until };
+}
+
+/**
+ * Drop expired requests; once per day, villagers may post 0-2 new ones (the board is
+ * sometimes empty). The first day always has a couple to show how the board works.
+ */
 export function refreshRequests(s: GameState): GameState {
   s.requests = s.requests.filter((r) => r.until >= s.day);
-  const crops = shopStock(s).filter((c) => c.level <= s.level);
-  while (s.requests.length < REQUESTS_PER_DAY && crops.length) {
-    const free = NPCS.filter((n) => !s.requests.some((r) => r.npc === n.id));
-    const npc = free[randInt(0, free.length - 1)];
-    const crop = crops[randInt(0, crops.length - 1)];
-    const qty = crop.days <= 3 ? randInt(2, 5) : crop.days <= 5 ? randInt(1, 3) : randInt(1, 2);
-    s.requests.push({
-      id: s.nextRequestId++,
-      npc: npc.id,
-      crop: crop.id,
-      qty,
-      reward: Math.round((crop.sellPrice * qty * 1.6) / 5) * 5,
-      // enough time to plant from scratch, grow, and deliver
-      until: s.day + crop.days + REQUEST_DAYS - 1,
-    });
+  if (s.requestDay === s.day) return s;
+  s.requestDay = s.day;
+  const roll = Math.random();
+  let n = s.day === 1 ? 2 : roll < 0.3 ? 0 : roll < 0.8 ? 1 : 2;
+  n = Math.min(n, REQUESTS_MAX - s.requests.length);
+  for (let i = 0; i < n; i++) {
+    const free = NPCS.filter((v) => !s.requests.some((r) => r.npc === v.id));
+    if (!free.length) break;
+    const k = Math.random();
+    const kind: RequestKind = s.day === 1 ? 'biasa' : k < 0.45 ? 'biasa' : k < 0.7 ? 'paket' : k < 0.88 ? 'kualitas' : 'kilat';
+    const r = makeRequest(s, kind, pickOne(free).id) ?? makeRequest(s, 'biasa', pickOne(free).id);
+    if (r) s.requests.push(r);
   }
   return s;
 }
 
-/** Hand over produce for a request. Returns false if the player lacks the items. */
-export function deliverRequest(s: GameState, id: number): boolean {
+/** Hand over the goods for a request; returns an error message or null. Lowest qualifying quality goes first. */
+export function deliverRequest(s: GameState, id: number): string | null {
   const r = s.requests.find((q) => q.id === id);
-  if (!r || countBase(s, r.crop) < r.qty) return false;
-  takeBase(s, r.crop, r.qty);
+  if (!r) return 'Permintaan sudah tidak ada.';
+  const short = reqItems(r).find((it) => countFor(s, it) < it.qty);
+  if (short) return `Kurang ${short.qty - countFor(s, short)} ${produceById(short.id).name}${short.minStars > 1 ? ` ★${short.minStars}+` : ''}.`;
+  if (r.bonusSeeds && !canAdd(s, 'seeds', r.bonusSeeds.id, r.bonusSeeds.qty)) return 'Tas penuh, tidak ada tempat untuk hadiah benih.';
+  for (const it of reqItems(r)) {
+    let n = it.qty;
+    const keys = Object.keys(s.produce)
+      .filter((k) => baseId(k) === it.id && starsOf(k) >= it.minStars)
+      .sort((a, b) => starsOf(a) - starsOf(b));
+    for (const k of keys) {
+      if (n <= 0) break;
+      const q = Math.min(n, s.produce[k]);
+      add(s.produce, k, -q);
+      n -= q;
+    }
+  }
+  if (r.bonusSeeds) add(s.seeds, r.bonusSeeds.id, r.bonusSeeds.qty);
   s.coins += r.reward;
   s.stats.earned += r.reward;
   s.stats.requestsDone++;
-  s.friendship[r.npc] = (s.friendship[r.npc] ?? 0) + 1;
+  s.friendship[r.npc] = (s.friendship[r.npc] ?? 0) + (r.kind && r.kind !== 'biasa' ? 2 : 1);
   s.requests = s.requests.filter((q) => q.id !== id);
-  return true;
+  return null;
 }
 
 /** Add XP; returns the levels newly reached (usually empty). */
