@@ -790,3 +790,42 @@ test('mencopot sprinkler minta konfirmasi', async ({ page }) => {
   expect(s.seeds.sprinkler).toBe(1);
   noErrors(errors);
 });
+
+test('danau baru: tiap perairan punya nama dan ikannya sendiri', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.ownedTools = ['pancing']; s.minutes = 10 * 60");
+  await press(page, '5');
+  const spots: [number, number, 'left' | 'right' | 'up' | 'down', string][] = [
+    [5, 47, 'right', 'rawa'],
+    [52, 63, 'right', 'muara'],
+  ];
+  for (const [x, y, dir, lake] of spots) {
+    await at(page, x, y, dir);
+    await press(page, 'Space');
+    expect(await page.evaluate(() => window.game.scene.getScene('farm').fishing?.where)).toBe(lake);
+    await page.waitForFunction(() => window.game.scene.getScene('farm').fishing?.stage === 'bite', null, { timeout: 8000 });
+    await press(page, 'Space');
+    await page.waitForTimeout(100);
+  }
+  const caught = Object.keys((await state(page)).produce).map((k) => k.split('@')[0]);
+  const lakeOf = await page.evaluate(async () => {
+    const d = await import('/src/data.ts');
+    return Object.fromEntries(d.FISH.map((f) => [f.id, f.where]));
+  });
+  expect(lakeOf[caught[0]]).toContain('rawa');
+  expect(lakeOf[caught[caught.length - 1]]).toContain('muara');
+  noErrors(errors);
+});
+
+test('setiap perairan selalu punya ikan di siang hari, di musim apa pun', async ({ page }) => {
+  const errors = await start(page);
+  const empty = await page.evaluate(async () => {
+    const d = await import('/src/data.ts');
+    const out: string[] = [];
+    for (const lake of Object.keys(d.LAKES)) for (const season of d.SEASONS) for (let h = 6; h < 24; h++)
+      if (!d.fishAvailable(lake as never, season, h, false).length) out.push(`${lake} ${season} ${h}`);
+    return out;
+  });
+  expect(empty).toEqual([]);
+  noErrors(errors);
+});

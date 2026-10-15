@@ -40,19 +40,30 @@ Item di toko (masuk slot 3, ganti dengan Q):
 - **Pupuk Cepat** (50 G): taburkan di tanah yang sudah dicangkul; tanaman di petak itu tumbuh 2 hari per malam sampai dipanen.
 - **Sprinkler** (1.500 G): pasang di petak kosong di ladang; tiap pagi menyiram 8 petak tanah di sekitarnya. Ambil lagi dengan Tangan (4).
 
-**Peta** 64×40 petak: Ladang (barat laut), Perkampungan Warga dengan alun-alun (timur), Danau Biru dengan dermaga (selatan), dan Hutan Kecil (tenggara). Toko, papan permintaan, dan panggung festival ada di alun-alun. Ajak warga bicara sekali sehari untuk menambah keakraban.
+**Peta** 64×72 petak: Ladang (barat laut), Perkampungan Warga dengan alun-alun (timur), Danau Sirep dengan dermaga, Hutan Kecil (tenggara), dan wilayah selatan dengan empat perairan lain yang dihubungkan jalan setapak. Setiap perairan punya papan nama. Toko, papan permintaan, dan panggung festival ada di alun-alun. Ajak warga bicara sekali sehari untuk menambah keakraban.
 
-**Papan permintaan warga** (di alun-alun): setiap pagi ada sampai 3 permintaan hasil panen. Hadiahnya sekitar 1,6× harga jual dan menambah keakraban (♥) dengan warga. Batas waktunya menyesuaikan lama tumbuh tanaman. Tanda "!" muncul di atas papan kalau ada permintaan yang bisa langsung diserahkan.
+**Papan permintaan warga** (di alun-alun): setiap pagi diundi 0–2 permintaan baru (papan bisa kosong, maksimal 4). Jenisnya Biasa (1,6× harga jual), Paket (2–3 barang, 1,9×), Kualitas (minimal ★3/★4), dan Kilat (sampai besok, 2,2×); tiga jenis terakhir hanya menerima hasil sendiri. Yang diminta bisa hasil panen, ikan, telur, atau masakan, dan kadang ada bonus benih. Tanda "!" muncul di atas papan kalau ada permintaan yang bisa langsung diserahkan.
 
 **Level**: XP dari mencangkul, menyiram, menanam, memanen, permintaan warga, dan merawat ayam. Fitur terbuka bertahap: Papan Permintaan (Lv 2), Pupuk (Lv 3), Sprinkler (Lv 5), Kandang Ayam (Lv 7), dan benih tertentu.
 
-**Tenaga maksimal**: 100 di awal, +10 di Lv 4, 8, 12, 16, dan 20 (sampai 150), ditambah dua hadiah sekali: **Jamu Kuat** saat pertama kali ada warga mencapai keakraban ♥10, dan **Buku Ikan lengkap** (13/13). Masakan tetap cara utama memulihkan tenaga di siang hari.
+**Tenaga maksimal**: 100 di awal, +10 di Lv 4, 8, 12, 16, dan 20 (sampai 150), ditambah dua hadiah sekali: **Jamu Kuat** saat pertama kali ada warga mencapai keakraban ♥10, dan **Buku Ikan lengkap** (21/21). Masakan tetap cara utama memulihkan tenaga di siang hari.
 
 **Ternak (Lv 7)**: beli Ayam (maks 4) dan Pakan di toko, tab Ternak. Hadapkan pemain ke kandang lalu tekan Spasi untuk mengambil telur sekaligus memberi pakan. Ayam yang diberi pakan bertelur keesokan pagi. Elus ayam (Tangan) sekali sehari supaya akrab; ayam yang sangat akrab bisa memberi Telur Emas.
 
 **Festival mingguan** (hari ke-7, 14, 21, 28 tiap musim, 09:00–18:00, di panggung alun-alun): serahkan sampai 5 hasil panen (dikembalikan setelah dinilai). Skor = harga jual (tanaman tema ×2) + 40 per jenis berbeda. Juara 1–3 mendapat koin, XP, piala, dan Poin Festival (dasar pembagian pool hadiah di fase 3 whitepaper). Datangi panggung di hari lain untuk melihat tema festival berikutnya.
 
-**Memancing**: beli Pancing di toko (Peralatan, 800 G, Lv 2). Hadapkan pemain ke air (kolam atau danau, paling enak dari ujung dermaga), tekan Spasi, tunggu tanda "!", lalu tekan Spasi lagi secepatnya: makin cepat reaksimu, makin tinggi kualitas ikannya (★1–5). Ada 13 jenis ikan; tiap jenis punya tempat (kolam/danau), jam, musim, dan sebagian butuh hujan (misalnya Belut hanya saat hujan malam, Arwana malam di musim Kemarau). Lihat semuanya di **Buku Ikan (J)**: ikan yang belum tertangkap tampil sebagai siluet dengan petunjuknya.
+**Memancing**: beli Pancing di toko (Peralatan, 800 G, Lv 2). Hadapkan pemain ke air (paling enak dari ujung dermaga), tekan Spasi, tunggu tanda "!", lalu tekan Spasi lagi secepatnya: makin cepat reaksimu, makin tinggi kualitas ikannya (★1–5). Ada 21 jenis ikan yang tersebar di 6 perairan, dan tiap perairan punya ikan khasnya sendiri:
+
+| Perairan | Letak | Ikan khas |
+|---|---|---|
+| Kolam Kebun | samping ladang | Koi, Betok, Belut |
+| Danau Sirep | selatan desa | Lele, Gabus, Gurame |
+| Rawa Gambut Kelam | barat daya | Sepat, Toman, Arwana |
+| Telaga Kabut Sunyi | ujung barat daya, di tengah hutan | Tawes, Ikan Emas, Sidat (malam) |
+| Waduk Kedung Lali | selatan, di balik bendungan | Patin, Bawal, Baung (sore–malam) |
+| Muara Payau Senja | tenggara, ada dermaga | Bandeng, Belanak, Kakap Merah, Udang Galah |
+
+Tiap jenis punya jam, musim, dan sebagian butuh hujan (misalnya Belut hanya saat hujan malam, Arwana malam di musim Kemarau). Setiap perairan selalu punya ikan dari pagi sampai tengah malam. Lihat semuanya di **Buku Ikan (J)**, satu tab per perairan: ikan yang belum tertangkap tampil sebagai siluet dengan petunjuknya.
 
 **Musim tropis** (28 hari per musim): Tanam (awal hujan), Hujan, Panen (pancaroba), dan Kemarau. Tanaman: Kangkung, Timun, Terong, Tomat, Ubi, Padi, Cabai, Singkong, Jagung, Kedelai, Semangka, dan **Sawit (Lv 12)**: benih 6.000 G, tumbuh 14 hari di semua musim, lalu berbuah lagi tiap 7 hari tanpa ditanam ulang; investasi jangka panjang yang baru terbayar di tahun kedua.
 
@@ -72,7 +83,7 @@ Item di toko (masuk slot 3, ganti dengan Q):
 | Kulkas | 4.000 G | 3 | Simpan 24 slot; dapur memakai bahan dari kulkas |
 | Kasur Besar | 6.000 G | 6 | +15 tenaga bonus setiap pagi |
 
-**Renovasi rumah** (Toko Mebel, tab Renovasi Rumah): Rumah Kecil 14×10 → **Rumah Sedang** 20×12 (12.000 G, Lv 5: ruang keluarga dengan sofa, istirahat sekali sehari +20 tenaga) → **Rumah Besar** 26×14 (35.000 G, Lv 10: dapur besar memasak 2 porsi, ruang baca dengan akuarium). Perabot lama tetap di tempatnya; kamera menyesuaikan ukuran rumah.
+**Renovasi rumah** (Toko Mebel, tab Renovasi Rumah): Rumah Kecil 20×12 → **Rumah Sedang** 26×14 (12.000 G, Lv 5: ruang keluarga dengan sofa, istirahat sekali sehari +20 tenaga) → **Rumah Besar** 32×16 (35.000 G, Lv 10: dapur besar memasak 2 porsi, ruang baca dengan akuarium). Perabot lama tetap di tempatnya; kamera menyesuaikan ukuran rumah.
 
 **Warung Bahan Bu Ratu Atit** (pintu rumahnya di desa, buka 07:00–20:00): beli 11 bahan resep di semua musim, kualitas standar ★1. Harga dihitung otomatis sekitar 2,5–4× harga jual supaya membeli bahan lalu memasak dan menjual tidak pernah untung, bahkan dengan 2 porsi di Rumah Besar.
 

@@ -1,6 +1,6 @@
 export const TILE = 16;
 export const MAP_W = 64;
-export const MAP_H = 40;
+export const MAP_H = 72; // the south half holds the far lakes
 
 // Field where the player may till soil.
 export const FIELD = { x: 8, y: 8, w: 16, h: 9 };
@@ -273,7 +273,17 @@ export const RUN_MULT = 1.7;
 
 // ---------- fish ----------
 
-export type Water = 'kolam' | 'danau';
+export type Water = 'kolam' | 'danau' | 'rawa' | 'telaga' | 'waduk' | 'muara';
+
+/** Every body of water has its own name, character and fish. */
+export const LAKES: Record<Water, { name: string; desc: string; tint: number }> = {
+  kolam: { name: 'Kolam Kebun', desc: 'Kolam kecil di samping ladang. Ikan hias dan ikan sawah.', tint: 0xffffff },
+  danau: { name: 'Danau Sirep', desc: 'Danau tenang di selatan desa. Ikan air tawar yang umum.', tint: 0xffffff },
+  rawa: { name: 'Rawa Gambut Kelam', desc: 'Air cokelat gambut di barat daya. Ikan predator dan ikan lumpur.', tint: 0x9fb07a },
+  telaga: { name: 'Telaga Kabut Sunyi', desc: 'Telaga dingin di kaki bukit. Ikan yang suka air jernih.', tint: 0xc8ecff },
+  waduk: { name: 'Waduk Kedung Lali', desc: 'Waduk luas di balik bendungan. Ikan besar air dalam.', tint: 0x7f9fe0 },
+  muara: { name: 'Muara Payau Senja', desc: 'Pertemuan sungai dan laut di tenggara. Ikan air payau.', tint: 0xd9cfa6 },
+};
 
 export interface FishDef {
   id: string;
@@ -286,22 +296,32 @@ export interface FishDef {
   rain?: 'bonus' | 'only'; // rain doubles the chance, or is required
   colors: [string, string, string]; // body, light, dark
   shape?: 'fish' | 'eel' | 'shrimp' | 'long';
+  art?: string; // reuse another fish's pixel art (recoloured)
 }
 
 export const FISH: FishDef[] = [
-  { id: 'ikan-nila', name: 'Ikan Nila', sellPrice: 25, where: ['kolam', 'danau'], hours: [6, 24], weight: 40, colors: ['#8a9aa8', '#b8c6d2', '#5f6f7d'] },
-  { id: 'ikan-mas', name: 'Ikan Mas', sellPrice: 35, where: ['kolam', 'danau'], hours: [6, 20], weight: 30, colors: ['#e88a2d', '#f4b66a', '#b8651c'] },
-  { id: 'ikan-betok', name: 'Ikan Betok', sellPrice: 30, where: ['kolam'], hours: [6, 12], weight: 22, colors: ['#7a8a5a', '#a0b07a', '#556040'] },
-  { id: 'ikan-lele', name: 'Ikan Lele', sellPrice: 50, where: ['danau'], seasons: ['Tanam', 'Hujan'], hours: [18, 24], weight: 26, rain: 'bonus', colors: ['#5a5248', '#7d746a', '#3b352f'] },
-  { id: 'ikan-belut', name: 'Belut', sellPrice: 60, where: ['kolam'], seasons: ['Tanam', 'Hujan'], hours: [18, 24], weight: 16, rain: 'only', colors: ['#6a5a3a', '#8f7a52', '#4a3f2a'], shape: 'eel' },
-  { id: 'ikan-gabus', name: 'Ikan Gabus', sellPrice: 55, where: ['danau'], seasons: ['Hujan', 'Panen'], hours: [6, 18], weight: 18, colors: ['#4f5a4a', '#6f7a68', '#353d32'], shape: 'long' },
-  { id: 'ikan-patin', name: 'Ikan Patin', sellPrice: 65, where: ['danau'], seasons: ['Panen', 'Kemarau'], hours: [6, 18], weight: 15, colors: ['#9aa6b2', '#c8d2dc', '#6a7682'] },
-  { id: 'ikan-gurame', name: 'Ikan Gurame', sellPrice: 80, where: ['danau'], hours: [9, 17], weight: 14, colors: ['#b8a07a', '#d8c4a0', '#8a7452'] },
-  { id: 'ikan-bawal', name: 'Ikan Bawal', sellPrice: 70, where: ['danau'], seasons: ['Kemarau'], hours: [12, 24], weight: 12, colors: ['#5a6a7a', '#8a9aaa', '#3a4a5a'] },
-  { id: 'ikan-udang', name: 'Udang Galah', sellPrice: 90, where: ['danau'], seasons: ['Hujan'], hours: [18, 24], weight: 10, rain: 'bonus', colors: ['#5f8fb0', '#8fbfdf', '#3f6f90'], shape: 'shrimp' },
+  { id: 'ikan-nila', name: 'Ikan Nila', sellPrice: 25, where: ['kolam', 'danau', 'waduk'], hours: [6, 24], weight: 40, colors: ['#8a9aa8', '#b8c6d2', '#5f6f7d'] },
+  { id: 'ikan-mas', name: 'Ikan Mas', sellPrice: 35, where: ['kolam', 'danau', 'telaga'], hours: [6, 20], weight: 30, colors: ['#e88a2d', '#f4b66a', '#b8651c'] },
+  { id: 'ikan-betok', name: 'Ikan Betok', sellPrice: 30, where: ['kolam', 'rawa'], hours: [6, 12], weight: 22, colors: ['#7a8a5a', '#a0b07a', '#556040'] },
+  { id: 'ikan-lele', name: 'Ikan Lele', sellPrice: 50, where: ['danau', 'rawa'], seasons: ['Tanam', 'Hujan'], hours: [18, 24], weight: 26, rain: 'bonus', colors: ['#5a5248', '#7d746a', '#3b352f'] },
+  { id: 'ikan-belut', name: 'Belut', sellPrice: 60, where: ['kolam', 'rawa'], seasons: ['Tanam', 'Hujan'], hours: [18, 24], weight: 16, rain: 'only', colors: ['#6a5a3a', '#8f7a52', '#4a3f2a'], shape: 'eel' },
+  { id: 'ikan-gabus', name: 'Ikan Gabus', sellPrice: 55, where: ['danau', 'rawa'], seasons: ['Hujan', 'Panen'], hours: [6, 18], weight: 18, colors: ['#4f5a4a', '#6f7a68', '#353d32'], shape: 'long' },
+  { id: 'ikan-patin', name: 'Ikan Patin', sellPrice: 65, where: ['waduk'], seasons: ['Panen', 'Kemarau'], hours: [6, 18], weight: 15, colors: ['#9aa6b2', '#c8d2dc', '#6a7682'] },
+  { id: 'ikan-gurame', name: 'Ikan Gurame', sellPrice: 80, where: ['danau', 'waduk'], hours: [9, 17], weight: 14, colors: ['#b8a07a', '#d8c4a0', '#8a7452'] },
+  { id: 'ikan-bawal', name: 'Ikan Bawal', sellPrice: 70, where: ['waduk'], seasons: ['Kemarau'], hours: [12, 24], weight: 12, colors: ['#5a6a7a', '#8a9aaa', '#3a4a5a'] },
+  { id: 'ikan-udang', name: 'Udang Galah', sellPrice: 90, where: ['muara'], seasons: ['Hujan'], hours: [18, 24], weight: 10, rain: 'bonus', colors: ['#5f8fb0', '#8fbfdf', '#3f6f90'], shape: 'shrimp' },
   { id: 'ikan-koi', name: 'Ikan Koi', sellPrice: 160, where: ['kolam'], seasons: ['Panen'], hours: [10, 16], weight: 5, colors: ['#f4f1e8', '#ffffff', '#e2434b'] },
-  { id: 'ikan-emas', name: 'Ikan Emas', sellPrice: 200, where: ['danau'], hours: [6, 24], weight: 3, rain: 'bonus', colors: ['#f2c94c', '#fff3a8', '#c99a2e'] },
-  { id: 'ikan-arwana', name: 'Ikan Arwana', sellPrice: 400, where: ['danau'], seasons: ['Kemarau'], hours: [18, 24], weight: 2, colors: ['#d9b45a', '#f2dc94', '#a8843a'], shape: 'long' },
+  { id: 'ikan-emas', name: 'Ikan Emas', sellPrice: 200, where: ['telaga'], hours: [6, 24], weight: 3, rain: 'bonus', colors: ['#f2c94c', '#fff3a8', '#c99a2e'] },
+  { id: 'ikan-arwana', name: 'Ikan Arwana', sellPrice: 400, where: ['rawa'], seasons: ['Kemarau'], hours: [18, 24], weight: 2, colors: ['#d9b45a', '#f2dc94', '#a8843a'], shape: 'long' },
+  // fish found only at the far lakes
+  { id: 'ikan-sepat', name: 'Ikan Sepat', sellPrice: 20, where: ['rawa'], hours: [6, 24], weight: 35, colors: ['#7f8fa0', '#b0bccb', '#56616e'], art: 'ikan-betok' },
+  { id: 'ikan-toman', name: 'Ikan Toman', sellPrice: 180, where: ['rawa'], seasons: ['Hujan', 'Panen'], hours: [6, 18], weight: 5, colors: ['#3e4a40', '#d0603a', '#28302a'], art: 'ikan-gabus' },
+  { id: 'ikan-tawes', name: 'Ikan Tawes', sellPrice: 30, where: ['telaga'], hours: [6, 24], weight: 35, colors: ['#c8c8b0', '#eeeedc', '#94947a'], art: 'ikan-mas' },
+  { id: 'ikan-sidat', name: 'Ikan Sidat', sellPrice: 220, where: ['telaga'], hours: [20, 24], weight: 4, colors: ['#4a5560', '#7a8794', '#2c343c'], shape: 'eel' },
+  { id: 'ikan-baung', name: 'Ikan Baung', sellPrice: 75, where: ['waduk'], hours: [17, 24], weight: 18, colors: ['#7a6a58', '#a8988a', '#4e4236'], art: 'ikan-lele' },
+  { id: 'ikan-bandeng', name: 'Ikan Bandeng', sellPrice: 45, where: ['muara'], hours: [6, 24], weight: 35, colors: ['#b4c4d0', '#e4eef4', '#7890a4'], art: 'ikan-patin' },
+  { id: 'ikan-belanak', name: 'Ikan Belanak', sellPrice: 40, where: ['muara'], hours: [6, 24], weight: 25, colors: ['#8e9a8a', '#c4ccbc', '#5e6a5a'], art: 'ikan-patin' },
+  { id: 'ikan-kakap', name: 'Kakap Merah', sellPrice: 140, where: ['muara'], seasons: ['Panen', 'Kemarau'], hours: [15, 24], weight: 6, colors: ['#d04a3a', '#f08a70', '#902a20'], art: 'ikan-gurame' },
 ];
 
 export const fishById = (id: string) => FISH.find((f) => f.id === id);
@@ -320,7 +340,7 @@ export function fishAvailable(where: Water, season: Season, hour: number, rainy:
 
 export function rollFish(where: Water, season: Season, hour: number, rainy: boolean, rand = Math.random): string {
   const pool = fishAvailable(where, season, hour, rainy).map((f) => [f.id, f.rain && rainy ? f.weight * 2 : f.weight] as const);
-  if (!pool.length) return 'ikan-nila';
+  if (!pool.length) return FISH.find((f) => f.where.includes(where))?.id ?? 'ikan-nila';
   let n = rand() * pool.reduce((a, [, w]) => a + w, 0);
   for (const [id, w] of pool) if ((n -= w) < 0) return id;
   return pool[0][0];
@@ -341,7 +361,7 @@ export const fishXp = (id: string) => 4 + Math.round((fishById(id)?.sellPrice ??
 
 /** Tools that must be bought once before they can be used. */
 export const BUYABLE_TOOLS: { id: Tool; name: string; price: number; level: number; desc: string }[] = [
-  { id: 'pancing', name: 'Pancing', price: 800, level: 2, desc: 'untuk kolam & danau' },
+  { id: 'pancing', name: 'Pancing', price: 800, level: 2, desc: 'untuk kolam, danau, rawa, telaga, waduk & muara' },
 ];
 export const needsPurchase = (tool: Tool) => BUYABLE_TOOLS.some((t) => t.id === tool);
 

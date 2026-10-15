@@ -4,6 +4,8 @@ import {
   FIELD,
   GAME_MIN_PER_SEC,
   MAP_H,
+  LAKES,
+  type Water,
   FISH,
   FURNITURE,
   HOUSE_TIERS,
@@ -70,7 +72,7 @@ const DIR_VEC: Record<Dir, [number, number]> = { down: [0, 1], up: [0, -1], left
 const SPEED = 62; // world px per second
 
 type Spot =
-  | 'door' | 'shop' | 'bin' | 'pond' | 'board' | 'coop' | 'stage' | 'house'
+  | 'door' | 'shop' | 'bin' | 'pond' | 'lakesign' | 'board' | 'coop' | 'stage' | 'house'
   | 'bed' | 'stove' | 'tv' | 'shelf' | 'wardrobe' | 'fridge' | 'storage' | 'radio' | 'trophy' | 'slot'
   | 'mebel' | 'counter' | 'display' | 'sofa';
 
@@ -124,7 +126,7 @@ export class FarmScene extends Phaser.Scene {
   private fishing?: {
     stage: 'wait' | 'bite';
     biteAt?: number;
-    where: 'kolam' | 'danau';
+    where: Water;
     bobber: Phaser.GameObjects.Image;
     alert: Phaser.GameObjects.Image;
     timer: Phaser.Time.TimerEvent;
@@ -218,13 +220,27 @@ export class FarmScene extends Phaser.Scene {
       for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(x, y, t);
     };
 
-    // lake: two overlapping ellipses, ringed with sand
-    for (let y = 22; y < MAP_H - 1; y++)
-      for (let x = 2; x < 44; x++) {
-        const a = ((x - 24) / 13) ** 2 + ((y - 31) / 5.2) ** 2;
-        const b = ((x - 34) / 7) ** 2 + ((y - 33.5) / 3.6) ** 2;
-        if (a < 1 || b < 1) set(x, y, 'w');
-      }
+    // lakes, each ringed with sand: Danau Sirep south of the village, the far ones further south
+    const water = (x: number, y: number, id: Water) => {
+      set(x, y, 'w');
+      if (G[y]?.[x] === 'w') this.waterAt.set(plotKey(x, y), id);
+    };
+    const blob = (cx: number, cy: number, rx: number, ry: number, id: Water, wobble = 0) => {
+      for (let y = Math.floor(cy - ry - 2); y <= cy + ry + 2; y++)
+        for (let x = Math.floor(cx - rx - 2); x <= cx + rx + 2; x++) {
+          const ang = Math.atan2(y - cy, x - cx);
+          const k = 1 + wobble * Math.sin(ang * 3 + cx) * 0.5;
+          if (((x - cx) / (rx * k)) ** 2 + ((y - cy) / (ry * k)) ** 2 < 1) water(x, y, id);
+        }
+    };
+    blob(24, 31, 13, 5.2, 'danau');
+    blob(34, 33.5, 7, 3.6, 'danau');
+    blob(13, 47, 8, 4, 'rawa', 0.35); // ragged swamp
+    blob(20, 50, 4, 2.6, 'rawa', 0.3);
+    blob(11, 62, 6, 4, 'telaga');
+    blob(34, 58, 11, 5, 'waduk');
+    blob(57, 64, 8, 5, 'muara', 0.2);
+    for (let y = 60; y <= 66; y++) for (let x = 60; x < MAP_W; x++) water(x, y, 'muara'); // the river mouth runs off the map
     for (let y = 1; y < MAP_H - 1; y++)
       for (let x = 1; x < MAP_W - 1; x++) {
         if (G[y][x] === 'w') continue;
@@ -248,6 +264,14 @@ export class FarmScene extends Phaser.Scene {
     rect(57, 18, 58, 21, 'p'); // to the Toko Mebel door
     rect(42, 7, 52, 14, 's'); // village plaza
     for (let y = 26; y <= 29; y++) set(24, y, 'k'); // dock
+    // the southern lakes: the forest road continues south, a long east-west road links them
+    rect(47, 30, 47, 69, 'p');
+    rect(3, 38, 47, 38, 'p');
+    rect(3, 39, 3, 69, 'p');
+    rect(3, 54, 47, 54, 'p');
+        rect(22, 64, 46, 64, 's'); // the waduk's dam
+    rect(18, 66, 47, 66, 'p');
+    rect(48, 63, 52, 63, 'k'); // a jetty into the muara
 
     // forest clearing with flowers
     const clearing = { x: 54, y: 32, r: 3.2 };
@@ -257,7 +281,8 @@ export class FarmScene extends Phaser.Scene {
         const t = G[y][x];
         const X = x * TILE, Y = y * TILE;
         if (t === 'w') {
-          this.waterImgs.push(this.add.image(X, Y, 'water0').setOrigin(0).setDepth(-9));
+          const lake = this.waterAt.get(plotKey(x, y)) ?? 'danau';
+          this.waterImgs.push(this.add.image(X, Y, 'water0').setOrigin(0).setDepth(-9).setTint(LAKES[lake].tint));
           if (y > 0 && G[y - 1][x] !== 'w' && G[y - 1][x] !== 'k') this.add.image(X, Y, 'shore').setOrigin(0).setDepth(-8.8);
           this.block(x, y, 'pond');
           continue;
@@ -290,6 +315,7 @@ export class FarmScene extends Phaser.Scene {
     for (let y = pond.y; y < pond.y + pond.h; y++)
       for (let x = pond.x; x < pond.x + pond.w; x++) {
         this.waterImgs.push(this.add.image(x * TILE, y * TILE, 'water0').setOrigin(0).setDepth(-9));
+        this.waterAt.set(plotKey(x, y), 'kolam');
         this.block(x, y, 'pond');
       }
     this.add.rectangle(pond.x * TILE, pond.y * TILE, pond.w * TILE, 2, 0x2f7fb8).setOrigin(0).setDepth(-8.9);
@@ -301,9 +327,16 @@ export class FarmScene extends Phaser.Scene {
       if (G[y][x] === 'w') this.add.image((x + 0.5) * TILE, (y + 0.5) * TILE, 'lily').setDepth(-8.5).setFlipX(x % 2 === 0);
     }
     for (let y = 22; y < MAP_H - 1; y++)
-      for (let x = 2; x < 44; x++)
+      for (let x = 2; x < MAP_W - 1; x++)
         if (G[y][x] === 'd' && (x * 7 + y * 13) % 5 === 0)
           this.add.image((x + 0.5) * TILE, (y + 1) * TILE, 'reeds').setOrigin(0.5, 1).setDepth((y + 1) * TILE - 2);
+
+    // a signpost with its name at every lake
+    for (const [id, x, y] of [['kolam', 28, 13], ['danau', 25, 24], ['rawa', 4, 44], ['telaga', 4, 61], ['waduk', 46, 56], ['muara', 46, 61]] as const) {
+      this.add.image((x + 0.5) * TILE, (y + 1) * TILE, 'signpost').setOrigin(0.5, 1).setDepth((y + 1) * TILE);
+      this.block(x, y, 'lakesign');
+      this.lakeSigns.set(plotKey(x, y), id);
+    }
 
     // farmhouse (4x4 tiles), door on bottom row
     this.building('house', 3, 2);
@@ -415,10 +448,17 @@ export class FarmScene extends Phaser.Scene {
       [8, 37, 0], [44, 30, 0], [42, 36, 1],
     ] as const)
       tree(x, y, f === 1);
-    for (let y = 24; y < MAP_H - 1; y++)
+    for (let y = 24; y < 52; y++)
       for (let x = 45; x < MAP_W - 1; x++) {
         if (Math.hypot(x - clearing.x, y - clearing.y) < clearing.r + 1) continue;
         if ((x + y) % 2 === 0 && r.frac() < 0.62) tree(x, y, r.frac() < 0.1);
+      }
+
+    // the south: woods between the lakes, thicker around the misty telaga
+    for (let y = 40; y < MAP_H - 1; y++)
+      for (let x = 1; x < MAP_W - 1; x++) {
+        const nearTelaga = Math.hypot(x - 11, y - 62) < 10;
+        if ((x * 3 + y) % 2 === 0 && r.frac() < (nearTelaga ? 0.4 : 0.14)) tree(x, y, r.frac() < 0.08);
       }
 
     // small decorations
@@ -549,6 +589,9 @@ export class FarmScene extends Phaser.Scene {
   private furnitureObjs = new Map<string, { img: Phaser.GameObjects.Image; ph: Phaser.GameObjects.Graphics; spot: Spot | null }[]>();
   /** World tile → furniture id, for furniture slots in the house and display stands in the shop. */
   private furnitureTiles = new Map<string, string>();
+  /** Which lake each water tile belongs to, and the signposts naming them. */
+  private waterAt = new Map<string, Water>();
+  private lakeSigns = new Map<string, Water>();
 
   /** Show bought furniture and dashed placeholders for the rest. */
   private refreshFurniture() {
@@ -642,7 +685,7 @@ export class FarmScene extends Phaser.Scene {
     const season = seasonOf(s.day);
     const wet = isWet(s.weather);
     const rare = FISH.filter((f) => f.weight <= 14 && (!f.seasons || f.seasons.includes(season)) && (f.rain !== 'only' || wet));
-    const list = rare.slice(0, 3).map((f) => `${f.name} (${f.where.includes('danau') ? 'danau' : 'kolam'} ${f.hours[0]}–${f.hours[1]})`).join(', ');
+    const list = rare.slice(0, 3).map((f) => `${f.name} (${LAKES[f.where[0]].name} ${f.hours[0]}–${f.hours[1]})`).join(', ');
     play('click');
     this.toast(`Radio Desa: hari ini muncul ${list || 'ikan biasa saja'}. Besok ${WEATHER_INFO[s.forecasts[0]].name.toLowerCase()}.`);
   }
@@ -1186,6 +1229,11 @@ export class FarmScene extends Phaser.Scene {
       if (s.level < FEATURE_LEVEL.coop) return this.fail(`Kandang ayam terbuka di Level ${FEATURE_LEVEL.coop}.`);
       return this.tendCoop();
     }
+    if (spot === 'lakesign') {
+      const lake = LAKES[this.lakeSigns.get(k) ?? 'danau'];
+      const n = FISH.filter((f) => f.where.includes(this.lakeSigns.get(k) ?? 'danau')).length;
+      return this.toast(`${lake.name}\n${lake.desc} (${n} jenis ikan)`);
+    }
     if (spot === 'pond') {
       if (s.tool === 'pancing') return this.startFishing(tx, ty);
       if (s.tool !== 'siram') return this.fail('Pakai Penyiram (2) untuk isi air, atau Pancing (5) untuk memancing.');
@@ -1360,14 +1408,14 @@ export class FarmScene extends Phaser.Scene {
     const s = this.state;
     if (s.stamina < STAMINA_COST.pancing) return this.fail('Terlalu lelah untuk memancing.');
     s.stamina -= STAMINA_COST.pancing;
-    const where = tx >= 25 && tx <= 27 && ty >= 11 && ty <= 14 ? 'kolam' : 'danau';
+    const where = this.waterAt.get(plotKey(tx, ty)) ?? 'danau';
     const bobber = this.add.image((tx + 0.5) * TILE, (ty + 0.5) * TILE, 'bobber').setDepth(9001);
     this.tweens.add({ targets: bobber, y: bobber.y + 1, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     const alert = this.add.image(this.player.x, this.player.y - 22, 'bubble').setDepth(9200).setVisible(false);
     this.swing();
     play('water');
     this.splash(tx, ty, 0x8fd0f5);
-    this.toast('Menunggu ikan menggigit...');
+    this.toast(`${LAKES[where].name} · menunggu ikan menggigit...`);
     const timer = this.time.delayedCall(Phaser.Math.Between(1500, 4500), () => this.bite());
     this.fishing = { stage: 'wait', where, bobber, alert, timer };
     this.changed();
