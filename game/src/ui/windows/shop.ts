@@ -7,6 +7,7 @@ import {
   ITEMS,
   MAX_CHICKENS,
   TOOLS,
+  seedIcon,
 } from '../../data';
 import { play } from '../../sfx';
 import { C, card, segmented, txt, well } from '../theme';
@@ -142,7 +143,7 @@ export function openShop(ui: UIScene) {
     card(g, cx, cy, cw, ch, locked ? 'locked' : 'normal', 16);
     well(g, cx + 40, cy + ch / 2, 26, locked);
     c.add(g);
-    const icon = ui.add.image(cx + 40, cy + ch / 2, `icon-${it.id}`).setScale(2.5);
+    const icon = ui.add.image(cx + 40, cy + ch / 2, shopTab === 'benih' ? seedIcon(it.id) : `icon-${it.id}`).setScale(2.5);
     if (locked) icon.setTint(0x9a9aa0).setAlpha(0.5);
     c.add(icon);
     const tx = cx + 78;

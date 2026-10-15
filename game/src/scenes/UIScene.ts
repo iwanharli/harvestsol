@@ -11,6 +11,7 @@ import {
   needsPurchase,
   unlocksAt,
   xpToNext,
+  seedIcon,
 } from '../data';
 import { play, setRain, unlockAudio } from '../sfx';
 import { startMusic } from '../music';
@@ -129,7 +130,7 @@ export class UIScene extends Phaser.Scene {
         else this.farm.setTool(i);
       });
       this.slots.push({ frame, label, icon });
-      if (t.id === 'benih') this.seedIcon = this.add.image(x + slotW - 12, y + 12, 'icon-kangkung').setScale(1);
+      if (t.id === 'benih') this.seedIcon = this.add.image(x + slotW - 12, y + 12, 'seed-kangkung').setScale(1);
     });
 
     this.toastBg = this.add.graphics().setDepth(199).setAlpha(0);
@@ -284,7 +285,7 @@ export class UIScene extends Phaser.Scene {
         icon.setTint(empty ? 0x8a8070 : 0xffffff).setAlpha(empty ? 0.45 : 1);
         label.setText(empty ? 'Kosong' : `${itemName(s.seed).replace('Pupuk Cepat', 'Pupuk')} ${s.seeds[s.seed]}`);
         this.seedIcon.setVisible(!empty);
-        if (!empty) this.seedIcon.setTexture(`icon-${s.seed}`);
+        if (!empty) this.seedIcon.setTexture(seedIcon(s.seed));
       }
     });
   }
