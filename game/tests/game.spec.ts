@@ -668,7 +668,7 @@ test('kulkas: klik barang menampilkan detail, lalu simpan', async ({ page }) => 
   await page.mouse.click(171, 155); // first bag slot: only selects
   await page.waitForTimeout(120);
   expect((await state(page)).fridge).toEqual({});
-  await page.mouse.click(716, 402); // "Simpan ke kulkas"
+  await page.mouse.click(716, 420); // "Simpan ke kulkas"
   await page.waitForTimeout(120);
   const s = await state(page);
   expect(s.fridge).toEqual({ kangkung: 3 });
@@ -764,7 +764,7 @@ test('peti lumbung: jendela dibuka dari rumah setelah dibeli', async ({ page }) 
   await page.waitForTimeout(150);
   await page.mouse.click(171, 148); // first bag slot
   await page.waitForTimeout(120);
-  await page.mouse.click(716, 403); // "Simpan ke peti"
+  await page.mouse.click(716, 420); // "Simpan ke peti"
   await page.waitForTimeout(120);
   const s = await state(page);
   expect(s.storage).toEqual({ kangkung: 4 });
