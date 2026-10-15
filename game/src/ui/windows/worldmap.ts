@@ -48,15 +48,15 @@ export function openWorldMap(ui: UIScene) {
   const indoors = !!ui.registry.get('indoors');
   if (tx >= MAP_W) [tx, ty] = tx >= 150 && tx < 200 ? [57, 18] : [4, 6];
   const { px, py } = at(tx, ty);
-  const ring = ui.add.circle(px, py, 9, HEX.blue, 0.25);
-  const dot = ui.add.circle(px, py, 4.5, HEX.blue).setStrokeStyle(2, 0xffffff);
+  const ring = ui.add.circle(px, py, 9, HEX.red, 0.3);
+  const dot = ui.add.circle(px, py, 4.5, HEX.red).setStrokeStyle(2, 0xffffff);
   c.add([ring, dot]);
   ui.tweens.add({ targets: ring, scale: 1.8, alpha: 0, duration: 1100, repeat: -1 });
 
   // right: legend and the list of lakes
   const lx = mx + mw + 30, lw = x + W - 24 - lx;
   let ly = y + 58;
-  c.add(ui.add.text(lx, ly, indoors ? 'Kamu di dalam ruangan' : 'Kamu di sini', txt(13, C.blue)));
+  c.add(ui.add.text(lx, ly, indoors ? 'Kamu di dalam ruangan' : 'Kamu di sini', txt(13, C.red)));
   ly += 30;
   c.add(ui.add.text(lx, ly, 'Perairan', txt(13)));
   ly += 22;
