@@ -1,6 +1,6 @@
 import { CROPS, DISHES, FISH, FRIDGE_STACK_MAX, ITEMS, STACK_MAX, baseId, cropById, dishById, isBought, produceById, seedIcon, starsOf } from '../../data';
 import { play } from '../../sfx';
-import { bagCapacity, bagFor, isSeedKey, moveFromStore, moveToStore, roomFor, save, slotsUsed, storeCap, storeOf, storeRoom, storeSlotsUsed, type Store } from '../../state';
+import { bagCapacity, bagFor, sortStore, isSeedKey, moveFromStore, moveToStore, roomFor, save, slotsUsed, storeCap, storeOf, storeRoom, storeSlotsUsed, type Store } from '../../state';
 import { C, HEX, bar as drawBar, card, segmented, txt, well } from '../theme';
 import type { UIScene } from '../../scenes/UIScene';
 
@@ -50,6 +50,14 @@ export function openStore(ui: UIScene, kind: Store) {
   const rec = storeOf(s, kind);
   const reopen = () => openStore(ui, kind);
   const { c, x, y } = ui.openModal(W, H, name);
+  ui.button(c, x + W - 130, y + 14, 'Rapikan', () => {
+    play('click');
+    sortStore(s, kind);
+    page = 0;
+    save(s);
+    ui.toast(`${name} dirapikan.`);
+    reopen();
+  }, 102, Object.keys(rec).length < 2, true);
   const segW = kind === 'kulkas' ? 132 : 160;
   c.add(
     segmented(ui, x + W / 2 - (segW * CATS.length + 4) / 2, y + 56, CATS.map((k) => k.name), cat, (i) => {

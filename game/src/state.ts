@@ -923,20 +923,33 @@ export function moveInBag(s: GameState, from: string, to?: string) {
 }
 
 /** Auto-tidy: crops, fish, animal products, dishes, then seeds and tools; best quality first. */
+/** Sort order for "Rapikan": produce before seeds, then by kind and catalogue order, best quality first. */
+function tidyRank(seed: boolean, id: string): number[] {
+  const b = baseId(id);
+  const lists: { id: string }[][] = seed ? [CROPS, ITEMS] : [CROPS, FISH, PRODUCTS, DISHES];
+  const group = lists.findIndex((l) => l.some((x) => x.id === b));
+  const pos = group < 0 ? 0 : lists[group].findIndex((x) => x.id === b);
+  return [seed ? 1 : 0, group < 0 ? 9 : group, pos, -starsOf(id)];
+}
+const byRank = (ra: number[], rb: number[]) => {
+  for (let i = 0; i < ra.length; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i];
+  return 0;
+};
+
 export function sortBag(s: GameState) {
-  const rank = (key: string): number[] => {
-    const [bag, id] = [key.slice(0, key.indexOf(':')), key.slice(key.indexOf(':') + 1)];
-    const b = baseId(id);
-    const lists: { id: string }[][] = bag === 'seeds' ? [CROPS, ITEMS] : [CROPS, FISH, PRODUCTS, DISHES];
-    const group = lists.findIndex((l) => l.some((x) => x.id === b));
-    const pos = group < 0 ? 0 : lists[group].findIndex((x) => x.id === b);
-    return [bag === 'seeds' ? 1 : 0, group < 0 ? 9 : group, pos, -starsOf(id)];
-  };
-  s.bagOrder = bagOrderKeys(s).sort((a, b) => {
-    const ra = rank(a), rb = rank(b);
-    for (let i = 0; i < ra.length; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i];
-    return 0;
-  });
+  const rank = (key: string) => tidyRank(key.startsWith('seeds:'), key.slice(key.indexOf(':') + 1));
+  s.bagOrder = bagOrderKeys(s).sort((a, b) => byRank(rank(a), rank(b)));
+}
+
+/** Tidy the kulkas or peti: the grid follows the record's key order, so rebuild it sorted. */
+export function sortStore(s: GameState, w: Store) {
+  const rec = storeOf(s, w);
+  const rank = (key: string) => (isSeedKey(key) ? tidyRank(true, key.slice(6)) : tidyRank(false, key));
+  const sorted = Object.keys(rec).sort((a, b) => byRank(rank(a), rank(b)));
+  const out: Record<string, number> = {};
+  for (const k of sorted) out[k] = rec[k];
+  if (w === 'kulkas') s.fridge = out;
+  else s.storage = out;
 }
 
 // ---------- mining ----------
