@@ -240,7 +240,7 @@ export class UIScene extends Phaser.Scene {
       this.xpLine.fillStyle(HEX.purple, 0.35).fillRect(0, 0, VIEW.w * frac, 6); // soft glow
       this.xpLine.fillStyle(HEX.purple, 1).fillRect(0, 0, VIEW.w * frac, 4);
     }
-    this.levelText.setText(`Lv ${s.level} · ${Math.floor(frac * 100)}%`);
+    this.levelText.setText(`Lv ${s.level} · ${(frac * 100).toFixed(2)}%`);
 
     // HUD bag: a row of mini slots plus one status line
     const W = VIEW.w;
