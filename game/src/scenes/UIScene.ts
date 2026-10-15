@@ -44,7 +44,7 @@ import { openFishBook } from '../ui/windows/fishbook';
 import { showReport, showWelcome, askSleep, askConfirm, type Confirm } from '../ui/windows/report';
 
 const INK = C.ink;
-const SLOT = 66, SLOT_GAP = 6, DOCK_PAD = 8;
+const SLOT = 54, SLOT_GAP = 6, DOCK_PAD = 7;
 
 /** Buttons that dismiss or postpone get the quiet secondary style. */
 const SECONDARY = new Set(['Tutup', 'Batal', 'Nanti', 'Belum']);
@@ -66,6 +66,8 @@ export class UIScene extends Phaser.Scene {
     count?: Phaser.GameObjects.Text;
   }[] = [];
   private dock!: Phaser.GameObjects.Graphics;
+  private toolPill!: Phaser.GameObjects.Graphics;
+  private toolName!: Phaser.GameObjects.Text;
   private seedIcon!: Phaser.GameObjects.Image;
   private toastText!: Phaser.GameObjects.Text;
   private toastTimer?: Phaser.Time.TimerEvent;
@@ -127,9 +129,9 @@ export class UIScene extends Phaser.Scene {
     TOOLS.forEach((t, i) => {
       const { x, y } = UIScene.slotPos(i);
       const frame = this.add.graphics();
-      const icon = this.add.image(x + SLOT / 2, y + 28, `tool-${t.id}`).setScale(2.5);
-      const key = this.add.text(x + 8, y + 5, t.key, txt(10, C.tertiary));
-      const label = this.add.text(x + SLOT / 2, y + SLOT - 7, t.name, txt(11, C.secondary)).setOrigin(0.5, 1);
+      const icon = this.add.image(x + SLOT / 2, y + SLOT / 2, `tool-${t.id}`).setScale(2.2);
+      const key = this.add.text(x + 6, y + 4, t.key, txt(9, C.tertiary));
+      const label = this.add.text(0, 0, '', txt(1)).setVisible(false); // the name shows in the pill above the dock
       const hit = this.add.zone(x, y, SLOT, SLOT).setOrigin(0).setInteractive({ useHandCursor: true });
       hit.on('pointerdown', () => {
         if (this.registry.get('modal')) return;
@@ -138,15 +140,18 @@ export class UIScene extends Phaser.Scene {
       });
       const slot: (typeof this.slots)[number] = { frame, label, icon, key };
       if (t.id === 'benih') {
-        this.seedIcon = this.add.image(x + SLOT - 14, y + 14, 'seed-kangkung').setScale(1);
-        slot.count = this.add.text(x + SLOT - 12, y + 42, '', txt(10, C.white)).setOrigin(0.5);
+        this.seedIcon = this.add.image(x + SLOT - 12, y + 12, 'seed-kangkung').setScale(0.9);
+        slot.count = this.add.text(0, 0, '', txt(9, C.white)).setOrigin(0.5);
       }
       this.slots.push(slot);
     });
 
+    this.toolPill = this.add.graphics();
+    this.toolName = this.add.text(0, 0, '', txt(12)).setOrigin(0.5);
+
     this.toastBg = this.add.graphics().setDepth(199).setAlpha(0);
     this.toastText = this.add
-      .text(W / 2, H - 100, '', { ...txt(14, C.white), align: 'center', wordWrap: { width: 640 } })
+      .text(W / 2, H - 128, '', { ...txt(14, C.white), align: 'center', wordWrap: { width: 640 } })
       .setOrigin(0.5, 1)
       .setAlpha(0)
       .setDepth(200);
@@ -281,46 +286,52 @@ export class UIScene extends Phaser.Scene {
     if (s.animals.length) status.push(`Pakan: ${s.feed}`);
     this.bagText.setText(status.join(' · '));
 
-    // the dock behind all tools
+    // the dock behind all tools: each tool sits in its own slot
     const first = UIScene.slotPos(0), last = UIScene.slotPos(TOOLS.length - 1);
+    const dockW = last.x + SLOT - first.x + DOCK_PAD * 2;
     this.dock.clear();
-    glass(this.dock, first.x - DOCK_PAD, first.y - DOCK_PAD, last.x + SLOT - first.x + DOCK_PAD * 2, SLOT + DOCK_PAD * 2, 24, { alpha: 0.62, shadow: 10 });
+    glass(this.dock, first.x - DOCK_PAD, first.y - DOCK_PAD, dockW, SLOT + DOCK_PAD * 2, 20, { alpha: 0.8, shadow: 10 });
 
+    let activeName = '';
     TOOLS.forEach((t, i) => {
-      const { frame, label, icon, key, count } = this.slots[i];
+      const { frame, icon, key, count } = this.slots[i];
       const locked = needsPurchase(t.id) && !s.ownedTools.includes(t.id);
       const on = s.tool === t.id;
-      const { x, y: y0 } = UIScene.slotPos(i);
-      const y = y0 - (on ? 6 : 0); // the active tool lifts up
+      const { x, y } = UIScene.slotPos(i);
       frame.clear();
       if (on) {
-        frame.fillStyle(HEX.blue, 0.22).fillRoundedRect(x - 3, y + 4, SLOT + 6, SLOT + 4, 20); // soft glow under it
-        glass(frame, x, y, SLOT, SLOT, 18, { alpha: 0.98, shadow: 12 });
-        frame.lineStyle(2.5, HEX.blue, 1).strokeRoundedRect(x, y, SLOT, SLOT, 18);
-        frame.fillStyle(HEX.blue, 1).fillCircle(x + SLOT / 2, y0 + SLOT + DOCK_PAD / 2 + 1, 2.5); // dot under the active tool
-      }
-      icon.setPosition(x + SLOT / 2, y + 28).setScale(on ? 2.8 : 2.4);
-      icon.setTint(locked ? 0x8a8070 : 0xffffff).setAlpha(locked ? 0.45 : 1);
-      key.setPosition(x + 8, y + 5).setColor(on ? C.blue : C.tertiary);
-      label.setPosition(x + SLOT / 2, y + SLOT - 7).setText(locked ? '🔒 Toko' : t.name);
-      label.setColor(on ? C.blue : locked ? C.tertiary : C.secondary);
+        frame.fillStyle(0xffffff, 1).fillRoundedRect(x, y, SLOT, SLOT, 14);
+        frame.lineStyle(2, HEX.blue, 1).strokeRoundedRect(x, y, SLOT, SLOT, 14);
+      } else frame.fillStyle(0x767680, 0.1).fillRoundedRect(x, y, SLOT, SLOT, 14);
+      icon.setScale(on ? 2.4 : 2.1);
+      icon.setTint(locked ? 0x8a8070 : 0xffffff).setAlpha(locked ? 0.4 : on ? 1 : 0.85);
+      key.setColor(on ? C.blue : C.tertiary);
+      let name = locked ? `${t.name} · beli di Toko` : t.name;
       if (t.id === 'benih' && count) {
         // an empty selection jumps to something still in the bag, or shows an empty sack
         if (!s.seeds[s.seed] && Object.keys(s.seeds).length) s.seed = Object.keys(s.seeds)[0];
         const empty = !s.seeds[s.seed];
-        icon.setTint(empty ? 0x8a8070 : 0xffffff).setAlpha(empty ? 0.45 : 1);
-        const name = empty ? 'Kosong' : itemName(s.seed).replace('Pupuk Cepat', 'Pupuk');
-        label.setText(name);
-        if (label.width > SLOT - 8) label.setText(name.split(' ')[0]);
-        this.seedIcon.setVisible(!empty).setPosition(x + SLOT - 14, y + 14);
+        icon.setTint(empty ? 0x8a8070 : 0xffffff).setAlpha(empty ? 0.4 : on ? 1 : 0.85);
+        name = empty ? 'Benih · kosong' : `${itemName(s.seed)} ×${s.seeds[s.seed]}`;
+        this.seedIcon.setVisible(!empty);
         if (!empty) this.seedIcon.setTexture(seedIcon(s.seed));
-        count.setVisible(!empty).setText(`${s.seeds[s.seed] ?? 0}`).setPosition(x + SLOT - 13, y + 40);
+        count.setVisible(!empty).setText(`${s.seeds[s.seed] ?? 0}`).setPosition(x + SLOT - 9, y + SLOT - 9);
         if (!empty) {
-          const w = Math.max(18, count.width + 8);
-          frame.fillStyle(on ? HEX.blue : 0x8e8e93, 1).fillRoundedRect(count.x - w / 2, count.y - 8, w, 16, 8);
+          const w = Math.max(16, count.width + 8);
+          frame.fillStyle(on ? HEX.blue : 0x8e8e93, 1).fillRoundedRect(count.x - w / 2, count.y - 7, w, 14, 7);
         }
       }
+      if (on) activeName = name;
     });
+
+    // the active tool's name, in a small pill above the dock
+    this.toolName.setText(activeName).setPosition(VIEW.w / 2, first.y - DOCK_PAD - 16);
+    this.toolPill.clear();
+    if (activeName) {
+      const w = this.toolName.width + 24;
+      glass(this.toolPill, VIEW.w / 2 - w / 2, this.toolName.y - 12, w, 24, 12, { alpha: 0.9, shadow: 4 });
+    }
+    this.toolName.setVisible(!!activeName);
   }
 
   /** Top-left corner of a toolbar slot (UI coordinates). */
@@ -366,7 +377,7 @@ export class UIScene extends Phaser.Scene {
   private placeToast() {
     const H = VIEW.h;
     const m = this.modalLayer ? this.modalBox : undefined;
-    if (!m) this.toastText.setY(H - 100);
+    if (!m) this.toastText.setY(H - 128); // above the tool name pill
     else if (m.bottom + 30 <= H) this.toastText.setY(m.bottom + 28);
     else this.toastText.setY(Math.max(26, m.top - 4));
   }
