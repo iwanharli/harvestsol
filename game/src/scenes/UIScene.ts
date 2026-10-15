@@ -123,7 +123,9 @@ export class UIScene extends Phaser.Scene {
     const mapBtn = this.panel(12, 104, 92, 30);
     mapBtn.fillStyle(0x34a853, 1).fillRoundedRect(22, 113, 12, 12, 3); // a tiny map glyph
     mapBtn.fillStyle(0x4a90d8, 1).fillRoundedRect(22, 119, 7, 6, { tl: 0, tr: 3, bl: 3, br: 0 });
-    this.add.text(42, 119, 'Peta · P', txt(12)).setOrigin(0, 0.5);
+    // no keyboard on a phone: drop the shortcut hint there
+    const hasTouch = this.sys.game.device.input.touch || new URLSearchParams(location.search).has('touch');
+    this.add.text(42, 119, hasTouch ? 'Peta' : 'Peta · P', txt(12)).setOrigin(0, 0.5);
     this.add.zone(12, 104, 92, 30).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
       if (this.registry.get('modal')) return;
       play('click');
