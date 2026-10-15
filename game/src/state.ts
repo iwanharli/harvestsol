@@ -986,7 +986,7 @@ export function genFloor(s: GameState, floor: number, rand = Math.random) {
   s.cave = { floor, deepest: Math.max(s.cave?.deepest ?? 0, floor), nodes, ladder: keys[Math.floor(rand() * keys.length)], ladderOpen: false };
 }
 
-/** Floors the lift can take you to: 1, then every 5th floor you have reached. */
+/** Floors the kerekan (rope-and-pulley basket) can lower you to: 1, then every 5th floor you have reached. */
 export const liftFloors = (s: GameState) => {
   const out = [1];
   for (let f = CAVE_LIFT_EVERY; f <= (s.cave?.deepest ?? 0); f += CAVE_LIFT_EVERY) out.push(f);

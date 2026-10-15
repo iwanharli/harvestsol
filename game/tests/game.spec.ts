@@ -922,7 +922,7 @@ test('peti hanya untuk hasil kebun, benih, pupuk, sprinkler; ikan/telur/masakan 
   noErrors(errors);
 });
 
-test('gua tambang: masuk, pecahkan batu, temukan tangga, turun, lift tiap 5 lantai', async ({ page }) => {
+test('gua tambang: masuk, pecahkan batu, temukan tangga, turun, kerekan tiap 5 lantai', async ({ page }) => {
   const errors = await start(page);
   await at(page, 56, 45, 'up'); // in front of the cave mouth
   await press(page, 'Space');
@@ -1024,7 +1024,7 @@ test('kulkas dan peti bisa dirapikan', async ({ page }) => {
   noErrors(errors);
 });
 
-test('lift gua: pilih lantai yang pernah dicapai', async ({ page }) => {
+test('kerekan gua: pilih lantai yang pernah dicapai', async ({ page }) => {
   const errors = await start(page);
   await patch(page, "s.ownedTools = ['beliung']; s.cave = { floor: 0, deepest: 12, nodes: {}, ladder: '', ladderOpen: false }");
   await at(page, 56, 45, 'up');
