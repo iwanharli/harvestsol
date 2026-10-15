@@ -78,7 +78,7 @@ Tiap jenis punya jam, musim, dan sebagian butuh hujan (misalnya Belut hanya saat
 | 30–39 | Gua Panas | Emas umum; tiap pukulan 6 tenaga |
 | 40–50 | Perut Bumi | Gelap, Batu Mulia (400 G); 7 tenaga per pukulan; peti harta sekali di lantai 50 (5.000 G, 3 Batu Mulia, 5 Bijih Emas) |
 
-Batu bijih makin keras setiap 15 lantai (Batu biasa tetap 1 pukulan). **Kerekan** (keranjang bertali dan katrol) di samping mulut gua menurunkanmu ke awal zona yang pernah dicapai: lantai 1, 10, 20, 30, 40. Hasil tambang bisa dijual atau nanti dipakai untuk upgrade alat; tidak masuk kulkas/peti dan tidak ikut festival. Tertidur di dalam gua dihitung tertidur di luar.
+Batu bijih makin keras setiap 15 lantai (Batu biasa tetap 1 pukulan). **Kerekan** (keranjang bertali dan katrol) di samping mulut gua menurunkanmu ke lantai terdalam yang pernah dicapai ("Lanjut"), atau ke awal zona yang pernah dicapai: lantai 1, 10, 20, 30, 40. Hasil tambang bisa dijual atau nanti dipakai untuk upgrade alat; tidak masuk kulkas/peti dan tidak ikut festival. Tertidur di dalam gua dihitung tertidur di luar.
 
 **Cuaca**: Cerah, Hujan, Badai, atau Kabut Asap (Kemarau), diundi dengan prakiraan 7 hari ke depan (lihat Kalender, K). Ikon cuaca dan jam ada di tengah atas layar. Hujan dan badai menyiram semua tanah yang dicangkul (tidak mengurangi kualitas) dan membuat Lele/Ikan Emas 2× lebih sering. Badai merusak sekitar 7% tanaman, ada kilat dan petir, dan warga tinggal di rumah. Ayam berteduh di kandang saat tidak cerah. Hari festival selalu cerah.
 

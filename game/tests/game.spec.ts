@@ -969,7 +969,7 @@ test('gua tambang: masuk, pecahkan batu, temukan tangga, turun, kerekan di awal 
     st.cave.deepest = 12;
     return { lift: m.liftFloors(st), shallowGold: d.oreWeights(1)['bijih-emas'], deepGold: d.oreWeights(45)['bijih-emas'] };
   });
-  expect(r.lift).toEqual([1, 10]);
+  expect(r.lift).toEqual([1, 10, 12]);
   expect(r.deepGold).toBeGreaterThan(r.shallowGold * 10);
   noErrors(errors);
 });
@@ -1111,5 +1111,17 @@ test('zona gua: makin dalam makin beda, dasar di lantai 50 dengan peti harta sek
   expect(r.again).toBe('Peti ini sudah kosong.');
   expect(r.chestAfter).toBe(false);
   expect(r.names).toEqual(['Gua Tanah', 'Gua Kapur', 'Gua Kristal', 'Gua Panas', 'Perut Bumi']);
+  noErrors(errors);
+});
+
+test('kerekan gua: lanjut dari lantai terdalam setelah keluar', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.ownedTools = ['beliung']; s.cave = { floor: 0, deepest: 7, nodes: {}, ladder: '', ladderOpen: false }");
+  await at(page, 56, 45, 'up');
+  await press(page, 'Space');
+  expect(await modalOpen(page)).toBe(true);
+  await page.mouse.click(429, 282); // "Lanjut 7"
+  await page.waitForTimeout(700);
+  expect((await state(page)).cave.floor).toBe(7);
   noErrors(errors);
 });
