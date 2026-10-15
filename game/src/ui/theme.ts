@@ -44,9 +44,12 @@ export const HEX = {
   hairline: 0x000000,
 };
 
+/** All UI text is drawn a bit smaller than its nominal size, so layouts keep their breathing room. */
+export const TEXT_SCALE = 0.88;
+
 export const txt = (size: number, color = C.ink, bold = true): Phaser.Types.GameObjects.Text.TextStyle => ({
   fontFamily: FONT,
-  fontSize: `${size}px`,
+  fontSize: `${Math.round(size * TEXT_SCALE * 2) / 2}px`,
   color,
   fontStyle: bold ? '600' : 'normal',
   resolution: 2,
