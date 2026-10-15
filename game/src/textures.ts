@@ -117,6 +117,28 @@ const LEGS = [
   ['.....PP...PP....', '....BB....BB....', '................'],
 ];
 
+/** Hand-drawn 16x16 fish, facing left. o outline, b body, l belly, d marking, e eye, w white, r red. */
+const FISH_ART: Record<string, string[]> = {
+  'ikan-nila': ['', '', '......o.o.o.....', '.....ododod.....', '....obbbbbbo....', '...obbdbdbdbo.oo', '..oebdbdbdbdbodo', '.obbbdbdbdbdbdo.', '.olbbdbdbdbdbdo.', '..olldldldldlodo', '...ollllllllo.oo', '....oooooooo....', '.....o....o.....'],
+  'ikan-mas': ['', '', '', '.....oooooo.....', '....obbbbbbo....', '...obdbdbdbbo.oo', '..oebbdbdbdbbodo', '.obbdbdbdbdbbdo.', 'oolbbdbdbdbdbdo.', '..olllllllllodo.', '...olllllllo.oo.', '....ooooooo.....', '......o...o.....'],
+  'ikan-betok': ['', '', '', '', '.....o.o.o.o....', '....obobobobo...', '...obbbbbbbbo.o.', '..oebbbbbbdeboo.', '..obbbbbbbbbbdo.', '...olllllllo.oo.', '....ooooooo.....', '......o.o.......'],
+  'ikan-lele': ['', '', '', '', '', '.......ooooooo..', '...ooobbbbbbboo.', 'd.obebbbbbbbbbdo', '.dobbbbbbbbbbbbo', 'd.ollllllllllldo', '.d.oooooooooo.oo', 'd...............'],
+  'ikan-gabus': ['', '', '', '', '....oooooooooo..', '...odddddddddo..', '.oobbdbbdbbdbboo', 'oebbdbbbdbbbdbdo', 'obbbbdbbbdbbbbdo', '.olllllllllllloo', '..oddddddddddo..', '...oooooooooo...'],
+  'ikan-patin': ['', '', '.......o........', '......odo.......', '.....oddo.....o.', '...ooobbbooo.odo', '.oobbbbbbbbbood.', 'oebbbbbbbbbbbo..', 'obllllllllllod..', '.ooollllllloood.', '....ooo.ooo..odo', '..............o.'],
+  'ikan-gurame': ['', '.....ooooo......', '....obbbbbo.....', '...obbdbbbbo....', '..obbbbdbbbbo...', '..obdbbbbdbbbo.o', '.obbbbdbbbbbbood', 'oebbdbbbbdbbbodo', 'obbbbbbdbbbbbod.', '.olllllllllllodo', '..olllllllllo.oo', '...olllllllo....', '....ooooooo.....', '....o...........', '...o............'],
+  'ikan-bawal': ['', '', '......ooooo.....', '....oobbbbbo....', '...obbbbbbbbo...', '..obbbbbbbbbbo.o', '.oebbbbbbbbbbodo', '.obbbbbbbbbbbod.', '.obrrrrrrrrrrod.', '..orrrrrrrrrrodo', '...orrrrrrrro..o', '....oorrrroo....', '......oooo......'],
+  'ikan-koi': ['', '', '', '......oooo......', '.....owwwwo.....', '...oowwrrwwwo..o', '..oewwrrrwwrrowo', '.owwwwrwwwrrrwwo', '.owwwwwwwwwwwowo', '..owwwwwwwwwwo.o', '...oowwwwwoo....', '....ow..ow......', '.....o...o......'],
+  'ikan-emas': ['', '', '', '......ooo.......', '.....obbbo......', '...oobbbbbo..oo.', '..oebbbbbbbooddo', '.obbbbbbbbbobddo', '.obllllbbbbobdo.', '..ollllbbbbobddo', '...oollllbooodo', '.....ooooo...oo.'],
+  'ikan-arwana': ['', '', '', '', '', '....ooooooooo...', '..oobbdbbdbbdo.o', '.oebbbbbbbbbbbod', 'obbbdbbdbbdbbdo.', '.olllllllllllodo', '..ooooooooooooo.', '.d..............', 'd...............'],
+};
+
+/** Darken a #rrggbb colour by factor k. */
+function shade(hex: string, k: number) {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (v: number) => Math.round(v * k).toString(16).padStart(2, '0');
+  return `#${ch(n >> 16)}${ch((n >> 8) & 255)}${ch(n & 255)}`;
+}
+
 export function makeTextures(scene: Phaser.Scene) {
   // ---------- ground ----------
   for (let v = 0; v < 4; v++) {
@@ -1130,6 +1152,16 @@ export function makeTextures(scene: Phaser.Scene) {
         px(c, 11, 1, dark, 1, 3);
         px(c, 3, 11, dark, 2, 2);
         px(c, 12, 6, '#2b2b2b');
+        return;
+      }
+      const art = FISH_ART[f.id];
+      if (art) {
+        const pal: Record<string, string> = { o: shade(dark, 0.55), b: body, l: light, d: dark, e: '#1b1b1b', w: '#fbf6ee', r: '#e2434b' };
+        art.forEach((row, y) => [...row].forEach((ch, x) => pal[ch] && px(c, x, y + 1, pal[ch])));
+        if (f.id === 'ikan-emas' || f.id === 'ikan-arwana') {
+          px(c, 6, 6, '#ffffff');
+          px(c, 10, 9, '#ffffff');
+        }
         return;
       }
       const long = f.shape === 'long';
