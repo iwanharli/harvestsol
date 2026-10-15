@@ -829,3 +829,30 @@ test('setiap perairan selalu punya ikan di siang hari, di musim apa pun', async 
   expect(empty).toEqual([]);
   noErrors(errors);
 });
+
+test('peta dunia: tombol P, gambar peta, dan posisi pemain', async ({ page }) => {
+  const errors = await start(page);
+  await at(page, 30, 40, 'down');
+  await press(page, 'p');
+  expect(await page.evaluate(() => window.game.scene.getScene('ui').modalKind)).toBe('worldmap');
+  const info = await page.evaluate(() => {
+    const ui = window.game.scene.getScene('ui');
+    const tex = ui.textures.get('minimap').getSourceImage() as HTMLCanvasElement;
+    // the player's dot: the blue circle with a white outline inside the modal
+    const layer = ui.modalLayer;
+    const all = layer.list as Phaser.GameObjects.GameObject[];
+    const texts = all.filter((o) => o.type === 'Text').map((o) => (o as Phaser.GameObjects.Text).text);
+    const dot = all.find((o) => o.type === 'Arc' && (o as Phaser.GameObjects.Arc).isStroked) as Phaser.GameObjects.Arc;
+    const img = all.find((o) => o.type === 'Image' && (o as Phaser.GameObjects.Image).texture.key === 'minimap') as Phaser.GameObjects.Image;
+    return { w: tex.width, h: tex.height, texts, dot: { x: dot.x, y: dot.y }, img: { x: img.x, y: img.y, w: img.displayWidth, h: img.displayHeight } };
+  });
+  expect(info.w).toBe(64 * 4);
+  expect(info.h).toBe(72 * 4);
+  for (const name of ['Danau Sirep', 'Rawa Gambut', 'Telaga Kabut', 'Waduk Kedung Lali', 'Muara Payau', 'Kamu di sini']) expect(info.texts).toContain(name);
+  // the dot sits where tile (30, 40) is on the map picture
+  expect(info.dot.x).toBeCloseTo(info.img.x + (30.5 / 64) * info.img.w, 0);
+  expect(info.dot.y).toBeCloseTo(info.img.y + (40.5 / 72) * info.img.h, 0);
+  await press(page, 'p'); // P again closes it
+  expect(await modalOpen(page)).toBe(false);
+  noErrors(errors);
+});
