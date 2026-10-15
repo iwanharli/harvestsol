@@ -227,7 +227,7 @@ export class UIScene extends Phaser.Scene {
   private refreshClock() {
     const s = this.state;
     const h = Math.floor(s.minutes / 60);
-    const mm = Math.floor((s.minutes % 60) / 10) * 10;
+    const mm = Math.floor(s.minutes % 60);
     this.timeText.setText(`${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
   }
 
