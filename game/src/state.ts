@@ -767,28 +767,34 @@ export const storeSlotsUsed = (s: GameState, w: Store) =>
   Object.values(storeOf(s, w)).reduce((a, q) => a + Math.ceil(q / FRIDGE_STACK_MAX), 0);
 export const fridgeSlotsUsed = (s: GameState) => storeSlotsUsed(s, 'kulkas');
 
-/** Move a whole stack from the bag into the kulkas or peti; returns an error message or null. */
-export function moveToStore(s: GameState, w: Store, key: string): string | null {
-  const q = s.produce[key] ?? 0;
-  if (!q) return null;
-  const rec = storeOf(s, w);
-  const cur = rec[key] ?? 0;
-  const need = Math.ceil((cur + q) / FRIDGE_STACK_MAX) - Math.ceil(cur / FRIDGE_STACK_MAX);
-  if (storeSlotsUsed(s, w) + need > storeCap(w)) return w === 'kulkas' ? 'Kulkas penuh.' : 'Peti penuh.';
+/** How many more of an item fit in the kulkas or peti. */
+export function storeRoom(s: GameState, w: Store, key: string) {
+  const cur = storeOf(s, w)[key] ?? 0;
+  const partial = cur % FRIDGE_STACK_MAX ? FRIDGE_STACK_MAX - (cur % FRIDGE_STACK_MAX) : 0;
+  return partial + Math.max(0, storeCap(w) - storeSlotsUsed(s, w)) * FRIDGE_STACK_MAX;
+}
+
+/** Move n of an item (all of it when n is left out) from the bag into the kulkas or peti; returns an error or null. */
+export function moveToStore(s: GameState, w: Store, key: string, n?: number): string | null {
+  const q = Math.min(n ?? Infinity, s.produce[key] ?? 0);
+  if (q <= 0) return null;
+  if (q > storeRoom(s, w, key)) return w === 'kulkas' ? 'Kulkas penuh.' : 'Peti penuh.';
   add(s.produce, key, -q);
-  add(rec, key, q);
+  add(storeOf(s, w), key, q);
   return null;
 }
 
-/** Take as much of a stored stack as fits back into the bag. */
-export function moveFromStore(s: GameState, w: Store, key: string): string | null {
+/** Take n of a stored item (as much as fits when n is left out) back into the bag. */
+export function moveFromStore(s: GameState, w: Store, key: string, n?: number): string | null {
   const rec = storeOf(s, w);
-  const q = rec[key] ?? 0;
-  if (!q) return null;
-  const n = Math.min(q, roomFor(s, 'produce', key));
-  if (!n) return 'Tas penuh.';
-  add(rec, key, -n);
-  add(s.produce, key, n);
+  const q = Math.min(n ?? Infinity, rec[key] ?? 0);
+  if (q <= 0) return null;
+  const room = roomFor(s, 'produce', key);
+  if (!room) return 'Tas penuh.';
+  if (n !== undefined && q > room) return `Tas hanya muat ${room} lagi.`;
+  const m = Math.min(q, room);
+  add(rec, key, -m);
+  add(s.produce, key, m);
   return null;
 }
 
