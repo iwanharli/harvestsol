@@ -35,6 +35,7 @@ import { openKitchen } from '../ui/windows/house';
 import { openWardrobe } from '../ui/windows/wardrobe';
 import { openMebel } from '../ui/windows/mebel';
 import { openFridge, openStorage } from '../ui/windows/fridge';
+import { openWorldMap } from '../ui/windows/worldmap';
 import { openMarket } from '../ui/windows/market';
 import { openShipping } from '../ui/windows/shipping';
 import { openBoard } from '../ui/windows/board';
@@ -112,6 +113,17 @@ export class UIScene extends Phaser.Scene {
     this.buildClock();
 
     // top-right: bag
+    // map button under the stats panel
+    const mapBtn = this.panel(12, 104, 92, 30);
+    mapBtn.fillStyle(0x34a853, 1).fillRoundedRect(22, 113, 12, 12, 3); // a tiny map glyph
+    mapBtn.fillStyle(0x4a90d8, 1).fillRoundedRect(22, 119, 7, 6, { tl: 0, tr: 3, bl: 3, br: 0 });
+    this.add.text(42, 119, 'Peta · P', txt(12)).setOrigin(0, 0.5);
+    this.add.zone(12, 104, 92, 30).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      if (this.registry.get('modal')) return;
+      play('click');
+      openWorldMap(this);
+    });
+
     this.panel(W - 232, 12, 220, 112);
     this.bagTitle = this.add.text(W - 216, 22, 'Tas', txt(16));
     this.coinText = this.add.text(W - 28, 22, '', txt(16, C.orange)).setOrigin(1, 0);
@@ -170,6 +182,7 @@ export class UIScene extends Phaser.Scene {
       ['open-wardrobe', () => openWardrobe(this)],
       ['open-mebel', (id?: string) => openMebel(this, id)],
       ['open-fridge', () => openFridge(this)],
+      ['open-map', () => openWorldMap(this)],
       ['open-storage', () => openStorage(this)],
       ['open-market', () => openMarket(this)],
       ['open-shipping', () => openShipping(this)],
@@ -191,6 +204,10 @@ export class UIScene extends Phaser.Scene {
     this.input.keyboard!.on('keydown-K', () => {
       if (this.modalLayer && this.modalKind === 'calendar') return this.closeModal();
       if (!this.registry.get('modal')) openCalendar(this);
+    });
+    this.input.keyboard!.on('keydown-P', () => {
+      if (this.modalLayer && this.modalKind === 'worldmap') return this.closeModal();
+      if (!this.registry.get('modal')) openWorldMap(this);
     });
     this.input.keyboard!.on('keydown-I', () => {
       if (this.modalLayer && this.modalKind === 'inventory') return this.closeModal();

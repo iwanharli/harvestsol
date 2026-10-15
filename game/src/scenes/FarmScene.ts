@@ -66,6 +66,7 @@ import {
 import { play, toggleMute, unlockAudio } from '../sfx';
 import { duck, setMood, startMusic, toggleMusic } from '../music';
 import { UI_SCALE, VIEW } from '../ui/theme';
+import { MAP_PX } from '../ui/windows/worldmap';
 
 type Dir = 'down' | 'up' | 'left' | 'right';
 const DIR_VEC: Record<Dir, [number, number]> = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] };
@@ -432,6 +433,7 @@ export class FarmScene extends Phaser.Scene {
       this.shadow((x + 0.5) * TILE, (y + 1) * TILE - 2, 26);
       this.add.image((x + 0.5) * TILE, (y + 1) * TILE, fruit ? 'tree-fruit' : 'tree').setOrigin(0.5, 1).setDepth((y + 1) * TILE);
       this.block(x, y);
+      this.treeTiles.add(plotKey(x, y));
     };
     for (let x = 0; x < MAP_W; x += 2) {
       tree(x, 0);
@@ -465,6 +467,33 @@ export class FarmScene extends Phaser.Scene {
     for (const [x, y] of [[2, 8], [3, 11], [6, 13], [22, 5], [2, 5], [34, 6], [58, 7], [39, 19], [27, 20], [9, 21], [46, 24]]) this.deco('bush', x, y);
     for (const [x, y] of [[6, 10], [19, 2], [11, 25], [38, 27], [50, 27], [61, 10]]) this.deco('rock', x, y);
     for (const [x, y] of [[12, 5], [21, 18], [52, 34], [56, 30]]) this.deco('stump', x, y);
+    this.paintMinimap(G);
+  }
+
+  /** A small picture of the whole world (MAP_PX per tile) for the map window. */
+  private paintMinimap(G: string[][]) {
+    if (this.textures.exists('minimap')) this.textures.remove('minimap');
+    const tex = this.textures.createCanvas('minimap', MAP_W * MAP_PX, MAP_H * MAP_PX)!;
+    const ctx = tex.getContext();
+    const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
+    const tint = (base: number, t: number) => {
+      const ch = (sh: number) => Math.round((((base >> sh) & 255) * ((t >> sh) & 255)) / 255);
+      return hex((ch(16) << 16) | (ch(8) << 8) | ch(0));
+    };
+    const ground: Record<string, string> = { g: '#6fae4c', p: '#d8b67e', s: '#b9b4a8', d: '#ead39a', k: '#8d5a34' };
+    for (let y = 0; y < MAP_H; y++)
+      for (let x = 0; x < MAP_W; x++) {
+        const k = plotKey(x, y);
+        const lake = this.waterAt.get(k);
+        let col = ground[G[y][x]] ?? ground.g;
+        if (G[y][x] === 'w' || (lake && this.blocked.has(k) && this.spots.get(k) === 'pond')) col = tint(0x4a90d8, LAKES[lake ?? 'danau'].tint);
+        else if (this.treeTiles.has(k)) col = '#2f6b34';
+        else if (this.blocked.has(k)) col = '#a5623e'; // buildings and props
+        if (x >= FIELD.x && x < FIELD.x + FIELD.w && y >= FIELD.y && y < FIELD.y + FIELD.h && col === ground.g) col = '#5b9440';
+        ctx.fillStyle = col;
+        ctx.fillRect(x * MAP_PX, y * MAP_PX, MAP_PX, MAP_PX);
+      }
+    tex.refresh();
   }
 
   // ---------- farmhouse interior ----------
@@ -592,6 +621,7 @@ export class FarmScene extends Phaser.Scene {
   /** Which lake each water tile belongs to, and the signposts naming them. */
   private waterAt = new Map<string, Water>();
   private lakeSigns = new Map<string, Water>();
+  private treeTiles = new Set<string>();
 
   /** Show bought furniture and dashed placeholders for the rest. */
   private refreshFurniture() {

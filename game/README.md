@@ -31,6 +31,7 @@ Buka `?reset` di URL untuk menghapus save lokal. Kontrol sentuh (joystick + tomb
 | Buka tas (inventory) | I | Klik panel Tas kanan atas |
 | Kalender & prakiraan cuaca 7 hari | K | Klik jam di tengah atas |
 | Buku Ikan | J | - |
+| Peta | P (atau tombol Peta di kiri atas) | - |
 | Semua suara nyala/mati | M | - |
 | Musik nyala/mati | N | - |
 | Tutup jendela | Esc | Tombol di jendela |
