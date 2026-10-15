@@ -341,6 +341,7 @@ export function makeTextures(scene: Phaser.Scene) {
     'house-rani': { roof: ['#4f9a4a', '#6cbf62', '#3a7a36', '#2f652c'], wall: ['#f4ead2', '#e2d6b6', '#cdbf99'] },
     'house-joyo': { roof: ['#7a5a3a', '#9c7a52', '#5f452c', '#4c3723'], wall: ['#e6d8bc', '#d4c3a2', '#bfac88'] },
     'house-mebel': { roof: ['#2f8f8a', '#4fb3ad', '#21706b', '#1a5a56'], wall: ['#f4ead2', '#e2d6b6', '#cdbf99'] },
+    'house-bengkel': { roof: ['#4a4a52', '#6a6a74', '#36363c', '#26262c'], wall: ['#c8b8a0', '#b4a48a', '#9c8c74'] },
     'house-dina': { roof: ['#b05a8f', '#d07ab0', '#8a4570', '#71385c'], wall: ['#fbeee2', '#ebdac8', '#d6c2ac'] },
   };
   for (const [key, { roof, wall }] of Object.entries(houses)) {
@@ -1279,6 +1280,14 @@ export function makeTextures(scene: Phaser.Scene) {
     px(c, 3, 4, '#f2c94c', 1, 11);
     px(c, 12, 4, '#f2c94c', 1, 11);
     px(c, 7, 8, '#fff3a8', 2, 3); // lock
+  }, true);
+  canvas(scene, 'anvil', TILE, TILE, (c) => {
+    px(c, 2, 5, '#3a3a42', 12, 3); // the anvil's face and horn
+    px(c, 0, 6, '#3a3a42', 3, 1);
+    px(c, 3, 5, '#6a6a74', 10, 1);
+    px(c, 5, 8, '#2a2a30', 6, 3);
+    px(c, 3, 11, '#5a3a22', 10, 4); // wooden stump
+    px(c, 4, 11, '#8d5a34', 8, 1);
   }, true);
   canvas(scene, 'cave-wall', TILE, TILE, (c) => {
     px(c, 0, 0, '#3e3a34', 16, 16);

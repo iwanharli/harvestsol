@@ -407,8 +407,9 @@ export function fishAvailable(where: Water, season: Season, hour: number, rainy:
   );
 }
 
-export function rollFish(where: Water, season: Season, hour: number, rainy: boolean, rand = Math.random): string {
-  const pool = fishAvailable(where, season, hour, rainy).map((f) => [f.id, f.rain && rainy ? f.weight * 2 : f.weight] as const);
+export function rollFish(where: Water, season: Season, hour: number, rainy: boolean, rand = Math.random, rareBoost = 1): string {
+  // rare fish (weight 6 or less) get a boost from the Emas rod
+  const pool = fishAvailable(where, season, hour, rainy).map((f) => [f.id, (f.rain && rainy ? f.weight * 2 : f.weight) * (f.weight <= 6 ? rareBoost : 1)] as const);
   if (!pool.length) return FISH.find((f) => f.where.includes(where))?.id ?? 'ikan-nila';
   let n = rand() * pool.reduce((a, [, w]) => a + w, 0);
   for (const [id, w] of pool) if ((n -= w) < 0) return id;
@@ -547,3 +548,31 @@ export const MARKET_ITEMS: { id: string; price: number }[] = (() => {
     }
   return ids.map((id) => ({ id, price: Math.ceil(price[id] / 5) * 5 }));
 })();
+
+// ---------- Bengkel Pandai Besi (tool upgrades) ----------
+
+/** Tools go up one tier at a time: Biasa → Tembaga → Besi → Emas. */
+export const TOOL_TIERS = ['Biasa', 'Tembaga', 'Besi', 'Emas'];
+export const TIER_COLORS = [0x000000, 0xd0803e, 0xb8c4d0, 0xf2c94c];
+export const UPGRADABLE: Tool[] = ['siram', 'cangkul', 'pancing', 'beliung'];
+/** Cost of reaching tier 1..3: coins, ore, days at the forge, and the level it unlocks at. */
+export const UPGRADE_COST: { coins: number; ore: string; qty: number; days: number; level: number }[] = [
+  { coins: 0, ore: '', qty: 0, days: 0, level: 0 },
+  { coins: 2000, ore: 'bijih-tembaga', qty: 5, days: 1, level: 3 },
+  { coins: 5000, ore: 'bijih-besi', qty: 5, days: 2, level: 6 },
+  { coins: 12000, ore: 'bijih-emas', qty: 5, days: 2, level: 9 },
+];
+/** What each tier does, per tool (shown in the forge). */
+export const TIER_EFFECTS: Partial<Record<Tool, string[]>> = {
+  siram: ['Isi 20, 1 petak', 'Isi 40, 1 petak', 'Isi 70, 3 petak berjajar', 'Isi 100, area 3×3'],
+  cangkul: ['1 petak', '2 petak berjajar', '3 petak berjajar', 'Area 3×3'],
+  pancing: ['Waktu tarik 0,85 dtk', 'Waktu tarik 1,1 dtk, ikan lebih cepat', 'Waktu tarik 1,4 dtk, ikan lebih cepat', 'Waktu tarik 1,7 dtk, ikan langka ×1,5'],
+  beliung: ['1 kerusakan per pukulan', '2 kerusakan', '3 kerusakan', '4 kerusakan'],
+};
+export const WATER_BY_TIER = [20, 40, 70, 100];
+export const BITE_WINDOW_MS = [850, 1100, 1400, 1700];
+/** Tiles a hoe or watering can reaches at a tier: a line ahead of you, or a 3×3 around the facing tile. */
+export const AREA_BY_TIER: Partial<Record<Tool, ('line1' | 'line2' | 'line3' | 'square')[]>> = {
+  siram: ['line1', 'line1', 'line3', 'square'],
+  cangkul: ['line1', 'line2', 'line3', 'square'],
+};

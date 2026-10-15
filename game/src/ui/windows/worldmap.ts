@@ -13,6 +13,7 @@ const PLACES: { name: string; x: number; y: number; lake?: Water }[] = [
   { name: 'Toko Mebel', x: 58, y: 16 },
   { name: 'Hutan', x: 55, y: 33 },
   { name: 'Gua Tambang', x: 56, y: 47 },
+  { name: 'Bengkel', x: 50, y: 33 },
   { name: 'Kolam', x: 26, y: 12, lake: 'kolam' },
   { name: 'Danau Sirep', x: 24, y: 31, lake: 'danau' },
   { name: 'Rawa Gambut', x: 13, y: 47, lake: 'rawa' },
