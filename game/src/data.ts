@@ -179,6 +179,9 @@ export const QUALITY_MULT = [1, 1, 1.2, 1.4, 1.7, 2.2]; // indexed by stars
 export const baseId = (key: string) => key.split('@')[0];
 export const starsOf = (key: string) => Number(key.split('@')[1] ?? 1);
 export const qualityKey = (id: string, stars: number) => (stars > 1 ? `${id}@${stars}` : id);
+/** Bought at the Warung Bahan: standard (1-star) value, but marked so it cannot enter festivals. */
+export const boughtKey = (id: string) => `${id}@0`;
+export const isBought = (key: string) => key.endsWith('@0');
 export const stars = (n: number) => '★'.repeat(n);
 
 /** Name and price of anything that can sit in the produce bag (crops, quality crops, products, dishes). */

@@ -1,4 +1,4 @@
-import { MARKET_ITEMS, produceById } from '../../data';
+import { MARKET_ITEMS, boughtKey, produceById } from '../../data';
 import { play } from '../../sfx';
 import { add, countBase, roomFor, save } from '../../state';
 import { C, HEX, card, txt, well } from '../theme';
@@ -102,7 +102,7 @@ export function openMarket(ui: UIScene) {
       return ui.toast(reason);
     }
     s.coins -= total;
-    add(s.produce, item.id, qty);
+    add(s.produce, boughtKey(item.id), qty);
     play('coin');
     save(s);
     ui.refresh();

@@ -1,4 +1,10 @@
-import { baseId, FESTIVAL_MAX_ITEMS, FESTIVAL_THEME_MULT, FESTIVAL_VARIETY_BONUS } from '../../data';
+import {
+  baseId,
+  FESTIVAL_MAX_ITEMS,
+  FESTIVAL_THEME_MULT,
+  FESTIVAL_VARIETY_BONUS,
+  isBought,
+} from '../../data';
 import { play } from '../../sfx';
 import { C, card, txt } from '../theme';
 import { enterFestival, festivalScore, festivalTheme, type FestivalResult, save } from '../../state';
@@ -45,9 +51,13 @@ export function openFestival(ui: UIScene) {
 
   // produce to choose from
   c.add(ui.add.text(x + 32, y + 184, 'Tas kamu (klik untuk menambah):', txt(13)));
+  // only your own harvest can compete: items bought at the warung are left out
   const avail = Object.entries(s.produce)
+    .filter(([id]) => !isBought(id))
     .map(([id, q]) => [id, q - festivalPick.filter((p) => p === id).length] as const)
     .filter(([, q]) => q > 0);
+  if (Object.keys(s.produce).some(isBought))
+    c.add(ui.add.text(x + W - 32, y + 184, 'Bahan dari warung tidak bisa ikut lomba', txt(11, C.tertiary, false)).setOrigin(1, 0));
   if (!avail.length && !festivalPick.length)
     c.add(ui.add.text(x + W / 2, y + 240, 'Belum ada hasil panen. Panen dulu, lalu kembali sebelum 18:00.', txt(14, INK, false)).setOrigin(0.5, 0));
   avail.forEach(([id, q], i) => {

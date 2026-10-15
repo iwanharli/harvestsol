@@ -13,6 +13,7 @@ import {
   npcById,
   produceById,
   seedIcon,
+  isBought,
 } from '../../data';
 import { play } from '../../sfx';
 import { C, HEX, bar as drawBar, card, segmented, txt, well } from '../theme';
@@ -130,6 +131,12 @@ export function openInventory(ui: UIScene) {
     const qg = ui.add.graphics();
     qg.fillStyle(0x767680, 0.14).fillRoundedRect(q.x - q.width - 4, q.y - q.height - 1, q.width + 8, q.height + 2, (q.height + 2) / 2);
     c.add([qg, q]);
+    if (cl.bag === 'produce' && isBought(cl.id)) {
+      const st = ui.add.text(sx + 6, sy + 5, 'beli', txt(8, C.secondary));
+      const sg = ui.add.graphics();
+      sg.fillStyle(0x767680, 0.16).fillRoundedRect(st.x - 3, st.y - 1, st.width + 6, st.height + 2, (st.height + 2) / 2);
+      c.add([sg, st]);
+    }
     if (cl.bag === 'produce' && starsOf(cl.id) > 1) {
       const st = ui.add.text(sx + 6, sy + 5, `★${starsOf(cl.id)}`, txt(9, '#a86f00'));
       const sg = ui.add.graphics();
@@ -301,6 +308,7 @@ export function describe(ui: UIScene, bag: 'produce' | 'seeds' | 'other', id: st
     if (want.length) lines.push(`Diminta: ${want.map((r) => `${npcById(r.npc).name} (${r.qty})`).join(', ')}`);
     if (isFestivalDay(s.day) && festivalTheme(s.day).id === baseId(id)) lines.push('Tema festival hari ini ×2!');
     if (starsOf(id) > 1) lines.splice(1, 0, `Kualitas: ${'★'.repeat(starsOf(id))}`);
+    if (isBought(id)) lines.push('Asal: Warung · tidak bisa ikut festival');
     return { name: p.name, icon: `icon-${baseId(id)}`, lines };
   }
   const item = ITEMS.find((i) => i.id === id);
