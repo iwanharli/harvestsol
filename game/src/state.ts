@@ -43,6 +43,7 @@ import {
   STACK_MAX,
   FRIDGE_STACK_MAX,
   STORAGE_SLOTS,
+  PASS_OUT_FINE,
   ORES,
   QUARRY,
   MINE_NODES,
@@ -290,11 +291,20 @@ export interface DayReport {
   eggs: number;
   hungry: number;
   stormDamage: number;
+  passedOut?: 'rumah' | 'luar'; // fell asleep at 02:00, in the house or outside
+  fine?: number; // coins paid to the villager who carried you home
 }
 
 /** Advance to the next morning: sell shipped goods, grow watered crops, reset daily resources. */
-export function endDay(s: GameState, passedOut: boolean): DayReport {
+export function endDay(s: GameState, passedOut: boolean, outside = false): DayReport {
   const report: DayReport = { income: 0, sold: [], grown: 0, withered: 0, sprinkled: 0, eggs: 0, hungry: 0, stormDamage: 0 };
+  if (passedOut) {
+    report.passedOut = outside ? 'luar' : 'rumah';
+    if (outside) {
+      report.fine = Math.min(PASS_OUT_FINE.max, Math.floor(s.coins * PASS_OUT_FINE.rate));
+      s.coins -= report.fine;
+    }
+  }
   for (const [id, qty] of Object.entries(s.shipping)) {
     const c = produceById(id);
     const total = c.sellPrice * qty;

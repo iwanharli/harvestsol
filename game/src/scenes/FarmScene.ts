@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {
   DAY_END_MIN,
+  LATE_WARNINGS,
   FIELD,
   GAME_MIN_PER_SEC,
   MAP_H,
@@ -1119,8 +1120,13 @@ export class FarmScene extends Phaser.Scene {
 
     // clock
     this.state.minutes += dt * GAME_MIN_PER_SEC;
+    for (const [at, msg] of LATE_WARNINGS)
+      if (this.state.minutes >= at && this.lateWarned < at) {
+        this.lateWarned = at;
+        if (this.state.minutes < at + 30) this.toast(msg); // not when a save loads already past it
+      }
     if (this.state.minutes >= DAY_END_MIN) {
-      this.game.events.emit('toast', 'Kamu pingsan karena kelelahan...');
+      this.toast(this.indoors ? 'Sudah jam 2 pagi. Kamu tertidur di lantai...' : 'Sudah jam 2 pagi. Kamu tertidur di jalan...');
       this.sleep(true);
       return;
     }
@@ -1723,6 +1729,9 @@ export class FarmScene extends Phaser.Scene {
     save(this.state);
   }
 
+  /** The last late-night warning shown today (minutes), so each shows once. */
+  private lateWarned = 0;
+
   sleep(passedOut = false) {
     if (this.busy) return;
     if (this.fishing) {
@@ -1738,7 +1747,8 @@ export class FarmScene extends Phaser.Scene {
     duck(2200);
     cam.fadeOut(500, 10, 10, 30);
     cam.once('camerafadeoutcomplete', () => {
-      const report = endDay(this.state, passedOut === true);
+      const report = endDay(this.state, passedOut === true, passedOut === true && !this.indoors);
+      this.lateWarned = 0;
       const home = HOUSE_ROOMS[this.state.houseTier] ?? ROOM;
       this.player.setPosition((home.x + 2.5) * TILE, (home.y + 4) * TILE - 2); // wake up beside the bed
       this.dir = 'down';

@@ -955,3 +955,33 @@ test('tambang: beliung harus dibeli, batu pecah jadi bijih, muncul lagi besok', 
   }
   noErrors(errors);
 });
+
+test('larut malam: peringatan, jam merah, tertidur jam 02:00 di luar kena biaya', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, 's.minutes = 22 * 60 - 0.5; s.coins = 3000');
+  await page.waitForTimeout(800);
+  expect((await toasts(page)).join()).toContain('jam 10 malam');
+
+  // past midnight the clock reads 00:xx/01:xx, night fish still bite, and it turns red
+  await patch(page, 's.minutes = 25 * 60 + 29');
+  await page.waitForTimeout(300);
+  const clock = await page.evaluate(() => {
+    const t = window.game.scene.getScene('ui').timeText;
+    return { text: t.text, color: t.style.color };
+  });
+  expect(clock.text).toMatch(/^01:(29|30)$/);
+  expect(clock.color).toBe('#ff3b30');
+  const night = await page.evaluate(async () => (await import('/src/data.ts')).fishAvailable('telaga', 'Tanam', 25, false).map((f) => f.id));
+  expect(night).toContain('ikan-sidat');
+
+  await page.waitForTimeout(800);
+  expect((await toasts(page)).join()).toContain('30 menit lagi');
+
+  await patch(page, 's.minutes = 26 * 60 - 0.5');
+  await page.waitForFunction(() => window.game.registry.get('state').day === 2, null, { timeout: 5000 });
+  await page.waitForTimeout(800);
+  const s = await state(page);
+  expect(s.coins).toBe(2700); // 10% fee for being carried home
+  expect(s.stamina).toBe(60);
+  noErrors(errors);
+});
