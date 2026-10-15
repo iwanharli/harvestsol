@@ -8,6 +8,11 @@ import {
   QUARRY,
   CAVE_ROOM,
   caveTint,
+  zoneOf,
+  zoneIndex,
+  mineCost,
+  CAVE_BOTTOM,
+  CAVE_TREASURE,
   LAKES,
   type Water,
   FISH,
@@ -66,6 +71,7 @@ import {
   save,
   mineHit,
   genFloor,
+  openCaveTreasure,
   liftFloors,
   seasonOf,
   type GameState,
@@ -80,9 +86,18 @@ const DIR_VEC: Record<Dir, [number, number]> = { down: [0, 1], up: [0, -1], left
 const SPEED = 62; // world px per second
 
 type Spot =
-  | 'door' | 'shop' | 'bin' | 'pond' | 'lakesign' | 'minesign' | 'ore' | 'cave' | 'descend' | 'board' | 'coop' | 'stage' | 'house'
+  | 'door' | 'shop' | 'bin' | 'pond' | 'lakesign' | 'minesign' | 'ore' | 'cave' | 'descend' | 'pillar' | 'treasure' | 'board' | 'coop' | 'stage' | 'house'
   | 'bed' | 'stove' | 'tv' | 'shelf' | 'wardrobe' | 'fridge' | 'storage' | 'radio' | 'trophy' | 'slot'
   | 'mebel' | 'counter' | 'display' | 'sofa';
+
+/** Shown the first time you reach each zone. */
+const ZONE_HINTS = [
+  '',
+  'Stalaktit menghalangi jalan, Besi lebih banyak.',
+  'Ada Kristal Kuarsa. Tangga hanya tersembunyi di batu bijih.',
+  'Udara panas: tiap pukulan butuh 6 tenaga. Bawa masakan!',
+  'Gelap dan berat (7 tenaga per pukulan). Ada Batu Mulia, dan dasar gua di lantai 50.',
+];
 
 /** The farmhouse interior lives in empty world space east of the map (tiles), so all systems just work inside. */
 const ROOM = { x: 100, y: 4, w: 20, h: 12 }; // Rumah Kecil
@@ -497,6 +512,7 @@ export class FarmScene extends Phaser.Scene {
   private mineImgs = new Map<string, Phaser.GameObjects.Image>();
   private caveFloorImgs: Phaser.GameObjects.Image[] = [];
   private caveLabel?: Phaser.GameObjects.Text;
+  private caveDark?: Phaser.GameObjects.Rectangle;
   private refreshCave() {
     for (const [k, img] of this.mineImgs) {
       img.destroy();
@@ -512,6 +528,18 @@ export class FarmScene extends Phaser.Scene {
       this.blocked.add(k);
       this.spots.set(k, 'ore');
     }
+    for (const k of cave.pillars ?? []) {
+      const [x, y] = k.split(',').map(Number);
+      this.mineImgs.set(k, this.add.image((x + 0.5) * TILE, (y + 1) * TILE, 'stalaktit').setOrigin(0.5, 1).setDepth((y + 1) * TILE));
+      this.blocked.add(k);
+      this.spots.set(k, 'pillar');
+    }
+    if (cave.chest) {
+      const [x, y] = cave.chest.split(',').map(Number);
+      this.mineImgs.set(cave.chest, this.add.image((x + 0.5) * TILE, (y + 1) * TILE, 'peti-harta').setOrigin(0.5, 1).setDepth((y + 1) * TILE));
+      this.blocked.add(cave.chest);
+      this.spots.set(cave.chest, 'treasure');
+    }
     if (cave.ladderOpen) {
       const [x, y] = cave.ladder.split(',').map(Number);
       this.mineImgs.set(cave.ladder, this.add.image(x * TILE, y * TILE, 'ladder-down').setOrigin(0).setDepth(-8));
@@ -520,7 +548,9 @@ export class FarmScene extends Phaser.Scene {
     }
     const tint = caveTint(cave.floor);
     for (const img of this.caveFloorImgs) img.setTint(tint);
-    this.caveLabel?.setText(`Lantai ${cave.floor}`);
+    const zone = zoneOf(cave.floor);
+    this.caveLabel?.setText(`Lantai ${cave.floor} · ${zone.name}${cave.floor >= CAVE_BOTTOM ? ' · Dasar' : ''}`);
+    this.caveDark?.setFillStyle(0x05030a, zone.dark);
   }
 
   /** The cave interior: rock walls, a floor that changes colour with depth, the ladder up at the bottom. */
@@ -543,6 +573,8 @@ export class FarmScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setResolution(4)
       .setDepth(-8);
+    // deeper zones are darker; the lantern around the player still shows the way
+    this.caveDark = this.add.rectangle(X(0) - 8, Y(0) - 8, R.w * TILE + 16, R.h * TILE + 16, 0x05030a, 0).setOrigin(0).setDepth(9500);
     // a few lanterns on the back wall
     for (const lx of [3, mid, R.w - 4]) {
       this.add.image(X(lx), Y(2) - 2, 'lamp').setOrigin(0.5, 1).setScale(0.8).setDepth(-8.4);
@@ -554,11 +586,16 @@ export class FarmScene extends Phaser.Scene {
   private enterCave(floor: number) {
     if (!this.state.ownedTools.includes('beliung')) return this.fail('Gua tambang gelap dan berbatu. Bawa Beliung dulu (beli di toko).');
     const R = CAVE_ROOM;
+    const before = zoneIndex(this.state.cave?.deepest ?? 0);
     this.moveTo((R.x + R.w / 2) * TILE, (R.y + R.h - 1) * TILE - 2, 'up', () => {
       genFloor(this.state, floor);
       this.refreshCave();
     });
-    this.toast(`Gua Tambang · Lantai ${floor}`);
+    const z = zoneOf(floor);
+    const first = floor === z.from && zoneIndex(floor) > before;
+    if (floor >= CAVE_BOTTOM) this.toast(this.state.caveTreasure ? 'Dasar gua. Petinya sudah kamu buka.' : 'Dasar gua! Ada peti harta di sini...');
+    else if (first) this.toast(`Zona baru: ${z.name}! ${ZONE_HINTS[zoneIndex(floor)]}`);
+    else this.toast(`Gua Tambang · Lantai ${floor} · ${z.name}`);
   }
 
   /** A small picture of the whole world (MAP_PX per tile) for the map window. */
@@ -1364,6 +1401,16 @@ export class FarmScene extends Phaser.Scene {
         return this.game.events.emit('ask-cave-floor', { floors, deepest: s.cave?.deepest ?? 0, onPick: (f: number) => this.enterCave(f) });
       return this.enterCave(1);
     }
+    if (spot === 'pillar') return this.fail('Stalaktit sekeras besi, tidak bisa dipecah. Cari jalan memutar.');
+    if (spot === 'treasure') {
+      const err = openCaveTreasure(s);
+      if (err) return this.fail(err);
+      play('quest');
+      this.toast(`Peti harta Perut Bumi! +${CAVE_TREASURE.coins.toLocaleString('id-ID')} G, 3 Batu Mulia, 5 Bijih Emas.`);
+      this.refreshCave();
+      save(s);
+      return this.changed();
+    }
     if (spot === 'descend') {
       const next = (s.cave?.floor ?? 0) + 1;
       play('place');
@@ -1374,7 +1421,8 @@ export class FarmScene extends Phaser.Scene {
         if (!s.ownedTools.includes('beliung')) return this.fail('Butuh Beliung untuk menambang. Beli di toko (tab Peralatan).');
         return this.fail('Pakai Beliung (6) untuk memecah batu.');
       }
-      if (s.stamina < STAMINA_COST.beliung) return this.fail('Terlalu lelah untuk menambang.');
+      const cost = mineCost(s.cave?.floor ?? 1);
+      if (s.stamina < cost) return this.fail(cost > 4 ? `Terlalu lelah. Di sini panas, tiap pukulan butuh ${cost} tenaga.` : 'Terlalu lelah untuk menambang.');
       const r = mineHit(s, k);
       if (r.error) return this.fail(r.error);
       this.swing();

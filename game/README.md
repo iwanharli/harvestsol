@@ -68,7 +68,17 @@ Tiap jenis punya jam, musim, dan sebagian butuh hujan (misalnya Belut hanya saat
 
 **Musim tropis** (28 hari per musim): Tanam (awal hujan), Hujan, Panen (pancaroba), dan Kemarau. Tanaman: Kangkung, Timun, Terong, Tomat, Ubi, Padi, Cabai, Singkong, Jagung, Kedelai, Semangka, dan **Sawit (Lv 12)**: benih 6.000 G, tumbuh 14 hari di semua musim, lalu berbuah lagi tiap 7 hari tanpa ditanam ulang; investasi jangka panjang yang baru terbayar di tahun kedua.
 
-**Gua Tambang**: beli **Beliung** di toko (Peralatan, 1.500 G, Lv 3; tombol 6). Mulut gua ada di Bukit Kapur, hutan timur, lewat jalan selatan dari alun-alun. Setiap lantai dibuat baru saat dimasuki, berisi 14–24 batu: Batu (1 pukulan), Batu Tembaga (2), Batu Besi (3), dan Batu Emas (4). Satu pukulan memakai 4 tenaga. Salah satu batu menyembunyikan **tangga turun**; makin dalam, makin banyak Besi dan Emas (Emas umum mulai lantai 15), dan warna gua berubah. Keluar lewat tangga di bawah. **Kerekan** (keranjang bertali dan katrol) di mulut gua bisa langsung menurunkanmu ke lantai 1, 5, 10, … yang pernah dicapai. Hasil tambang bisa dijual atau nanti dipakai untuk upgrade alat; tidak masuk kulkas/peti dan tidak ikut festival. Tertidur di dalam gua dihitung tertidur di luar.
+**Gua Tambang**: beli **Beliung** di toko (Peralatan, 1.500 G, Lv 3; tombol 6). Mulut gua ada di Bukit Kapur, hutan timur, lewat jalan selatan dari alun-alun. Setiap lantai dibuat baru saat dimasuki; salah satu batu menyembunyikan **tangga turun**. Keluar lewat tangga di bawah. Gua punya **dasar di lantai 50** dan 5 zona:
+
+| Lantai | Zona | Ciri |
+|---|---|---|
+| 1–9 | Gua Tanah | Batu dan Tembaga, Besi jarang |
+| 10–19 | Gua Kapur | Besi umum, stalaktit menghalangi jalan |
+| 20–29 | Gua Kristal | Kristal Kuarsa (90 G); tangga hanya di bawah batu bijih |
+| 30–39 | Gua Panas | Emas umum; tiap pukulan 6 tenaga |
+| 40–50 | Perut Bumi | Gelap, Batu Mulia (400 G); 7 tenaga per pukulan; peti harta sekali di lantai 50 (5.000 G, 3 Batu Mulia, 5 Bijih Emas) |
+
+Batu bijih makin keras setiap 15 lantai (Batu biasa tetap 1 pukulan). **Kerekan** (keranjang bertali dan katrol) di samping mulut gua menurunkanmu ke awal zona yang pernah dicapai: lantai 1, 10, 20, 30, 40. Hasil tambang bisa dijual atau nanti dipakai untuk upgrade alat; tidak masuk kulkas/peti dan tidak ikut festival. Tertidur di dalam gua dihitung tertidur di luar.
 
 **Cuaca**: Cerah, Hujan, Badai, atau Kabut Asap (Kemarau), diundi dengan prakiraan 7 hari ke depan (lihat Kalender, K). Ikon cuaca dan jam ada di tengah atas layar. Hujan dan badai menyiram semua tanah yang dicangkul (tidak mengurangi kualitas) dan membuat Lele/Ikan Emas 2× lebih sering. Badai merusak sekitar 7% tanaman, ada kilat dan petir, dan warga tinggal di rumah. Ayam berteduh di kandang saat tidak cerah. Hari festival selalu cerah.
 

@@ -156,6 +156,8 @@ export const PRODUCTS: { id: string; name: string; sellPrice: number }[] = [
   { id: 'bijih-tembaga', name: 'Bijih Tembaga', sellPrice: 25 },
   { id: 'bijih-besi', name: 'Bijih Besi', sellPrice: 45 },
   { id: 'bijih-emas', name: 'Bijih Emas', sellPrice: 120 },
+  { id: 'kristal', name: 'Kristal Kuarsa', sellPrice: 90 },
+  { id: 'batu-mulia', name: 'Batu Mulia', sellPrice: 400 },
 ];
 
 // ---------- mining ----------
@@ -164,26 +166,46 @@ export const PRODUCTS: { id: string; name: string; sellPrice: number }[] = [
 export const QUARRY = { x: 51, y: 41, w: 11, h: 10 };
 /** The cave interior: one room in empty world space, rebuilt for every floor you reach. */
 export const CAVE_ROOM = { x: 400, y: 4, w: 20, h: 14 };
-export const CAVE_LIFT_EVERY = 5; // a lift stop every 5 floors you have reached
-export type Ore = 'batu' | 'bijih-tembaga' | 'bijih-besi' | 'bijih-emas';
-/** Rock kinds: how many hits they take and what they drop. */
+export const CAVE_BOTTOM = 50; // the deepest floor, with a treasure chest
+/** Five zones, each with its own look and riches; the kerekan stops at the start of each. */
+export const CAVE_ZONES: { from: number; name: string; tint: number; dark: number }[] = [
+  { from: 1, name: 'Gua Tanah', tint: 0xffffff, dark: 0 },
+  { from: 10, name: 'Gua Kapur', tint: 0xdcdce6, dark: 0.05 },
+  { from: 20, name: 'Gua Kristal', tint: 0xb4d4f4, dark: 0.12 },
+  { from: 30, name: 'Gua Panas', tint: 0xf4a07c, dark: 0.18 },
+  { from: 40, name: 'Perut Bumi', tint: 0x8a7aac, dark: 0.38 },
+];
+export const zoneOf = (floor: number) => [...CAVE_ZONES].reverse().find((z) => floor >= z.from) ?? CAVE_ZONES[0];
+export const zoneIndex = (floor: number) => CAVE_ZONES.indexOf(zoneOf(floor));
+export const caveTint = (floor: number) => zoneOf(floor).tint;
+export type Ore = 'batu' | 'bijih-tembaga' | 'bijih-besi' | 'bijih-emas' | 'kristal' | 'batu-mulia';
+/** Rock kinds: hits at the surface (deeper rocks are harder) and what they drop. */
 export const ORES: Record<Ore, { name: string; hits: number; drop: [number, number] }> = {
   batu: { name: 'Batu', hits: 1, drop: [1, 3] },
   'bijih-tembaga': { name: 'Batu Tembaga', hits: 2, drop: [1, 2] },
   'bijih-besi': { name: 'Batu Besi', hits: 3, drop: [1, 2] },
   'bijih-emas': { name: 'Batu Emas', hits: 4, drop: [1, 1] },
+  kristal: { name: 'Batu Kristal', hits: 3, drop: [1, 2] },
+  'batu-mulia': { name: 'Batu Mulia', hits: 6, drop: [1, 1] },
 };
-/** How common each rock is on a floor: deeper floors hold better ore. */
+/** Ore rocks get one extra hit every 15 floors; plain stone stays easy. */
+export const rockHits = (ore: Ore, floor: number) => ORES[ore].hits + (ore === 'batu' ? 0 : Math.floor(floor / 15));
+/** Swinging in the hot zone and below takes more out of you. */
+export const mineCost = (floor: number) => (floor >= 40 ? 7 : floor >= 30 ? 6 : 4);
+/** How common each rock is on a floor, by zone. */
 export function oreWeights(floor: number): Record<Ore, number> {
-  return {
-    batu: 60,
-    'bijih-tembaga': floor <= 10 ? 30 : 20,
-    'bijih-besi': floor < 5 ? 2 : floor < 10 ? 12 : 25,
-    'bijih-emas': floor < 10 ? 0.5 : floor < 15 ? 4 : 12,
-  };
+  const z = zoneIndex(floor);
+  const table: Record<Ore, number>[] = [
+    { batu: 60, 'bijih-tembaga': 30, 'bijih-besi': floor >= 5 ? 8 : 2, 'bijih-emas': 0.3, kristal: 0, 'batu-mulia': 0 },
+    { batu: 50, 'bijih-tembaga': 20, 'bijih-besi': 25, 'bijih-emas': 2, kristal: 0, 'batu-mulia': 0 },
+    { batu: 45, 'bijih-tembaga': 10, 'bijih-besi': 20, 'bijih-emas': 5, kristal: 18, 'batu-mulia': 0 },
+    { batu: 40, 'bijih-tembaga': 5, 'bijih-besi': 15, 'bijih-emas': 15, kristal: 8, 'batu-mulia': 0 },
+    { batu: 40, 'bijih-tembaga': 0, 'bijih-besi': 10, 'bijih-emas': 15, kristal: 8, 'batu-mulia': 3 },
+  ];
+  return table[z];
 }
-/** The look of a floor band: shallow brown, middle grey-blue, deep purple. */
-export const caveTint = (floor: number) => (floor < 5 ? 0xffffff : floor < 10 ? 0xc8d0e0 : floor < 15 ? 0xb8a8d8 : 0xe0a0a0);
+/** The one-time treasure at the bottom of the cave. */
+export const CAVE_TREASURE = { coins: 5000, items: { 'batu-mulia': 3, 'bijih-emas': 5 } as Record<string, number> };
 export const isOre = (id: string) => id in ORES;
 
 // ---------- cooking ----------

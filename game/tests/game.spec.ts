@@ -922,7 +922,7 @@ test('peti hanya untuk hasil kebun, benih, pupuk, sprinkler; ikan/telur/masakan 
   noErrors(errors);
 });
 
-test('gua tambang: masuk, pecahkan batu, temukan tangga, turun, kerekan tiap 5 lantai', async ({ page }) => {
+test('gua tambang: masuk, pecahkan batu, temukan tangga, turun, kerekan di awal zona', async ({ page }) => {
   const errors = await start(page);
   await at(page, 56, 45, 'up'); // in front of the cave mouth
   await press(page, 'Space');
@@ -967,9 +967,9 @@ test('gua tambang: masuk, pecahkan batu, temukan tangga, turun, kerekan tiap 5 l
     const m = await import('/src/state.ts');
     const d = await import('/src/data.ts');
     st.cave.deepest = 12;
-    return { lift: m.liftFloors(st), shallowGold: d.oreWeights(1)['bijih-emas'], deepGold: d.oreWeights(16)['bijih-emas'] };
+    return { lift: m.liftFloors(st), shallowGold: d.oreWeights(1)['bijih-emas'], deepGold: d.oreWeights(45)['bijih-emas'] };
   });
-  expect(r.lift).toEqual([1, 5, 10]);
+  expect(r.lift).toEqual([1, 10]);
   expect(r.deepGold).toBeGreaterThan(r.shallowGold * 10);
   noErrors(errors);
 });
@@ -1030,10 +1030,56 @@ test('kerekan gua: pilih lantai yang pernah dicapai', async ({ page }) => {
   await at(page, 56, 45, 'up');
   await press(page, 'Space');
   expect(await modalOpen(page)).toBe(true);
-  await page.mouse.click(531, 282); // "Lantai 10"
+  await page.mouse.click(429, 282); // "Lantai 10"
   await page.waitForTimeout(700);
   const s = await state(page);
   expect(s.cave.floor).toBe(10);
   expect(s.cave.deepest).toBe(12);
+  noErrors(errors);
+});
+
+test('zona gua: makin dalam makin beda, dasar di lantai 50 dengan peti harta sekali', async ({ page }) => {
+  const errors = await start(page);
+  const r = await page.evaluate(async () => {
+    const st = window.game.registry.get('state');
+    const m = await import('/src/state.ts');
+    const d = await import('/src/data.ts');
+    st.produce = {};
+    st.coins = 0;
+    m.genFloor(st, 3);
+    const shallow = { pillars: st.cave.pillars.length, ladderOre: st.cave.nodes[st.cave.ladder].ore };
+    m.genFloor(st, 25);
+    const crystal = {
+      pillars: st.cave.pillars.length,
+      ladderIsOre: st.cave.nodes[st.cave.ladder].ore !== 'batu',
+      kristalWeight: d.oreWeights(25).kristal,
+    };
+    const hits = { shallowGold: d.rockHits('bijih-emas', 3), deepGold: d.rockHits('bijih-emas', 45), deepStone: d.rockHits('batu', 45) };
+    const cost = [d.mineCost(5), d.mineCost(35), d.mineCost(45)];
+    const mulia = [d.oreWeights(35)['batu-mulia'], d.oreWeights(45)['batu-mulia']];
+    m.genFloor(st, 80); // there is nothing below 50
+    const bottom = { floor: st.cave.floor, ladder: st.cave.ladder, chest: !!st.cave.chest };
+    const first = m.openCaveTreasure(st);
+    const coins = st.coins;
+    const items = { ...st.produce };
+    const again = m.openCaveTreasure(st);
+    m.genFloor(st, 50);
+    return { shallow, crystal, hits, cost, mulia, bottom, first, coins, items, again, chestAfter: !!st.cave.chest, names: d.CAVE_ZONES.map((z) => z.name) };
+  });
+  expect(r.shallow.pillars).toBe(0);
+  expect(r.crystal.pillars).toBeGreaterThan(0);
+  expect(r.crystal.ladderIsOre).toBe(true);
+  expect(r.crystal.kristalWeight).toBeGreaterThan(0);
+  expect(r.hits).toEqual({ shallowGold: 4, deepGold: 7, deepStone: 1 });
+  expect(r.cost).toEqual([4, 6, 7]);
+  expect(r.mulia[0]).toBe(0);
+  expect(r.mulia[1]).toBeGreaterThan(0);
+  expect(r.bottom).toEqual({ floor: 50, ladder: '', chest: true });
+  expect(r.first).toBeNull();
+  expect(r.coins).toBe(5000);
+  expect(r.items).toEqual({ 'batu-mulia': 3, 'bijih-emas': 5 });
+  expect(r.again).toBe('Peti ini sudah kosong.');
+  expect(r.chestAfter).toBe(false);
+  expect(r.names).toEqual(['Gua Tanah', 'Gua Kapur', 'Gua Kristal', 'Gua Panas', 'Perut Bumi']);
   noErrors(errors);
 });

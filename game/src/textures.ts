@@ -1263,6 +1263,23 @@ export function makeTextures(scene: Phaser.Scene) {
     px(c, 5, 18, '#c8964e', 7, 1);
     px(c, 6, 20, '#8a5e2e', 5, 1);
   }, true);
+  canvas(scene, 'stalaktit', TILE, 24, (c) => {
+    // a rock column from floor to ceiling
+    px(c, 4, 0, '#4e4a44', 8, 24);
+    px(c, 3, 4, '#4e4a44', 10, 16);
+    px(c, 5, 0, '#7a7468', 3, 22);
+    px(c, 9, 6, '#5e5850', 2, 14);
+    px(c, 2, 20, '#3e3a34', 12, 4);
+  }, true);
+  canvas(scene, 'peti-harta', TILE, TILE, (c) => {
+    px(c, 1, 4, '#5a3a22', 14, 11);
+    px(c, 2, 5, '#8d5a34', 12, 4);
+    px(c, 2, 10, '#7a4a2a', 12, 4);
+    px(c, 1, 9, '#f2c94c', 14, 1); // gold bands
+    px(c, 3, 4, '#f2c94c', 1, 11);
+    px(c, 12, 4, '#f2c94c', 1, 11);
+    px(c, 7, 8, '#fff3a8', 2, 3); // lock
+  }, true);
   canvas(scene, 'cave-wall', TILE, TILE, (c) => {
     px(c, 0, 0, '#3e3a34', 16, 16);
     px(c, 1, 2, '#4e4a44', 6, 4);
@@ -1294,6 +1311,8 @@ export function makeTextures(scene: Phaser.Scene) {
     'bijih-tembaga': ['#8a8a8e', '#e08a4a', '#5e5e62'],
     'bijih-besi': ['#7a7e86', '#c8d2e0', '#4e525a'],
     'bijih-emas': ['#86827a', '#f2c94c', '#5a564e'],
+    kristal: ['#7e8a94', '#bfeaff', '#4e5a64'],
+    'batu-mulia': ['#4a4058', '#ff4f8a', '#2a2234'],
   };
   for (const [id, [body, fleck, dark]] of Object.entries(ORE_LOOK)) {
     // the rock you swing at in the quarry
