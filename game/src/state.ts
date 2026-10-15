@@ -45,8 +45,9 @@ import {
   STORAGE_SLOTS,
   PASS_OUT_FINE,
   ORES,
-  QUARRY,
-  MINE_NODES,
+  CAVE_ROOM,
+  CAVE_LIFT_EVERY,
+  oreWeights,
   STAMINA_COST,
   type Ore,
   FESTIVAL_EVERY,
@@ -138,7 +139,7 @@ export interface GameState {
   sofaDay: number; // last day the sofa rest was used
   fridge: Record<string, number>; // kulkas contents (same keys as produce)
   storage: Record<string, number>; // peti lumbung contents (same keys as produce)
-  mine?: { day: number; nodes: Record<string, { ore: Ore; hits: number }> }; // today's rocks in the quarry, by tile "x,y"
+  cave?: CaveState;
   pos?: { x: number; y: number; dir: 'down' | 'up' | 'left' | 'right' }; // where the player stands (world px) // last day the player chatted with each villager
   stats: { harvested: number; earned: number; requestsDone: number };
 }
@@ -247,12 +248,12 @@ export function load(): GameState {
     const raw = localStorage.getItem(SAVE_KEY);
     if (raw) {
       const s = JSON.parse(raw) as GameState;
-      if (s.version === 1) return rollMine(refreshRequests(migrate(s)));
+      if (s.version === 1) return refreshRequests(migrate(s));
     }
   } catch {
     // corrupted or unavailable storage: start fresh
   }
-  return rollMine(refreshRequests(newGame()));
+  return refreshRequests(newGame());
 }
 
 export function save(s: GameState) {
@@ -382,7 +383,6 @@ export function endDay(s: GameState, passedOut: boolean, outside = false): DayRe
   }
 
   refreshRequests(s);
-  rollMine(s);
   return report;
 }
 
@@ -952,35 +952,50 @@ export function sortStore(s: GameState, w: Store) {
   else s.storage = out;
 }
 
-// ---------- mining ----------
+// ---------- mining (the cave) ----------
 
-/** Fresh rocks in the quarry each morning; ores above your level are rarer. */
-export function rollMine(s: GameState, rand = Math.random): GameState {
-  if (s.mine?.day === s.day) return s;
-  const nodes: Record<string, { ore: Ore; hits: number }> = {};
-  const kinds = Object.entries(ORES) as [Ore, (typeof ORES)[Ore]][];
-  const weight = (o: (typeof ORES)[Ore]) => (s.level >= o.level ? o.weight : o.weight / 4);
-  const total = kinds.reduce((a, [, o]) => a + weight(o), 0);
+export interface CaveState {
+  floor: number; // the floor you are on (0 = outside)
+  deepest: number; // the deepest floor ever reached
+  nodes: Record<string, { ore: Ore; hits: number }>; // rocks on this floor, by world tile "x,y"
+  ladder: string; // the rock hiding the way down
+  ladderOpen: boolean;
+}
+
+/** Lay out a fresh floor: more rocks deeper down, one of them hides the ladder. */
+export function genFloor(s: GameState, floor: number, rand = Math.random) {
+  const R = CAVE_ROOM;
+  const nodes: CaveState['nodes'] = {};
+  const w = oreWeights(floor);
+  const kinds = Object.keys(w) as Ore[];
+  const total = kinds.reduce((a, k) => a + w[k], 0);
+  const count = 14 + Math.min(10, Math.floor(floor / 2));
   let tries = 0;
-  while (Object.keys(nodes).length < MINE_NODES && tries++ < 500) {
-    // keep the entrance column and the edges walkable
-    const x = QUARRY.x + 1 + Math.floor(rand() * (QUARRY.w - 2));
-    const y = QUARRY.y + 1 + Math.floor(rand() * (QUARRY.h - 2));
-    if (y === QUARRY.y + Math.floor(QUARRY.h / 2)) continue; // the entrance row
+  while (Object.keys(nodes).length < count && tries++ < 800) {
+    // inside the walls, away from the entrance ladder at the bottom middle
+    const x = R.x + 1 + Math.floor(rand() * (R.w - 2));
+    const y = R.y + 2 + Math.floor(rand() * (R.h - 5));
     const k = `${x},${y}`;
     if (nodes[k]) continue;
     let n = rand() * total;
     let ore: Ore = 'batu';
-    for (const [id, o] of kinds) if ((n -= weight(o)) < 0) { ore = id; break; }
+    for (const id of kinds) if ((n -= w[id]) < 0) { ore = id; break; }
     nodes[k] = { ore, hits: ORES[ore].hits };
   }
-  s.mine = { day: s.day, nodes };
-  return s;
+  const keys = Object.keys(nodes);
+  s.cave = { floor, deepest: Math.max(s.cave?.deepest ?? 0, floor), nodes, ladder: keys[Math.floor(rand() * keys.length)], ladderOpen: false };
 }
 
-/** One swing at a rock: returns what it dropped when it breaks, an error, or null while it holds. */
-export function mineHit(s: GameState, key: string, rand = Math.random): { error?: string; drop?: { id: Ore; qty: number } } {
-  const node = s.mine?.nodes[key];
+/** Floors the lift can take you to: 1, then every 5th floor you have reached. */
+export const liftFloors = (s: GameState) => {
+  const out = [1];
+  for (let f = CAVE_LIFT_EVERY; f <= (s.cave?.deepest ?? 0); f += CAVE_LIFT_EVERY) out.push(f);
+  return out;
+};
+
+/** One swing at a rock: what it dropped when it breaks (and whether the ladder showed), an error, or {} while it holds. */
+export function mineHit(s: GameState, key: string, rand = Math.random): { error?: string; drop?: { id: Ore; qty: number }; ladder?: boolean } {
+  const node = s.cave?.nodes[key];
   if (!node) return {};
   const o = ORES[node.ore];
   const qty = o.drop[0] + Math.floor(rand() * (o.drop[1] - o.drop[0] + 1));
@@ -988,7 +1003,9 @@ export function mineHit(s: GameState, key: string, rand = Math.random): { error?
   s.stamina -= STAMINA_COST.beliung;
   node.hits--;
   if (node.hits > 0) return {};
-  delete s.mine!.nodes[key];
+  delete s.cave!.nodes[key];
   add(s.produce, node.ore, qty);
-  return { drop: { id: node.ore, qty } };
+  const ladder = key === s.cave!.ladder;
+  if (ladder) s.cave!.ladderOpen = true;
+  return { drop: { id: node.ore, qty }, ladder };
 }

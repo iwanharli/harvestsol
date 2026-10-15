@@ -1233,6 +1233,51 @@ export function makeTextures(scene: Phaser.Scene) {
     const dots: [number, number, string][] = [[2, 3, '#8f8370'], [9, 1, '#c2b8a4'], [12, 7, '#8f8370'], [5, 10, '#c2b8a4'], [1, 13, '#8f8370'], [13, 13, '#c2b8a4'], [7, 6, '#958a76']];
     for (const [x, y, col] of dots) px(c, x, y, col, 2, 2);
   });
+  // ---------- the cave ----------
+  canvas(scene, 'cave-mouth', 48, 40, (c) => {
+    // a rocky hill with a dark arch in the middle
+    px(c, 4, 6, '#6e6a62', 40, 34);
+    px(c, 0, 14, '#6e6a62', 48, 26);
+    px(c, 8, 2, '#7e7a72', 32, 6);
+    px(c, 2, 12, '#8a867e', 10, 4);
+    px(c, 34, 8, '#8a867e', 10, 4);
+    px(c, 18, 4, '#9a968e', 12, 3);
+    px(c, 0, 36, '#4e4a44', 48, 4);
+    px(c, 14, 18, '#3a3630', 20, 22); // arch frame
+    px(c, 16, 16, '#3a3630', 16, 2);
+    px(c, 16, 20, '#0e0c0a', 16, 20); // the dark inside
+    px(c, 18, 18, '#0e0c0a', 12, 2);
+    px(c, 13, 16, '#8d5a34', 2, 24); // timber posts and beam
+    px(c, 33, 16, '#8d5a34', 2, 24);
+    px(c, 12, 14, '#a36c40', 24, 3);
+    px(c, 22, 24, '#f2c94c', 4, 3); // a lantern glow deep inside
+  }, true);
+  canvas(scene, 'cave-wall', TILE, TILE, (c) => {
+    px(c, 0, 0, '#3e3a34', 16, 16);
+    px(c, 1, 2, '#4e4a44', 6, 4);
+    px(c, 9, 7, '#4e4a44', 5, 5);
+    px(c, 3, 11, '#4a463f', 5, 3);
+    px(c, 2, 2, '#5e5a52', 3, 1);
+    px(c, 10, 7, '#5e5a52', 3, 1);
+  });
+  canvas(scene, 'cave-floor', TILE, TILE, (c) => {
+    px(c, 0, 0, '#6e5a46', 16, 16);
+    const dots: [number, number, string][] = [[2, 3, '#5e4c3a'], [10, 2, '#7e6a54'], [13, 9, '#5e4c3a'], [5, 11, '#7e6a54'], [8, 7, '#64503e']];
+    for (const [x, y, col] of dots) px(c, x, y, col, 2, 2);
+  });
+  canvas(scene, 'ladder-down', TILE, TILE, (c) => {
+    px(c, 1, 1, '#1a1410', 14, 14); // the hole
+    px(c, 2, 2, '#0a0806', 12, 12);
+    px(c, 4, 2, '#a36c40', 1, 12); // ladder rails and rungs
+    px(c, 11, 2, '#a36c40', 1, 12);
+    for (let y = 4; y < 14; y += 3) px(c, 4, y, '#c08552', 8, 1);
+  }, true);
+  canvas(scene, 'ladder-up', 32, 16, (c) => {
+    px(c, 6, 0, '#a36c40', 2, 16);
+    px(c, 24, 0, '#a36c40', 2, 16);
+    for (let y = 2; y < 16; y += 4) px(c, 6, y, '#c08552', 20, 2);
+  }, true);
+
   const ORE_LOOK: Record<string, [string, string, string]> = {
     batu: ['#8a8a8e', '#b4b4b8', '#5e5e62'],
     'bijih-tembaga': ['#8a8a8e', '#e08a4a', '#5e5e62'],

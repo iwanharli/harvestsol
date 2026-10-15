@@ -6,6 +6,8 @@ import {
   GAME_MIN_PER_SEC,
   MAP_H,
   QUARRY,
+  CAVE_ROOM,
+  caveTint,
   LAKES,
   type Water,
   FISH,
@@ -63,6 +65,8 @@ import {
   plotKey,
   save,
   mineHit,
+  genFloor,
+  liftFloors,
   seasonOf,
   type GameState,
 } from '../state';
@@ -76,7 +80,7 @@ const DIR_VEC: Record<Dir, [number, number]> = { down: [0, 1], up: [0, -1], left
 const SPEED = 62; // world px per second
 
 type Spot =
-  | 'door' | 'shop' | 'bin' | 'pond' | 'lakesign' | 'minesign' | 'ore' | 'board' | 'coop' | 'stage' | 'house'
+  | 'door' | 'shop' | 'bin' | 'pond' | 'lakesign' | 'minesign' | 'ore' | 'cave' | 'descend' | 'board' | 'coop' | 'stage' | 'house'
   | 'bed' | 'stove' | 'tv' | 'shelf' | 'wardrobe' | 'fridge' | 'storage' | 'radio' | 'trophy' | 'slot'
   | 'mebel' | 'counter' | 'display' | 'sofa';
 
@@ -90,6 +94,7 @@ const SHOP = { x: 160, y: 4, w: 14, h: 9 }; // far enough that the house never s
 const ROOMS = [
   ...HOUSE_ROOMS.map((room) => ({ room, exit: { x: 4.5 * TILE + 8, y: 7 * TILE - 2 } })),
   { room: SHOP, exit: { x: 58 * TILE, y: 19 * TILE - 2 } },
+  { room: CAVE_ROOM, exit: { x: 56.5 * TILE, y: 46 * TILE - 2 } },
 ];
 const roomAt = (tx: number, ty: number) =>
   ROOMS.find(({ room: r }) => tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h);
@@ -144,7 +149,8 @@ export class FarmScene extends Phaser.Scene {
   create() {
     this.state = this.registry.get('state');
     this.buildMap();
-    this.refreshMine();
+    this.buildCave();
+    this.refreshCave();
     HOUSE_ROOMS.forEach((R, tier) => this.buildRoom(R, tier));
     this.buildShop();
     this.refreshFurniture();
@@ -349,6 +355,9 @@ export class FarmScene extends Phaser.Scene {
     const mx = QUARRY.x - 2, my = QUARRY.y + Math.floor(QUARRY.h / 2) - 1;
     this.add.image((mx + 0.5) * TILE, (my + 1) * TILE, 'signpost').setOrigin(0.5, 1).setDepth((my + 1) * TILE);
     this.block(mx, my, 'minesign');
+    // the cave mouth at the back of the yard (3 tiles wide), entered from the row in front of it
+    this.add.image(56.5 * TILE, 45 * TILE, 'cave-mouth').setOrigin(0.5, 1).setDepth(45 * TILE);
+    for (let x = 55; x <= 57; x++) for (let y = 42; y <= 44; y++) this.block(x, y, y === 44 ? 'cave' : undefined);
 
     // farmhouse (4x4 tiles), door on bottom row
     this.building('house', 3, 2);
@@ -481,21 +490,72 @@ export class FarmScene extends Phaser.Scene {
     this.paintMinimap(G);
   }
 
-  /** Today's rocks in the quarry: draw them, and make each one solid and minable. */
+  /** The rocks (and, once found, the ladder down) on the current cave floor. */
   private mineImgs = new Map<string, Phaser.GameObjects.Image>();
-  private refreshMine() {
+  private caveFloorImgs: Phaser.GameObjects.Image[] = [];
+  private caveLabel?: Phaser.GameObjects.Text;
+  private refreshCave() {
     for (const [k, img] of this.mineImgs) {
       img.destroy();
       this.blocked.delete(k);
       this.spots.delete(k);
     }
     this.mineImgs.clear();
-    for (const [k, n] of Object.entries(this.state.mine?.nodes ?? {})) {
+    const cave = this.state.cave;
+    if (!cave?.floor) return;
+    for (const [k, n] of Object.entries(cave.nodes)) {
       const [x, y] = k.split(',').map(Number);
       this.mineImgs.set(k, this.add.image((x + 0.5) * TILE, (y + 1) * TILE, `rock-${n.ore}`).setOrigin(0.5, 1).setDepth((y + 1) * TILE));
       this.blocked.add(k);
       this.spots.set(k, 'ore');
     }
+    if (cave.ladderOpen) {
+      const [x, y] = cave.ladder.split(',').map(Number);
+      this.mineImgs.set(cave.ladder, this.add.image(x * TILE, y * TILE, 'ladder-down').setOrigin(0).setDepth(-8));
+      this.blocked.add(cave.ladder);
+      this.spots.set(cave.ladder, 'descend');
+    }
+    const tint = caveTint(cave.floor);
+    for (const img of this.caveFloorImgs) img.setTint(tint);
+    this.caveLabel?.setText(`Lantai ${cave.floor}`);
+  }
+
+  /** The cave interior: rock walls, a floor that changes colour with depth, the ladder up at the bottom. */
+  private buildCave() {
+    const R = CAVE_ROOM;
+    const X = (lx: number) => (R.x + lx) * TILE;
+    const Y = (ly: number) => (R.y + ly) * TILE;
+    for (let ly = 0; ly < R.h; ly++)
+      for (let lx = 0; lx < R.w; lx++) {
+        const wall = ly < 2 || lx === 0 || lx === R.w - 1;
+        const img = this.add.image(X(lx), Y(ly), wall ? 'cave-wall' : 'cave-floor').setOrigin(0).setDepth(-10);
+        if ((lx * 7 + ly * 3) % 4 === 0) img.setFlipX(true);
+        this.caveFloorImgs.push(img);
+        if (wall) this.blocked.add(plotKey(R.x + lx, R.y + ly));
+      }
+    const mid = R.w / 2;
+    this.add.image(X(mid), Y(R.h), 'ladder-up').setOrigin(0.5, 1).setDepth(-8.5);
+    this.caveLabel = this.add
+      .text(X(mid), Y(1) + 4, '', { fontFamily: 'monospace', fontSize: '9px', color: '#f2dcb0', stroke: '#2a1d17', strokeThickness: 3 })
+      .setOrigin(0.5)
+      .setResolution(4)
+      .setDepth(-8);
+    // a few lanterns on the back wall
+    for (const lx of [3, mid, R.w - 4]) {
+      this.add.image(X(lx), Y(2) - 2, 'lamp').setOrigin(0.5, 1).setScale(0.8).setDepth(-8.4);
+      this.add.image(X(lx), Y(1), 'glow').setScale(1.2).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0.55);
+    }
+  }
+
+  /** Go into the cave at a floor (fresh rocks every time), or one floor deeper. */
+  private enterCave(floor: number) {
+    if (!this.state.ownedTools.includes('beliung')) return this.fail('Gua tambang gelap dan berbatu. Bawa Beliung dulu (beli di toko).');
+    const R = CAVE_ROOM;
+    this.moveTo((R.x + R.w / 2) * TILE, (R.y + R.h - 1) * TILE - 2, 'up', () => {
+      genFloor(this.state, floor);
+      this.refreshCave();
+    });
+    this.toast(`Gua Tambang · Lantai ${floor}`);
   }
 
   /** A small picture of the whole world (MAP_PX per tile) for the map window. */
@@ -759,13 +819,14 @@ export class FarmScene extends Phaser.Scene {
   }
 
   /** Fade, move the player, fade back. */
-  private moveTo(x: number, y: number, dir: Dir) {
+  private moveTo(x: number, y: number, dir: Dir, whileDark?: () => void) {
     if (this.busy) return;
     this.busy = true;
     this.moveTarget = undefined;
     const cam = this.cameras.main;
     cam.fadeOut(220, 10, 10, 20);
     cam.once('camerafadeoutcomplete', () => {
+      whileDark?.();
       this.player.setPosition(x, y);
       this.dir = dir;
       this.setPlayerFrame(0);
@@ -1126,7 +1187,7 @@ export class FarmScene extends Phaser.Scene {
         if (this.state.minutes < at + 30) this.toast(msg); // not when a save loads already past it
       }
     if (this.state.minutes >= DAY_END_MIN) {
-      this.toast(this.indoors ? 'Sudah jam 2 pagi. Kamu tertidur di lantai...' : 'Sudah jam 2 pagi. Kamu tertidur di jalan...');
+      this.toast(this.indoors && this.currentRoom !== CAVE_ROOM ? 'Sudah jam 2 pagi. Kamu tertidur di lantai...' : 'Sudah jam 2 pagi. Kamu tertidur di jalan...');
       this.sleep(true);
       return;
     }
@@ -1293,7 +1354,18 @@ export class FarmScene extends Phaser.Scene {
       return this.tendCoop();
     }
     if (spot === 'minesign')
-      return this.toast(`Tambang Bukit Kapur\nBatu dan bijih muncul lagi setiap pagi. Butuh Beliung (6), beli di toko.`);
+      return this.toast(`Gua Tambang Bukit Kapur\nMakin dalam, makin bagus bijihnya. Terdalam: lantai ${s.cave?.deepest ?? 0}. Butuh Beliung (6).`);
+    if (spot === 'cave') {
+      const floors = liftFloors(s);
+      if (floors.length > 1 && s.ownedTools.includes('beliung'))
+        return this.game.events.emit('ask-cave-floor', { floors, deepest: s.cave?.deepest ?? 0, onPick: (f: number) => this.enterCave(f) });
+      return this.enterCave(1);
+    }
+    if (spot === 'descend') {
+      const next = (s.cave?.floor ?? 0) + 1;
+      play('place');
+      return this.enterCave(next);
+    }
     if (spot === 'ore') {
       if (s.tool !== 'beliung') {
         if (!s.ownedTools.includes('beliung')) return this.fail('Butuh Beliung untuk menambang. Beli di toko (tab Peralatan).');
@@ -1311,7 +1383,8 @@ export class FarmScene extends Phaser.Scene {
         play('coin');
         this.toast(`+${r.drop.qty} ${produceById(r.drop.id).name}`);
         this.xp(r.drop.id === 'batu' ? 1 : 3, tx, ty);
-        this.refreshMine();
+        if (r.ladder) this.toast('Ada tangga ke bawah di balik batu itu!');
+        this.refreshCave();
       }
       return this.changed();
     }
@@ -1747,7 +1820,7 @@ export class FarmScene extends Phaser.Scene {
     duck(2200);
     cam.fadeOut(500, 10, 10, 30);
     cam.once('camerafadeoutcomplete', () => {
-      const report = endDay(this.state, passedOut === true, passedOut === true && !this.indoors);
+      const report = endDay(this.state, passedOut === true, passedOut === true && (!this.indoors || this.currentRoom === CAVE_ROOM));
       this.lateWarned = 0;
       const home = HOUSE_ROOMS[this.state.houseTier] ?? ROOM;
       this.player.setPosition((home.x + 2.5) * TILE, (home.y + 4) * TILE - 2); // wake up beside the bed
@@ -1756,7 +1829,7 @@ export class FarmScene extends Phaser.Scene {
       // refresh drawn plots (some may have reverted to grass) and all current ones
       for (const k of new Set([...this.soilImgs.keys(), ...this.propImgs.keys(), ...Object.keys(this.state.plots)]))
         this.refreshPlot(k);
-      this.refreshMine();
+      this.refreshCave();
       save(this.state);
       this.game.events.emit('day-report', report);
       cam.fadeIn(500, 10, 10, 30);

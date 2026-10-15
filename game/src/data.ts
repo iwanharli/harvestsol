@@ -160,17 +160,30 @@ export const PRODUCTS: { id: string; name: string; sellPrice: number }[] = [
 
 // ---------- mining ----------
 
-/** The quarry in the east woods (world tiles); rocks reappear in it every morning. */
+/** The gravel yard in the east woods with the cave mouth at its back (world tiles). */
 export const QUARRY = { x: 51, y: 41, w: 11, h: 10 };
-export const MINE_NODES = 16;
+/** The cave interior: one room in empty world space, rebuilt for every floor you reach. */
+export const CAVE_ROOM = { x: 400, y: 4, w: 20, h: 14 };
+export const CAVE_LIFT_EVERY = 5; // a lift stop every 5 floors you have reached
 export type Ore = 'batu' | 'bijih-tembaga' | 'bijih-besi' | 'bijih-emas';
-/** Rock kinds: how many hits they take, what they drop, and how common they are (gold grows rarer below its level). */
-export const ORES: Record<Ore, { name: string; hits: number; drop: [number, number]; weight: number; level: number }> = {
-  batu: { name: 'Batu', hits: 1, drop: [1, 3], weight: 55, level: 1 },
-  'bijih-tembaga': { name: 'Batu Tembaga', hits: 2, drop: [1, 2], weight: 25, level: 1 },
-  'bijih-besi': { name: 'Batu Besi', hits: 3, drop: [1, 2], weight: 14, level: 4 },
-  'bijih-emas': { name: 'Batu Emas', hits: 4, drop: [1, 1], weight: 6, level: 8 },
+/** Rock kinds: how many hits they take and what they drop. */
+export const ORES: Record<Ore, { name: string; hits: number; drop: [number, number] }> = {
+  batu: { name: 'Batu', hits: 1, drop: [1, 3] },
+  'bijih-tembaga': { name: 'Batu Tembaga', hits: 2, drop: [1, 2] },
+  'bijih-besi': { name: 'Batu Besi', hits: 3, drop: [1, 2] },
+  'bijih-emas': { name: 'Batu Emas', hits: 4, drop: [1, 1] },
 };
+/** How common each rock is on a floor: deeper floors hold better ore. */
+export function oreWeights(floor: number): Record<Ore, number> {
+  return {
+    batu: 60,
+    'bijih-tembaga': floor <= 10 ? 30 : 20,
+    'bijih-besi': floor < 5 ? 2 : floor < 10 ? 12 : 25,
+    'bijih-emas': floor < 10 ? 0.5 : floor < 15 ? 4 : 12,
+  };
+}
+/** The look of a floor band: shallow brown, middle grey-blue, deep purple. */
+export const caveTint = (floor: number) => (floor < 5 ? 0xffffff : floor < 10 ? 0xc8d0e0 : floor < 15 ? 0xb8a8d8 : 0xe0a0a0);
 export const isOre = (id: string) => id in ORES;
 
 // ---------- cooking ----------

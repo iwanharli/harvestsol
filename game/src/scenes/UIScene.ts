@@ -36,6 +36,7 @@ import { openWardrobe } from '../ui/windows/wardrobe';
 import { openMebel } from '../ui/windows/mebel';
 import { openFridge, openStorage } from '../ui/windows/fridge';
 import { openWorldMap } from '../ui/windows/worldmap';
+import { askCaveFloor, type CaveAsk } from '../ui/windows/cave';
 import { openMarket } from '../ui/windows/market';
 import { openShipping } from '../ui/windows/shipping';
 import { openBoard } from '../ui/windows/board';
@@ -183,6 +184,7 @@ export class UIScene extends Phaser.Scene {
       ['open-mebel', (id?: string) => openMebel(this, id)],
       ['open-fridge', () => openFridge(this)],
       ['open-map', () => openWorldMap(this)],
+      ['ask-cave-floor', (q: CaveAsk) => askCaveFloor(this, q)],
       ['open-storage', () => openStorage(this)],
       ['open-market', () => openMarket(this)],
       ['open-shipping', () => openShipping(this)],
