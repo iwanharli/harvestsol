@@ -42,7 +42,8 @@ import {
   STAMINA_COST,
   TILE,
   TOOLS,
-  WATER_CAN_MAX,
+  AREA_BY_TIER,
+  BITE_WINDOW_MS,
   AFFECTION_MAX,
   FEATURE_LEVEL,
   FESTIVAL_CLOSE,
@@ -76,6 +77,9 @@ import {
   save,
   mineHit,
   genFloor,
+  tierOf,
+  waterMax,
+  atForge,
   openCaveTreasure,
   liftFloors,
   seasonOf,
@@ -91,7 +95,7 @@ const DIR_VEC: Record<Dir, [number, number]> = { down: [0, 1], up: [0, -1], left
 const SPEED = 62; // world px per second
 
 type Spot =
-  | 'door' | 'shop' | 'bin' | 'pond' | 'lakesign' | 'minesign' | 'ore' | 'cave' | 'descend' | 'pillar' | 'treasure' | 'board' | 'coop' | 'stage' | 'house'
+  | 'door' | 'shop' | 'bin' | 'pond' | 'lakesign' | 'minesign' | 'ore' | 'cave' | 'descend' | 'pillar' | 'treasure' | 'bengkel' | 'board' | 'coop' | 'stage' | 'house'
   | 'bed' | 'stove' | 'tv' | 'shelf' | 'wardrobe' | 'fridge' | 'storage' | 'radio' | 'trophy' | 'slot'
   | 'mebel' | 'counter' | 'display' | 'sofa';
 
@@ -305,6 +309,7 @@ export class FarmScene extends Phaser.Scene {
     rect(48, 63, 52, 63, 'k'); // a jetty into the muara
     // Tambang Bukit Kapur: a gravel quarry in the east woods, reached from the south road
     rect(QUARRY.x, QUARRY.y, QUARRY.x + QUARRY.w - 1, QUARRY.y + QUARRY.h - 1, 'q');
+    rect(48, 38, 51, 38, 'p'); // in front of the Bengkel
     rect(48, QUARRY.y + Math.floor(QUARRY.h / 2), QUARRY.x - 1, QUARRY.y + Math.floor(QUARRY.h / 2), 'p');
 
     // forest clearing with flowers
@@ -405,6 +410,18 @@ export class FarmScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setResolution(4)
       .setDepth(18 * TILE + 2);
+
+    // Bengkel Pandai Besi, beside the road south to the cave
+    this.building('house-bengkel', 48, 34);
+    this.spots.set(plotKey(49, 37), 'bengkel').set(plotKey(50, 37), 'bengkel');
+    this.windowGlow(48, 34);
+    this.add
+      .text(50 * TILE, 34 * TILE + 30, 'BENGKEL', { fontFamily: 'monospace', fontSize: '7px', color: '#fffbe6', stroke: '#26262c', strokeThickness: 3, fontStyle: 'bold' })
+      .setOrigin(0.5)
+      .setResolution(4)
+      .setDepth(38 * TILE + 2);
+    this.add.image(52.5 * TILE, 38 * TILE, 'anvil').setOrigin(0.5, 1).setDepth(38 * TILE);
+    this.block(52, 37);
 
     // plaza: shop, board, stage, fountain, lamps, benches, flowers
     this.shadow(47 * TILE, 7 * TILE - 1, 36);
@@ -1159,13 +1176,14 @@ export class FarmScene extends Phaser.Scene {
     if (this.modal() || this.busy) return;
     if (this.fishing) return this.reel();
     const [tx, ty] = this.facingTile();
-    this.act(tx, ty);
+    this.work(tx, ty);
   }
 
   setTool(i: number) {
     const tool = TOOLS[i].id;
     if (needsPurchase(tool) && !this.state.ownedTools.includes(tool))
       return this.fail(`Kamu belum punya ${TOOLS[i].name}. Beli di toko (tab Peralatan).`);
+    if (atForge(this.state, tool)) return this.fail(`${TOOLS[i].name} sedang ditempa di Bengkel Pandai Besi.`);
     this.state.tool = tool;
     this.game.events.emit('hud');
   }
@@ -1189,7 +1207,7 @@ export class FarmScene extends Phaser.Scene {
     const dist = Phaser.Math.Distance.Between(px, py - 4, (tx + 0.5) * TILE, (ty + 0.5) * TILE);
     if (dist < TILE * 1.6) {
       this.faceTowards((tx + 0.5) * TILE, (ty + 0.5) * TILE);
-      this.act(tx, ty);
+      this.work(tx, ty);
     } else {
       this.moveTarget = { x: (tx + 0.5) * TILE, y: (ty + 0.9) * TILE, act: [tx, ty] };
     }
@@ -1293,7 +1311,7 @@ export class FarmScene extends Phaser.Scene {
         this.moveTarget = undefined;
         if (act) {
           this.faceTowards((act[0] + 0.5) * TILE, (act[1] + 0.5) * TILE);
-          this.act(act[0], act[1]);
+          this.work(act[0], act[1]);
         }
       } else {
         vx = Math.abs(dx) > 1 ? Math.sign(dx) : 0;
@@ -1366,10 +1384,33 @@ export class FarmScene extends Phaser.Scene {
     this.toast(msg);
   }
 
-  private act(tx: number, ty: number) {
+  /** Use the tool on the facing tile; upgraded hoes and watering cans also work the tiles around it. */
+  private work(tx: number, ty: number) {
+    const s = this.state;
+    const area = AREA_BY_TIER[s.tool]?.[tierOf(s, s.tool)] ?? 'line1';
+    this.act(tx, ty);
+    if (area === 'line1') return;
+    for (const [x, y] of this.areaTiles(tx, ty, area)) this.act(x, y, true);
+  }
+
+  /** The extra tiles an upgraded tool reaches (not the facing tile itself). */
+  private areaTiles(tx: number, ty: number, area: 'line2' | 'line3' | 'square'): [number, number][] {
+    const [dx, dy] = this.dir === 'up' ? [0, -1] : this.dir === 'down' ? [0, 1] : this.dir === 'left' ? [-1, 0] : [1, 0];
+    if (area === 'square') {
+      const out: [number, number][] = [];
+      for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) if (ox || oy) out.push([tx + ox, ty + oy]);
+      return out;
+    }
+    const n = area === 'line2' ? 1 : 2;
+    return Array.from({ length: n }, (_, i) => [tx + dx * (i + 1), ty + dy * (i + 1)] as [number, number]);
+  }
+
+  private act(tx: number, ty: number, extra = false) {
     const s = this.state;
     const k = plotKey(tx, ty);
     const spot = this.spots.get(k);
+    // extra tiles of an upgraded tool: only plain field work, quietly
+    if (extra && (spot || !this.inField(tx, ty) || (s.tool !== 'cangkul' && s.tool !== 'siram'))) return;
     if (spot === 'door') return this.enterHouse();
     if (spot === 'bed') return this.game.events.emit('ask-sleep');
     if (spot === 'stove') {
@@ -1420,6 +1461,7 @@ export class FarmScene extends Phaser.Scene {
       if (s.level < FEATURE_LEVEL.coop) return this.fail(`Kandang ayam terbuka di Level ${FEATURE_LEVEL.coop}.`);
       return this.tendCoop();
     }
+    if (spot === 'bengkel') return this.game.events.emit('open-bengkel');
     if (spot === 'minesign')
       return this.toast(`Gua Tambang Bukit Kapur\nMakin dalam, makin bagus bijihnya. Terdalam: lantai ${s.cave?.deepest ?? 0}. Butuh Beliung (6).`);
     if (spot === 'cave') {
@@ -1448,7 +1490,7 @@ export class FarmScene extends Phaser.Scene {
         if (!s.ownedTools.includes('beliung')) return this.fail('Butuh Beliung untuk menambang. Beli di toko (tab Peralatan).');
         return this.fail('Pakai Beliung (6) untuk memecah batu.');
       }
-      const r = mineHit(s, k);
+      const r = mineHit(s, k, Math.random, 1 + tierOf(s, 'beliung'));
       if (r.error) return this.fail(r.error);
       this.swing();
       play('hoe');
@@ -1472,7 +1514,7 @@ export class FarmScene extends Phaser.Scene {
     if (spot === 'pond') {
       if (s.tool === 'pancing') return this.startFishing(tx, ty);
       if (s.tool !== 'siram') return this.fail('Pakai Penyiram (2) untuk isi air, atau Pancing (5) untuk memancing.');
-      s.water = WATER_CAN_MAX;
+      s.water = waterMax(s);
       play('water');
       this.splash(tx, ty, 0x8fd0f5);
       this.toast('Penyiram terisi penuh.');
@@ -1488,32 +1530,36 @@ export class FarmScene extends Phaser.Scene {
 
     switch (s.tool) {
       case 'cangkul': {
-        if (plot?.sprinkler) return this.fail('Ambil sprinkler dengan Tangan (4).');
+        if (plot?.sprinkler) return extra ? undefined : this.fail('Ambil sprinkler dengan Tangan (4).');
         if (plot?.crop?.dead) {
           delete plot.crop;
         } else if (plot?.crop) {
-          return this.fail('Ada tanaman di sini.');
+          return extra ? undefined : this.fail('Ada tanaman di sini.');
         } else if (plot?.tilled) {
           return;
         } else {
           s.plots[k] = { tilled: true, watered: false };
         }
-        s.stamina -= STAMINA_COST.cangkul;
-        this.swing();
-        play('hoe');
+        if (!extra) {
+          s.stamina -= STAMINA_COST.cangkul;
+          this.swing();
+          play('hoe');
+        }
         this.xp(XP.till, tx, ty);
         this.splash(tx, ty, 0xa8743f);
         break;
       }
       case 'siram': {
         if (!plot?.tilled) return;
-        if (s.water <= 0) return this.fail('Air habis. Isi di kolam.');
+        if (s.water <= 0) return extra ? undefined : this.fail('Air habis. Isi di kolam.');
         if (plot.watered) return;
         plot.watered = true;
         s.water--;
-        s.stamina -= STAMINA_COST.siram;
-        this.swing();
-        play('water');
+        if (!extra) {
+          s.stamina -= STAMINA_COST.siram;
+          this.swing();
+          play('water');
+        }
         this.xp(XP.water, tx, ty);
         this.splash(tx, ty, 0x6fb7e8);
         break;
@@ -1649,7 +1695,7 @@ export class FarmScene extends Phaser.Scene {
     play('water');
     this.splash(tx, ty, 0x8fd0f5);
     this.toast(`${LAKES[where].name} · menunggu ikan menggigit...`);
-    const timer = this.time.delayedCall(Phaser.Math.Between(1500, 4500), () => this.bite());
+    const timer = this.time.delayedCall(Phaser.Math.Between(1500, 4500) * (1 - 0.15 * tierOf(this.state, 'pancing')), () => this.bite());
     this.fishing = { stage: 'wait', where, bobber, alert, timer };
     this.changed();
   }
@@ -1663,7 +1709,7 @@ export class FarmScene extends Phaser.Scene {
     this.tweens.add({ targets: f.bobber, y: f.bobber.y + 3, duration: 90, yoyo: true, repeat: 3 });
     play('click');
     // a short window to react
-    f.timer = this.time.delayedCall(850, () => this.endFishing('Ikannya lepas... Coba lagi.', true));
+    f.timer = this.time.delayedCall(BITE_WINDOW_MS[tierOf(this.state, 'pancing')], () => this.endFishing('Ikannya lepas... Coba lagi.', true));
   }
 
   private reel() {
@@ -1671,7 +1717,7 @@ export class FarmScene extends Phaser.Scene {
     if (!f) return;
     if (f.stage === 'wait') return this.endFishing('Terlalu cepat! Ikannya kabur.', true);
     const s = this.state;
-    const id = rollFish(f.where, seasonOf(s.day), s.minutes / 60, isWet(s.weather));
+    const id = rollFish(f.where, seasonOf(s.day), s.minutes / 60, isWet(s.weather), Math.random, tierOf(s, 'pancing') >= 3 ? 1.5 : 1);
     // quicker reaction to the bite = better quality
     const q = fishStars(this.time.now - (f.biteAt ?? this.time.now), s.level);
     const key = qualityKey(id, q);

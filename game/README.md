@@ -108,6 +108,23 @@ Batu bijih makin keras setiap 15 lantai (Batu biasa tetap 1 pukulan). **Kerekan*
 
 **Kotak Kirim**: jendela dua sisi (Tas ⇄ Kotak). Klik barang lalu tentukan jumlahnya (−10/−1/+1/+10/Maks) dan tekan Kirim/Ambil, atau Kirim Semua / Ambil Semua; barang bisa diambil kembali sebelum tidur. Isi kotak dibayar besok pagi.
 
+**Bengkel Pandai Besi** (di jalan selatan, dekat gua): alat naik **satu tingkat demi satu tingkat**, Biasa → Tembaga → Besi → Emas. Hanya satu alat di tungku; selama ditempa alat itu tidak bisa dipakai (titik warna di toolbar menunjukkan tingkatnya).
+
+| Tingkat | Biaya | Lama | Level |
+|---|---|---|---|
+| Tembaga | 2.000 G + 5 Bijih Tembaga | 1 hari | 3 |
+| Besi | 5.000 G + 5 Bijih Besi | 2 hari | 6 |
+| Emas | 12.000 G + 5 Bijih Emas | 2 hari | 9 |
+
+| Alat | Tembaga | Besi | Emas |
+|---|---|---|---|
+| Penyiram | isi 40 | isi 70, 3 petak berjajar | isi 100, area 3×3 |
+| Cangkul | 2 petak berjajar | 3 petak berjajar | area 3×3 |
+| Pancing | waktu tarik 1,1 dtk, ikan lebih cepat | 1,4 dtk | 1,7 dtk, ikan langka ×1,5 |
+| Beliung | 2 kerusakan per pukulan | 3 | 4 |
+
+Satu ayunan tetap memakai tenaga satu kali, berapa pun petak yang kena.
+
 **Biaya tenaga per aksi**: Cangkul 1, Penyiram 1, Pancing 2, Beliung 2 (3 di Gua Panas, 4 di Perut Bumi); menanam dan memanen gratis.
 
 Loop: cangkul → tanam → siram tiap hari → panen → kotak kirim → dibayar tengah malam. Isi penyiram di kolam. **Hari berganti sendiri tiap 00:00**, tidur atau tidak: tanaman yang sudah disiram tumbuh, kiriman dibayar, cuaca dan permintaan warga baru muncul. **Tidur hanya memulihkan tenaga**, sebanding lamanya (penuh setelah 8 jam): tidur di kasur sampai 06:00 (05:00 dengan Jam Dinding, minimal 3 jam), atau tidur siang 2 jam (+25% tenaga). Laporan pagi muncul saat bangun. Boleh begadang: mulai 22:00 tenaga berkurang sendiri (5 per jam, 10 per jam setelah tengah malam), jam berubah oranye lalu merah. **Pingsan saat tenaga habis** (karena bekerja atau begadang): bangun 4 jam kemudian di rumah dengan 30% tenaga; kalau pingsan di luar rumah, warga mengantar pulang dengan biaya 10% koin (maksimal 500 G). Ikan malam tetap menggigit sampai pagi.

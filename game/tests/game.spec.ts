@@ -1141,3 +1141,62 @@ test('begadang menguras tenaga: 5 per jam sebelum, 10 per jam setelah tengah mal
   expect(s.stamina).toBeGreaterThan(95);
   noErrors(errors);
 });
+
+test('bengkel: upgrade bertahap, alat ditinggal sehari, lalu diambil', async ({ page }) => {
+  const errors = await start(page);
+  const r = await page.evaluate(async () => {
+    const st = window.game.registry.get('state');
+    const m = await import('/src/state.ts');
+    st.level = 9;
+    st.coins = 30000;
+    st.seeds = {};
+    st.produce = { 'bijih-tembaga': 5, 'bijih-besi': 5, 'bijih-emas': 5 };
+    const noOre = (() => { const p = { ...st.produce }; st.produce = {}; const e = m.startUpgrade(st, 'siram'); st.produce = p; return e; })();
+    const first = m.startUpgrade(st, 'siram'); // Biasa → Tembaga, uses copper
+    const busy = m.startUpgrade(st, 'cangkul'); // one tool at a time
+    const early = m.collectUpgrade(st);
+    st.day += 1;
+    const got = m.collectUpgrade(st);
+    const tier1 = m.tierOf(st, 'siram');
+    const water1 = m.waterMax(st);
+    const second = m.startUpgrade(st, 'siram'); // Tembaga → Besi, uses iron
+    st.day += 2;
+    m.collectUpgrade(st);
+    return { noOre, first, busy, early: !!early, got, tier1, water1, second, tier2: m.tierOf(st, 'siram'), water2: m.waterMax(st), coins: st.coins, produce: st.produce };
+  });
+  expect(r.noOre).toBe('Butuh 5 Bijih Tembaga.');
+  expect(r.first).toBeNull();
+  expect(r.busy).toBe('Pandai besi masih mengerjakan alat lain.');
+  expect(r.early).toBe(true);
+  expect(r.got).toBeNull();
+  expect([r.tier1, r.water1]).toEqual([1, 40]);
+  expect(r.second).toBeNull();
+  expect([r.tier2, r.water2]).toEqual([2, 70]);
+  expect(r.coins).toBe(30000 - 2000 - 5000);
+  expect(r.produce).toEqual({ 'bijih-emas': 5 }); // copper and iron used, gold kept
+  noErrors(errors);
+});
+
+test('alat tingkat tinggi: cangkul 3 petak, penyiram 3x3, alat di bengkel tidak bisa dipakai', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.toolTier = { cangkul: 2, siram: 3 }; s.water = 100; s.stamina = 100");
+  await at(page, 12, 9, 'down');
+  await use(page, 1); // Besi hoe: (12,10) (12,11) (12,12)
+  let s = await state(page);
+  for (const y of [10, 11, 12]) expect(s.plots[`12,${y}`]?.tilled).toBe(true);
+  expect(s.stamina).toBe(99); // one swing, one stamina
+  await page.waitForTimeout(400); // let the swing finish before moving
+  await patch(page, "for (const k of ['11,10','13,10','11,11','13,11','11,12','13,12']) s.plots[k] = { tilled: true, watered: false }");
+  await at(page, 12, 10, 'down');
+  await use(page, 2); // Emas can: 3x3 around (12,11)
+  s = await state(page);
+  for (const x of [11, 12, 13]) for (const y of [10, 11, 12]) expect(s.plots[`${x},${y}`].watered, `${x},${y}`).toBe(true);
+  expect(s.water).toBe(91);
+
+  await patch(page, "s.forge = { tool: 'cangkul', tier: 3, ready: 99 }");
+  await press(page, '1');
+  expect((await toasts(page)).join()).toContain('sedang ditempa');
+  await page.evaluate(() => window.game.events.emit('open-bengkel'));
+  expect(await modalOpen(page)).toBe(true);
+  noErrors(errors);
+});

@@ -19,6 +19,11 @@ import {
   STAMINA_PER_MILESTONE,
   STAMINA_REWARD,
   WATER_CAN_MAX,
+  WATER_BY_TIER,
+  UPGRADABLE,
+  UPGRADE_COST,
+  TOOL_TIERS,
+  needsPurchase,
   AFFECTION_MAX,
   BAG_TIERS,
   ALARM_WAKE_MIN,
@@ -149,6 +154,8 @@ export interface GameState {
   fridge: Record<string, number>; // kulkas contents (same keys as produce)
   storage: Record<string, number>; // peti lumbung contents (same keys as produce)
   cave?: CaveState;
+  toolTier?: Partial<Record<Tool, number>>; // 0 Biasa, 1 Tembaga, 2 Besi, 3 Emas
+  forge?: { tool: Tool; tier: number; ready: number }; // a tool at the Bengkel, ready on that day
   caveTreasure?: boolean; // the chest at the bottom has been opened
   pos?: { x: number; y: number; dir: 'down' | 'up' | 'left' | 'right' }; // where the player stands (world px) // last day the player chatted with each villager
   stats: { harvested: number; earned: number; requestsDone: number };
@@ -1073,18 +1080,52 @@ export function openCaveTreasure(s: GameState): string | null {
 }
 
 /** One swing at a rock: what it dropped when it breaks (and whether the ladder showed), an error, or {} while it holds. */
-export function mineHit(s: GameState, key: string, rand = Math.random): { error?: string; drop?: { id: Ore; qty: number }; ladder?: boolean } {
+export function mineHit(s: GameState, key: string, rand = Math.random, damage = 1): { error?: string; drop?: { id: Ore; qty: number }; ladder?: boolean } {
   const node = s.cave?.nodes[key];
   if (!node) return {};
   const o = ORES[node.ore];
   const qty = o.drop[0] + Math.floor(rand() * (o.drop[1] - o.drop[0] + 1));
-  if (node.hits <= 1 && !canAdd(s, 'produce', node.ore, qty)) return { error: 'Tas penuh! Kosongkan slot dulu.' };
+  if (node.hits <= damage && !canAdd(s, 'produce', node.ore, qty)) return { error: 'Tas penuh! Kosongkan slot dulu.' };
   s.stamina -= mineCost(s.cave!.floor);
-  node.hits--;
+  node.hits -= damage;
   if (node.hits > 0) return {};
   delete s.cave!.nodes[key];
   add(s.produce, node.ore, qty);
   const ladder = key === s.cave!.ladder;
   if (ladder) s.cave!.ladderOpen = true;
   return { drop: { id: node.ore, qty }, ladder };
+}
+
+// ---------- Bengkel Pandai Besi ----------
+
+export const tierOf = (s: GameState, t: Tool) => s.toolTier?.[t] ?? 0;
+export const waterMax = (s: GameState) => WATER_BY_TIER[tierOf(s, 'siram')];
+export const atForge = (s: GameState, t: Tool) => s.forge?.tool === t;
+
+/** Hand a tool to the smith for its next tier; returns an error or null. One tool at a time. */
+export function startUpgrade(s: GameState, t: Tool): string | null {
+  if (!UPGRADABLE.includes(t)) return 'Alat ini tidak bisa ditempa.';
+  if (s.forge) return 'Pandai besi masih mengerjakan alat lain.';
+  if (needsPurchase(t) && !s.ownedTools.includes(t)) return 'Beli alatnya dulu di toko.';
+  const next = tierOf(s, t) + 1;
+  const cost = UPGRADE_COST[next];
+  if (!cost) return 'Sudah tingkat tertinggi.';
+  if (s.level < cost.level) return `Tingkat ${TOOL_TIERS[next]} terbuka di Level ${cost.level}.`;
+  if (s.coins < cost.coins) return `Uang tidak cukup (butuh ${cost.coins.toLocaleString('id-ID')} G).`;
+  if (countBase(s, cost.ore) < cost.qty) return `Butuh ${cost.qty} ${produceById(cost.ore).name}.`;
+  s.coins -= cost.coins;
+  takeBase(s, cost.ore, cost.qty);
+  s.forge = { tool: t, tier: next, ready: s.day + cost.days };
+  if (s.tool === t) s.tool = 'tangan';
+  return null;
+}
+
+/** Collect a finished tool; returns an error or null. */
+export function collectUpgrade(s: GameState): string | null {
+  if (!s.forge) return 'Tidak ada alat di bengkel.';
+  if (s.day < s.forge.ready) return `Belum selesai. Ambil hari ke-${dayOfSeason(s.forge.ready)} ${seasonOf(s.forge.ready)}.`;
+  s.toolTier = { ...(s.toolTier ?? {}), [s.forge.tool]: s.forge.tier };
+  if (s.forge.tool === 'siram') s.water = waterMax(s);
+  s.forge = undefined;
+  return null;
 }

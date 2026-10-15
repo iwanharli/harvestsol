@@ -6,9 +6,10 @@ import {
   baseId,
   starsOf,
   TOOLS,
-  WATER_CAN_MAX,
   itemName,
   needsPurchase,
+  TOOL_TIERS,
+  TIER_COLORS,
   unlocksAt,
   xpToNext,
   seedIcon,
@@ -19,6 +20,9 @@ import { C, HEX, UI_SCALE, VIEW, bar as drawBar, card, glass, txt } from '../ui/
 import {
   bagCapacity,
   requestReady,
+  waterMax,
+  tierOf,
+  atForge,
   isFestivalDay,
   dayOfSeason,
   seasonOf,
@@ -37,6 +41,7 @@ import { openMebel } from '../ui/windows/mebel';
 import { openFridge, openStorage } from '../ui/windows/fridge';
 import { openWorldMap } from '../ui/windows/worldmap';
 import { askCaveFloor, type CaveAsk } from '../ui/windows/cave';
+import { openBengkel } from '../ui/windows/bengkel';
 import { openMarket } from '../ui/windows/market';
 import { openShipping } from '../ui/windows/shipping';
 import { openBoard } from '../ui/windows/board';
@@ -185,6 +190,7 @@ export class UIScene extends Phaser.Scene {
       ['open-fridge', () => openFridge(this)],
       ['open-map', () => openWorldMap(this)],
       ['ask-cave-floor', (q: CaveAsk) => askCaveFloor(this, q)],
+      ['open-bengkel', () => openBengkel(this)],
       ['open-storage', () => openStorage(this)],
       ['open-market', () => openMarket(this)],
       ['open-shipping', () => openShipping(this)],
@@ -270,7 +276,7 @@ export class UIScene extends Phaser.Scene {
       v.setText(`${Math.floor(value)}/${max}`);
     };
     bar(46, s.stamina, maxStamina(s), HEX.orange, 'Tenaga');
-    bar(66, s.water, WATER_CAN_MAX, HEX.blue, 'Air');
+    bar(66, s.water, waterMax(s), HEX.blue, 'Air');
 
     // XP: a thin full-width progress line along the top edge
     const need = xpToNext(s.level);
@@ -327,7 +333,13 @@ export class UIScene extends Phaser.Scene {
       icon.setScale(on ? 2.4 : 2.1);
       icon.setTint(locked ? 0x8a8070 : 0xffffff).setAlpha(locked ? 0.4 : on ? 1 : 0.85);
       key.setColor(on ? C.blue : C.tertiary);
-      let name = locked ? `${t.name} · beli di Toko` : t.name;
+      const tier = tierOf(s, t.id), away = atForge(s, t.id);
+      let name = locked ? `${t.name} · beli di Toko` : tier ? `${t.name} ${TOOL_TIERS[tier]}` : t.name;
+      if (away) {
+        name = `${t.name} · sedang di Bengkel`;
+        icon.setAlpha(0.3);
+      }
+      if (tier && !locked) frame.fillStyle(TIER_COLORS[tier], 1).fillCircle(x + 9, y + SLOT - 9, 4).lineStyle(1, 0xffffff, 1).strokeCircle(x + 9, y + SLOT - 9, 4);
       if (t.id === 'benih' && count) {
         // an empty selection jumps to something still in the bag, or shows an empty sack
         if (!s.seeds[s.seed] && Object.keys(s.seeds).length) s.seed = Object.keys(s.seeds)[0];
