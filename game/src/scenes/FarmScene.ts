@@ -955,7 +955,7 @@ export class FarmScene extends Phaser.Scene {
    */
   private frameRoom(R: { x: number; y: number; w: number; h: number }) {
     const cam = this.cameras.main;
-    const top = 150 * UI_SCALE, bottom = 90 * UI_SCALE;
+    const top = 150 * UI_SCALE, bottom = 125 * UI_SCALE; // clear the tool dock and its name pill
     const zoom = Math.min(2 * UI_SCALE, (cam.width * 0.94) / ((R.w + 1) * TILE), (cam.height - top - bottom) / ((R.h + 0.5) * TILE));
     cam.setZoom(zoom);
     // centre the room in the free band, which sits a little below the screen centre
