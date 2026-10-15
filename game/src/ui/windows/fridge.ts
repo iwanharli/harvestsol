@@ -1,4 +1,4 @@
-import { DISHES, FRIDGE_SLOTS, STACK_MAX, baseId, dishById, isBought, produceById, starsOf } from '../../data';
+import { DISHES, FRIDGE_SLOTS, FRIDGE_STACK_MAX, STACK_MAX, baseId, dishById, isBought, produceById, starsOf } from '../../data';
 import { play } from '../../sfx';
 import { bagCapacity, fridgeSlotsUsed, moveFromFridge, moveToFridge, save, slotsUsed } from '../../state';
 import { C, HEX, bar as drawBar, card, txt, well } from '../theme';
@@ -25,7 +25,8 @@ export function openFridge(ui: UIScene) {
     c.add(bg);
     const stacks = Object.entries(rec).flatMap(([k, q]) => {
       const out: [string, number][] = [];
-      for (let left = q; left > 0; left -= STACK_MAX) out.push([k, Math.min(STACK_MAX, left)]);
+      const per = which === 'bag' ? STACK_MAX : FRIDGE_STACK_MAX;
+      for (let left = q; left > 0; left -= per) out.push([k, Math.min(per, left)]);
       return out;
     });
     for (let i = 0; i < COLS * ROWS; i++) {

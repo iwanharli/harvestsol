@@ -167,8 +167,8 @@ test('pancing harus dibeli, lalu bisa dapat ikan', async ({ page }) => {
 
 test('tas penuh menolak panen, lalu upgrade tas', async ({ page }) => {
   const errors = await start(page);
-  // 12 stacks of 99 fill the starter bag
-  await patch(page, "s.seeds = {}; s.produce = { kangkung: 12 * 99 }; s.plots['10,10'] = { tilled: true, watered: false, crop: { id: 'tomat', growth: 5 } }");
+  // 12 stacks of 50 fill the starter bag
+  await patch(page, "s.seeds = {}; s.produce = { kangkung: 12 * 50 }; s.plots['10,10'] = { tilled: true, watered: false, crop: { id: 'tomat', growth: 5 } }");
   await at(page, 10, 9, 'down');
   await use(page, 4);
   let s = await state(page);
@@ -719,5 +719,21 @@ test('permintaan baru muncul acak sekali sehari, papan bisa kosong', async ({ pa
   expect(counts).not.toContain(-1);
   expect(counts).toContain(0);
   expect(Math.max(...counts)).toBeLessThanOrEqual(2);
+  noErrors(errors);
+});
+
+test('slot tas maksimal 50, slot kulkas maksimal 99', async ({ page }) => {
+  const errors = await start(page);
+  const r = await page.evaluate(async () => {
+    const st = window.game.registry.get('state');
+    const mod = await import('/src/state.ts');
+    st.seeds = {};
+    st.produce = { kangkung: 120 };
+    st.fridge = {};
+    const bag = mod.slotsUsed(st); // 50 + 50 + 20
+    mod.moveToFridge(st, 'kangkung');
+    return { bag, fridge: mod.fridgeSlotsUsed(st) }; // 99 + 21
+  });
+  expect(r).toEqual({ bag: 3, fridge: 2 });
   noErrors(errors);
 });
