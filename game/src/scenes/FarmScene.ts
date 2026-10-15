@@ -8,19 +8,12 @@ import {
   FIELD,
   GAME_MIN_PER_SEC,
   MAP_H,
-  QUARRY,
   BENGKEL_HOURS,
   CAVE_ROOM,
-  caveTint,
-  zoneOf,
-  zoneIndex,
-  CAVE_BOTTOM,
   CAVE_TREASURE,
   LAKES,
   type Water,
   FISH,
-  FURNITURE,
-  HOUSE_TIERS,
   MARKET_CLOSE,
   MARKET_OPEN,
   MARKET_OWNER,
@@ -32,10 +25,7 @@ import {
   furnitureById,
   RUN_MULT,
   isWet,
-  fishStars,
-  fishXp,
   needsPurchase,
-  rollFish,
   NPC_LINES,
   npcById,
   zoneAt,
@@ -44,7 +34,6 @@ import {
   TILE,
   TOOLS,
   AREA_BY_TIER,
-  BITE_WINDOW_MS,
   AFFECTION_MAX,
   FEATURE_LEVEL,
   FESTIVAL_CLOSE,
@@ -77,7 +66,6 @@ import {
   plotKey,
   save,
   mineHit,
-  genFloor,
   tierOf,
   waterMax,
   atForge,
@@ -89,75 +77,45 @@ import {
 import { play, toggleMute, unlockAudio } from '../sfx';
 import { duck, setMood, startMusic, toggleMusic } from '../music';
 import { UI_SCALE, VIEW } from '../ui/theme';
-import { MAP_PX } from '../ui/windows/worldmap';
-
-type Dir = 'down' | 'up' | 'left' | 'right';
-const DIR_VEC: Record<Dir, [number, number]> = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] };
-const SPEED = 62; // world px per second
-
-type Spot =
-  | 'door' | 'shop' | 'bin' | 'pond' | 'lakesign' | 'minesign' | 'ore' | 'cave' | 'descend' | 'pillar' | 'treasure' | 'bengkel' | 'board' | 'coop' | 'stage' | 'house'
-  | 'bed' | 'stove' | 'tv' | 'shelf' | 'wardrobe' | 'fridge' | 'storage' | 'radio' | 'trophy' | 'slot'
-  | 'mebel' | 'counter' | 'display' | 'sofa';
-
-/** Shown the first time you reach each zone. */
-const ZONE_HINTS = [
-  '',
-  'Stalaktit menghalangi jalan, Besi lebih banyak.',
-  'Ada Kristal Kuarsa. Tangga hanya tersembunyi di batu bijih.',
-  'Udara panas: tiap pukulan butuh 3 tenaga. Bawa masakan!',
-  'Gelap dan berat (4 tenaga per pukulan). Ada Batu Mulia, dan dasar gua di lantai 50.',
-];
-
-/** The farmhouse interior lives in empty world space east of the map (tiles), so all systems just work inside. */
-const ROOM = { x: 100, y: 4, w: 20, h: 12 }; // Rumah Kecil
-/** One interior per house tier (renovations), all reached through the farmhouse door. */
-const HOUSE_ROOMS = HOUSE_TIERS.map((t) => (t.x === ROOM.x ? ROOM : { x: t.x, y: 4, w: t.w, h: t.h }));
-/** The Toko Mebel interior, further east. */
-const SHOP = { x: 160, y: 4, w: 14, h: 9 }; // far enough that the house never shows at the screen edge
-/** Where each room's doormat leads back to outside (world px, facing down). */
-const ROOMS = [
-  ...HOUSE_ROOMS.map((room) => ({ room, exit: { x: 4.5 * TILE + 8, y: 7 * TILE - 2 } })),
-  { room: SHOP, exit: { x: 58 * TILE, y: 19 * TILE - 2 } },
-  { room: CAVE_ROOM, exit: { x: 56.5 * TILE, y: 46 * TILE - 2 } },
-];
-const roomAt = (tx: number, ty: number) =>
-  ROOMS.find(({ room: r }) => tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h);
-const inRoom = (tx: number, ty: number) => !!roomAt(tx, ty);
+import { type Dir, DIR_VEC, SPEED, type Spot, ROOM, HOUSE_ROOMS, SHOP, roomAt, inRoom } from './farm/common';
+import * as map from './farm/map';
+import * as interiors from './farm/interiors';
+import * as cave from './farm/cave';
+import * as fishing from './farm/fishing';
 
 export class FarmScene extends Phaser.Scene {
-  private state!: GameState;
-  private player!: Phaser.GameObjects.Image;
-  private cursor!: Phaser.GameObjects.Image;
-  private dir: Dir = 'down';
-  private walkTime = 0;
-  private blocked = new Set<string>();
-  private spots = new Map<string, Spot>();
-  private soilImgs = new Map<string, Phaser.GameObjects.Image>();
-  private cropImgs = new Map<string, Phaser.GameObjects.Image>();
-  private fertImgs = new Map<string, Phaser.GameObjects.Image>();
-  private propImgs = new Map<string, Phaser.GameObjects.Image>();
-  private keys!: Record<string, Phaser.Input.Keyboard.Key>;
-  private moveTarget?: { x: number; y: number; act?: [number, number] };
-  private busy = false;
-  private waterImgs: Phaser.GameObjects.Image[] = [];
-  private butterflies: Phaser.GameObjects.Image[] = [];
-  private fireflies: Phaser.GameObjects.Image[] = [];
-  private clouds: Phaser.GameObjects.Image[] = [];
-  private lamps: Phaser.GameObjects.Image[] = [];
-  private lantern!: Phaser.GameObjects.Image;
-  private night!: Phaser.GameObjects.Rectangle;
-  private playerShadow!: Phaser.GameObjects.Image;
-  private flap = 0;
-  private boardBubble!: Phaser.GameObjects.Image;
-  private coopLock!: Phaser.GameObjects.Image;
-  private bunting!: Phaser.GameObjects.Image;
-  private coopLockText!: Phaser.GameObjects.Text;
-  private hens = new Map<number, Phaser.GameObjects.Image>();
-  private houseOwner = new Map<string, string>();
-  private villagers = new Map<string, Phaser.GameObjects.Image>();
-  private zone = '';
-  private fishing?: {
+  state!: GameState;
+  player!: Phaser.GameObjects.Image;
+  cursor!: Phaser.GameObjects.Image;
+  dir: Dir = 'down';
+  walkTime = 0;
+  blocked = new Set<string>();
+  spots = new Map<string, Spot>();
+  soilImgs = new Map<string, Phaser.GameObjects.Image>();
+  cropImgs = new Map<string, Phaser.GameObjects.Image>();
+  fertImgs = new Map<string, Phaser.GameObjects.Image>();
+  propImgs = new Map<string, Phaser.GameObjects.Image>();
+  keys!: Record<string, Phaser.Input.Keyboard.Key>;
+  moveTarget?: { x: number; y: number; act?: [number, number] };
+  busy = false;
+  waterImgs: Phaser.GameObjects.Image[] = [];
+  butterflies: Phaser.GameObjects.Image[] = [];
+  fireflies: Phaser.GameObjects.Image[] = [];
+  clouds: Phaser.GameObjects.Image[] = [];
+  lamps: Phaser.GameObjects.Image[] = [];
+  lantern!: Phaser.GameObjects.Image;
+  night!: Phaser.GameObjects.Rectangle;
+  playerShadow!: Phaser.GameObjects.Image;
+  flap = 0;
+  boardBubble!: Phaser.GameObjects.Image;
+  coopLock!: Phaser.GameObjects.Image;
+  bunting!: Phaser.GameObjects.Image;
+  coopLockText!: Phaser.GameObjects.Text;
+  hens = new Map<number, Phaser.GameObjects.Image>();
+  houseOwner = new Map<string, string>();
+  villagers = new Map<string, Phaser.GameObjects.Image>();
+  zone = '';
+  fishing?: {
     stage: 'wait' | 'bite';
     biteAt?: number;
     where: Water;
@@ -165,7 +123,7 @@ export class FarmScene extends Phaser.Scene {
     alert: Phaser.GameObjects.Image;
     timer: Phaser.Time.TimerEvent;
   };
-  private yard = new Phaser.Geom.Rectangle(25 * TILE, 15 * TILE + 8, 3 * TILE + 8, 2 * TILE + 8);
+  yard = new Phaser.Geom.Rectangle(25 * TILE, 15 * TILE + 8, 3 * TILE + 8, 2 * TILE + 8);
 
   constructor() {
     super('farm');
@@ -244,649 +202,71 @@ export class FarmScene extends Phaser.Scene {
 
   // ---------- map ----------
 
-  private buildMap() {
-    const r = new Phaser.Math.RandomDataGenerator(['cropfarm']);
-
-    // ---- ground plan: g grass, p path, s stone, d sand, w water, k dock ----
-    const G: string[][] = Array.from({ length: MAP_H }, () => Array<string>(MAP_W).fill('g'));
-    const set = (x: number, y: number, t: string) => {
-      if (x >= 0 && y >= 0 && x < MAP_W && y < MAP_H) G[y][x] = t;
-    };
-    const rect = (x0: number, y0: number, x1: number, y1: number, t: string) => {
-      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(x, y, t);
-    };
-
-    // lakes, each ringed with sand: Danau Sirep south of the village, the far ones further south
-    const water = (x: number, y: number, id: Water) => {
-      set(x, y, 'w');
-      if (G[y]?.[x] === 'w') this.waterAt.set(plotKey(x, y), id);
-    };
-    const blob = (cx: number, cy: number, rx: number, ry: number, id: Water, wobble = 0) => {
-      for (let y = Math.floor(cy - ry - 2); y <= cy + ry + 2; y++)
-        for (let x = Math.floor(cx - rx - 2); x <= cx + rx + 2; x++) {
-          const ang = Math.atan2(y - cy, x - cx);
-          const k = 1 + wobble * Math.sin(ang * 3 + cx) * 0.5;
-          if (((x - cx) / (rx * k)) ** 2 + ((y - cy) / (ry * k)) ** 2 < 1) water(x, y, id);
-        }
-    };
-    blob(24, 31, 13, 5.2, 'danau');
-    blob(34, 33.5, 7, 3.6, 'danau');
-    blob(13, 47, 8, 4, 'rawa', 0.35); // ragged swamp
-    blob(20, 50, 4, 2.6, 'rawa', 0.3);
-    blob(11, 62, 6, 4, 'telaga');
-    blob(34, 58, 11, 5, 'waduk');
-    blob(57, 64, 8, 5, 'muara', 0.2);
-    for (let y = 60; y <= 66; y++) for (let x = 60; x < MAP_W; x++) water(x, y, 'muara'); // the river mouth runs off the map
-    for (let y = 1; y < MAP_H - 1; y++)
-      for (let x = 1; x < MAP_W - 1; x++) {
-        if (G[y][x] === 'w') continue;
-        let near = false;
-        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (G[y + dy][x + dx] === 'w') near = true;
-        if (near) set(x, y, 'd');
-      }
-
-    // roads
-    rect(4, 6, 5, 6, 'p'); // farmhouse door
-    rect(4, 7, 41, 7, 'p'); // farm → village
-    rect(4, 8, 4, 23, 'p'); // farm → lake
-    rect(4, 23, 24, 23, 'p');
-    rect(24, 24, 24, 24, 'p');
-    rect(53, 7, 57, 7, 'p'); // plaza → Pak Darto
-    rect(37, 6, 38, 6, 'p'); // Bu Sari's door
-    rect(55, 6, 56, 6, 'p'); // Pak Darto's door
-    rect(53, 13, 58, 13, 'p'); // plaza → Mbak Rani
-    rect(47, 15, 47, 30, 'p'); // plaza → south road → forest clearing
-    rect(40, 22, 58, 22, 'p');
-    rect(57, 18, 58, 21, 'p'); // to the Toko Mebel door
-    rect(42, 7, 52, 14, 's'); // village plaza
-    for (let y = 26; y <= 29; y++) set(24, y, 'k'); // dock
-    // the southern lakes: the forest road continues south, a long east-west road links them
-    rect(47, 30, 47, 69, 'p');
-    rect(3, 38, 47, 38, 'p');
-    rect(3, 39, 3, 69, 'p');
-    rect(3, 54, 47, 54, 'p');
-        rect(22, 64, 46, 64, 's'); // the waduk's dam
-    rect(18, 66, 47, 66, 'p');
-    rect(48, 63, 52, 63, 'k'); // a jetty into the muara
-    // Tambang Bukit Kapur: a gravel quarry in the east woods, reached from the south road
-    rect(QUARRY.x, QUARRY.y, QUARRY.x + QUARRY.w - 1, QUARRY.y + QUARRY.h - 1, 'q');
-    rect(48, 38, 51, 38, 'p'); // in front of the Bengkel
-    rect(48, QUARRY.y + Math.floor(QUARRY.h / 2), QUARRY.x - 1, QUARRY.y + Math.floor(QUARRY.h / 2), 'p');
-
-    // forest clearing with flowers
-    const clearing = { x: 54, y: 32, r: 3.2 };
-
-    for (let y = 0; y < MAP_H; y++)
-      for (let x = 0; x < MAP_W; x++) {
-        const t = G[y][x];
-        const X = x * TILE, Y = y * TILE;
-        if (t === 'w') {
-          const lake = this.waterAt.get(plotKey(x, y)) ?? 'danau';
-          this.waterImgs.push(this.add.image(X, Y, 'water0').setOrigin(0).setDepth(-9).setTint(LAKES[lake].tint));
-          if (y > 0 && G[y - 1][x] !== 'w' && G[y - 1][x] !== 'k') this.add.image(X, Y, 'shore').setOrigin(0).setDepth(-8.8);
-          this.block(x, y, 'pond');
-          continue;
-        }
-        let key = 'grass0';
-        if (t === 'p') key = 'path';
-        else if (t === 's') key = 'stone';
-        else if (t === 'd') key = 'sand';
-        else if (t === 'k') key = 'plank';
-        else if (t === 'q') key = 'gravel';
-        else {
-          const inClearing = Math.hypot(x - clearing.x, y - clearing.y) < clearing.r;
-          const n = r.frac();
-          key = inClearing ? (n < 0.5 ? 'grass2' : 'grass3') : n < 0.06 ? 'grass2' : n < 0.12 ? 'grass3' : n < 0.38 ? 'grass1' : 'grass0';
-        }
-        this.add.image(X, Y, key).setOrigin(0).setDepth(-10);
-      }
-
-    // field area: slightly darker grass so players know where they can till
-    this.add
-      .rectangle(FIELD.x * TILE, FIELD.y * TILE, FIELD.w * TILE, FIELD.h * TILE, 0x3f7a2a, 0.2)
-      .setOrigin(0)
-      .setDepth(-9);
-
-    // farm pond with a sandy rim and lily pads
-    const pond = { x: 25, y: 11, w: 3, h: 4 };
-    this.add
-      .rectangle(pond.x * TILE - 2, pond.y * TILE - 2, pond.w * TILE + 4, pond.h * TILE + 4, 0xe6cf9a)
-      .setOrigin(0)
-      .setDepth(-9.5);
-    for (let y = pond.y; y < pond.y + pond.h; y++)
-      for (let x = pond.x; x < pond.x + pond.w; x++) {
-        this.waterImgs.push(this.add.image(x * TILE, y * TILE, 'water0').setOrigin(0).setDepth(-9));
-        this.waterAt.set(plotKey(x, y), 'kolam');
-        this.block(x, y, 'pond');
-      }
-    this.add.rectangle(pond.x * TILE, pond.y * TILE, pond.w * TILE, 2, 0x2f7fb8).setOrigin(0).setDepth(-8.9);
-    this.add.image(25.6 * TILE, 12.4 * TILE, 'lily').setDepth(-8.5);
-    this.add.image(27.2 * TILE, 14.1 * TILE, 'lily').setDepth(-8.5).setFlipX(true);
-
-    // lake dressing: lily pads, reeds on the sand
-    for (const [x, y] of [[15, 29], [19, 33], [30, 28], [36, 33], [27, 34], [12, 31]]) {
-      if (G[y][x] === 'w') this.add.image((x + 0.5) * TILE, (y + 0.5) * TILE, 'lily').setDepth(-8.5).setFlipX(x % 2 === 0);
-    }
-    for (let y = 22; y < MAP_H - 1; y++)
-      for (let x = 2; x < MAP_W - 1; x++)
-        if (G[y][x] === 'd' && (x * 7 + y * 13) % 5 === 0)
-          this.add.image((x + 0.5) * TILE, (y + 1) * TILE, 'reeds').setOrigin(0.5, 1).setDepth((y + 1) * TILE - 2);
-
-    // a signpost with its name at every lake
-    for (const [id, x, y] of [['kolam', 28, 13], ['danau', 25, 24], ['rawa', 4, 44], ['telaga', 4, 61], ['waduk', 46, 56], ['muara', 46, 61]] as const) {
-      this.add.image((x + 0.5) * TILE, (y + 1) * TILE, 'signpost').setOrigin(0.5, 1).setDepth((y + 1) * TILE);
-      this.block(x, y, 'lakesign');
-      this.lakeSigns.set(plotKey(x, y), id);
-    }
-    const mx = QUARRY.x - 2, my = QUARRY.y + Math.floor(QUARRY.h / 2) - 1;
-    this.add.image((mx + 0.5) * TILE, (my + 1) * TILE, 'signpost').setOrigin(0.5, 1).setDepth((my + 1) * TILE);
-    this.block(mx, my, 'minesign');
-    // the cave mouth at the back of the yard (3 tiles wide), entered from the row in front of it
-    this.add.image(56.5 * TILE, 45 * TILE, 'cave-mouth').setOrigin(0.5, 1).setDepth(45 * TILE);
-    for (let x = 55; x <= 57; x++) for (let y = 42; y <= 44; y++) this.block(x, y, y === 44 ? 'cave' : undefined);
-    // the kerekan beside it: a rope-and-pulley basket down to the floors you have reached
-    this.add.image(58.5 * TILE, 45 * TILE, 'kerekan').setOrigin(0.5, 1).setDepth(45 * TILE);
-    this.block(58, 44, 'cave');
-
-    // farmhouse (4x4 tiles), door on bottom row
-    this.building('house', 3, 2);
-    this.spots.set(plotKey(4, 5), 'door').set(plotKey(5, 5), 'door');
-    this.windowGlow(3, 2);
-
-    // villager houses
-    for (const h of NPC_HOMES) {
-      this.building(h.tex, h.x, h.y);
-      this.spots.set(plotKey(h.x + 1, h.y + 3), 'house').set(plotKey(h.x + 2, h.y + 3), 'house');
-      this.houseOwner.set(plotKey(h.x + 1, h.y + 3), h.npc).set(plotKey(h.x + 2, h.y + 3), h.npc);
-      this.windowGlow(h.x, h.y);
-    }
-
-    // Toko Mebel, east of the village, with its own path to the south road
-    this.building('house-mebel', 56, 14);
-    this.spots.set(plotKey(57, 17), 'mebel').set(plotKey(58, 17), 'mebel');
-    this.windowGlow(56, 14);
-    this.add.image(58 * TILE, 14 * TILE + 30, 'sign-mebel').setOrigin(0.5, 0.5).setDepth(18 * TILE + 1);
-    this.add
-      .text(58 * TILE, 14 * TILE + 30, 'MEBEL', { fontFamily: 'monospace', fontSize: '8px', color: '#1a5a56', fontStyle: 'bold' })
-      .setOrigin(0.5)
-      .setResolution(4)
-      .setDepth(18 * TILE + 2);
-
-    // Bengkel Pandai Besi: an open smithy beside the road south to the cave
-    this.shadow(50 * TILE, 38 * TILE - 1, 66);
-    this.add.image(50 * TILE, 38 * TILE, 'smithy').setOrigin(0.5, 1).setDepth(36 * TILE);
-    this.add
-      .text(50 * TILE, 33 * TILE + 13, 'BENGKEL', { fontFamily: 'monospace', fontSize: '7px', color: '#fffbe6', stroke: '#26262c', strokeThickness: 3, fontStyle: 'bold' })
-      .setOrigin(0.5)
-      .setResolution(4)
-      .setDepth(36 * TILE + 1);
-    for (let x = 48; x <= 51; x++) for (let y = 34; y <= 37; y++) this.block(x, y, y === 37 && (x === 49 || x === 50) ? 'bengkel' : undefined);
-    const fire = this.add.image(48.5 * TILE - 1, 37 * TILE - 2, 'forge-fire').setOrigin(0.5, 1).setDepth(36 * TILE + 2);
-    const fireGlow = this.add.image(48.5 * TILE, 36.6 * TILE, 'glow').setScale(1.1).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600);
-    const smith = this.add.image(50.3 * TILE, 38 * TILE - 1, 'npc-smith-0').setOrigin(0.5, 1).setDepth(37 * TILE + 4);
-    const anvil = this.add.image(49.3 * TILE, 38 * TILE, 'anvil').setOrigin(0.5, 1).setDepth(37 * TILE + 3);
-    const hammer = this.add.image(50 * TILE, 37 * TILE + 6, 'smith-hammer').setOrigin(0.9, 0.5).setDepth(37 * TILE + 5);
-    this.tweens.add({ targets: fire, scaleY: 1.15, alpha: 0.85, duration: 260, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-    // the smith swings: hammer up, then down onto the anvil with a few sparks
-    this.tweens.add({
-      targets: hammer,
-      angle: { from: 70, to: -10 },
-      duration: 220,
-      hold: 60,
-      repeatDelay: 420,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Quad.In',
-      onYoyo: () => {
-        if (!this.smithy.open) return;
-        for (let i = 0; i < 4; i++) {
-          const sp = this.add.rectangle(anvil.x + 2, anvil.y - 11, 1.5, 1.5, i % 2 ? 0xfff3a8 : 0xf8a03a).setDepth(37 * TILE + 6);
-          this.tweens.add({ targets: sp, x: sp.x + Phaser.Math.Between(-10, 10), y: sp.y - Phaser.Math.Between(4, 12), alpha: 0, duration: 380, onComplete: () => sp.destroy() });
-        }
-      },
-    });
-    this.smithy = { open: true, parts: [smith, hammer], fire, fireGlow };
-
-    // plaza: shop, board, stage, fountain, lamps, benches, flowers
-    this.shadow(47 * TILE, 7 * TILE - 1, 36);
-    this.add.image(46 * TILE, 5 * TILE, 'shop').setOrigin(0).setDepth(7 * TILE);
-    for (let y = 5; y <= 6; y++) for (let x = 46; x <= 47; x++) this.block(x, y, 'shop');
-
-    this.shadow(44 * TILE, 7 * TILE - 1, 22);
-    this.add.image(44 * TILE, 7 * TILE, 'board').setOrigin(0.5, 1).setDepth(7 * TILE);
-    this.block(43, 6, 'board');
-    this.block(44, 6, 'board');
-    this.boardBubble = this.add.image(44 * TILE, 7 * TILE - 34, 'bubble').setDepth(9200).setVisible(false);
-    this.tweens.add({ targets: this.boardBubble, y: this.boardBubble.y - 3, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-
-    this.shadow(50.5 * TILE, 7 * TILE - 1, 50);
-    this.add.image(50.5 * TILE, 7 * TILE, 'stage').setOrigin(0.5, 1).setDepth(7 * TILE);
-    for (let y = 5; y <= 6; y++) for (let x = 49; x <= 51; x++) this.block(x, y, 'stage');
-    this.bunting = this.add.image(50.5 * TILE, 4 * TILE + 6, 'bunting').setDepth(7 * TILE + 1);
-
-    this.add.image(47.5 * TILE, 13 * TILE, 'fountain').setOrigin(0.5, 1).setDepth(13 * TILE);
-    for (let y = 11; y <= 12; y++) for (let x = 46; x <= 48; x++) this.block(x, y);
-
-    for (const [x, y] of [[42, 8], [52, 8], [42, 14], [52, 14], [40, 22], [54, 22], [24, 24]]) {
-      this.add.image((x + 0.5) * TILE, (y + 1) * TILE, 'lamp').setOrigin(0.5, 1).setDepth((y + 1) * TILE);
-      this.block(x, y);
-      this.lamps.push(this.add.image((x + 0.5) * TILE, y * TILE - 8, 'glow').setScale(0.9).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0));
-    }
-    for (const [x, y] of [[44, 13], [49, 13]]) {
-      this.add.image((x + 1) * TILE, (y + 1) * TILE, 'bench').setOrigin(0.5, 1).setDepth((y + 1) * TILE);
-      this.block(x, y);
-      this.block(x + 1, y);
-    }
-    for (const [x, y] of [[43, 9], [51, 9], [43, 10], [51, 10]]) this.deco('flowerbed', x, y, false);
-    this.add.image(39 * TILE, 12 * TILE, 'well').setOrigin(0.5, 1).setDepth(12 * TILE);
-    this.block(38, 11);
-    this.block(39, 11);
-
-    // chicken coop (locked until FEATURE_LEVEL.coop)
-    this.shadow(25.5 * TILE, 10 * TILE - 1, 50);
-    this.add.image(24 * TILE, 10 * TILE, 'coop').setOrigin(0, 1).setDepth(10 * TILE);
-    for (let y = 8; y <= 9; y++) for (let x = 24; x <= 26; x++) this.block(x, y, 'coop');
-    this.coopLock = this.add.image(27.5 * TILE, 10 * TILE, 'sign-lock').setOrigin(0.5, 1).setDepth(10 * TILE + 1);
-    this.coopLockText = this.add
-      .text(27.5 * TILE, 10 * TILE - 22, `Lv ${FEATURE_LEVEL.coop}`, {
-        fontFamily: 'monospace',
-        fontSize: '8px',
-        color: '#fffbe6',
-        stroke: '#2a1d17',
-        strokeThickness: 2,
-      })
-      .setOrigin(0.5, 1)
-      .setDepth(10 * TILE + 2)
-      .setResolution(4);
-
-    // shipping bin
-    this.shadow(8.5 * TILE, 7 * TILE - 1, 18);
-    this.add.image(8 * TILE, 6 * TILE, 'bin').setOrigin(0).setDepth(7 * TILE);
-    this.block(8, 6, 'bin');
-
-    // fence below the field
-    for (let x = FIELD.x - 1; x <= FIELD.x + FIELD.w; x++) {
-      this.add.image(x * TILE, (FIELD.y + FIELD.h) * TILE, 'fence').setOrigin(0).setDepth((FIELD.y + FIELD.h + 1) * TILE);
-      this.block(x, FIELD.y + FIELD.h);
-    }
-
-    // trees: world border, farm, village, and a forest in the south-east
-    const free = (x: number, y: number) => G[y]?.[x] === 'g' && !this.blocked.has(plotKey(x, y));
-    const tree = (x: number, y: number, fruit = false) => {
-      if (!free(x, y)) return;
-      this.shadow((x + 0.5) * TILE, (y + 1) * TILE - 2, 26);
-      this.add.image((x + 0.5) * TILE, (y + 1) * TILE, fruit ? 'tree-fruit' : 'tree').setOrigin(0.5, 1).setDepth((y + 1) * TILE);
-      this.block(x, y);
-      this.treeTiles.add(plotKey(x, y));
-    };
-    for (let x = 0; x < MAP_W; x += 2) {
-      tree(x, 0);
-      tree(x + 1, MAP_H - 1);
-    }
-    for (let y = 2; y < MAP_H - 1; y += 2) {
-      tree(0, y);
-      tree(MAP_W - 1, y + 1);
-    }
-    for (const [x, y, f] of [
-      [20, 3, 1], [23, 2, 0], [10, 2, 1], [26, 5, 0], [3, 15, 0], [5, 17, 1],
-      [31, 3, 0], [33, 10, 1], [30, 15, 0], [32, 19, 0], [29, 21, 1], [12, 20, 0], [18, 21, 1],
-      [40, 3, 0], [60, 5, 1], [35, 12, 0], [36, 16, 1], [57, 16, 0], [61, 14, 0], [59, 20, 1], [41, 11, 0],
-      [8, 37, 0], [44, 30, 0], [42, 36, 1],
-    ] as const)
-      tree(x, y, f === 1);
-    for (let y = 24; y < 52; y++)
-      for (let x = 45; x < MAP_W - 1; x++) {
-        if (Math.hypot(x - clearing.x, y - clearing.y) < clearing.r + 1) continue;
-        if ((x + y) % 2 === 0 && r.frac() < 0.62) tree(x, y, r.frac() < 0.1);
-      }
-
-    // the south: woods between the lakes, thicker around the misty telaga
-    for (let y = 40; y < MAP_H - 1; y++)
-      for (let x = 1; x < MAP_W - 1; x++) {
-        const nearTelaga = Math.hypot(x - 11, y - 62) < 10;
-        if ((x * 3 + y) % 2 === 0 && r.frac() < (nearTelaga ? 0.4 : 0.14)) tree(x, y, r.frac() < 0.08);
-      }
-
-    // small decorations
-    for (const [x, y] of [[2, 8], [3, 11], [6, 13], [22, 5], [2, 5], [34, 6], [58, 7], [39, 19], [27, 20], [9, 21], [46, 24]]) this.deco('bush', x, y);
-    for (const [x, y] of [[6, 10], [19, 2], [11, 25], [38, 27], [50, 27], [61, 10]]) this.deco('rock', x, y);
-    for (const [x, y] of [[12, 5], [21, 18], [52, 34], [56, 30]]) this.deco('stump', x, y);
-    this.paintMinimap(G);
+  buildMap() {
+    return map.buildMap(this);
   }
 
   /** The rocks (and, once found, the ladder down) on the current cave floor. */
-  private mineImgs = new Map<string, Phaser.GameObjects.Image>();
-  private caveFloorImgs: Phaser.GameObjects.Image[] = [];
-  private caveLabel?: Phaser.GameObjects.Text;
-  private caveDark?: Phaser.GameObjects.Rectangle;
-  private refreshCave() {
-    for (const [k, img] of this.mineImgs) {
-      img.destroy();
-      this.blocked.delete(k);
-      this.spots.delete(k);
-    }
-    this.mineImgs.clear();
-    const cave = this.state.cave;
-    if (!cave?.floor) return;
-    for (const [k, n] of Object.entries(cave.nodes)) {
-      const [x, y] = k.split(',').map(Number);
-      this.mineImgs.set(k, this.add.image((x + 0.5) * TILE, (y + 1) * TILE, `rock-${n.ore}`).setOrigin(0.5, 1).setDepth((y + 1) * TILE));
-      this.blocked.add(k);
-      this.spots.set(k, 'ore');
-    }
-    for (const k of cave.pillars ?? []) {
-      const [x, y] = k.split(',').map(Number);
-      this.mineImgs.set(k, this.add.image((x + 0.5) * TILE, (y + 1) * TILE, 'stalaktit').setOrigin(0.5, 1).setDepth((y + 1) * TILE));
-      this.blocked.add(k);
-      this.spots.set(k, 'pillar');
-    }
-    if (cave.chest) {
-      const [x, y] = cave.chest.split(',').map(Number);
-      this.mineImgs.set(cave.chest, this.add.image((x + 0.5) * TILE, (y + 1) * TILE, 'peti-harta').setOrigin(0.5, 1).setDepth((y + 1) * TILE));
-      this.blocked.add(cave.chest);
-      this.spots.set(cave.chest, 'treasure');
-    }
-    if (cave.ladderOpen) {
-      const [x, y] = cave.ladder.split(',').map(Number);
-      this.mineImgs.set(cave.ladder, this.add.image(x * TILE, y * TILE, 'ladder-down').setOrigin(0).setDepth(-8));
-      this.blocked.add(cave.ladder);
-      this.spots.set(cave.ladder, 'descend');
-    }
-    const tint = caveTint(cave.floor);
-    for (const img of this.caveFloorImgs) img.setTint(tint);
-    const zone = zoneOf(cave.floor);
-    this.caveLabel?.setText(`Lantai ${cave.floor} · ${zone.name}${cave.floor >= CAVE_BOTTOM ? ' · Dasar' : ''}`);
-    this.caveDark?.setFillStyle(0x05030a, zone.dark);
+  mineImgs = new Map<string, Phaser.GameObjects.Image>();
+  caveFloorImgs: Phaser.GameObjects.Image[] = [];
+  caveLabel?: Phaser.GameObjects.Text;
+  caveDark?: Phaser.GameObjects.Rectangle;
+  refreshCave() {
+    return cave.refreshCave(this);
   }
 
   /** The cave interior: rock walls, a floor that changes colour with depth, the ladder up at the bottom. */
-  private buildCave() {
-    const R = CAVE_ROOM;
-    const X = (lx: number) => (R.x + lx) * TILE;
-    const Y = (ly: number) => (R.y + ly) * TILE;
-    for (let ly = 0; ly < R.h; ly++)
-      for (let lx = 0; lx < R.w; lx++) {
-        const wall = ly < 2 || lx === 0 || lx === R.w - 1;
-        const img = this.add.image(X(lx), Y(ly), wall ? 'cave-wall' : 'cave-floor').setOrigin(0).setDepth(-10);
-        if ((lx * 7 + ly * 3) % 4 === 0) img.setFlipX(true);
-        this.caveFloorImgs.push(img);
-        if (wall) this.blocked.add(plotKey(R.x + lx, R.y + ly));
-      }
-    const mid = R.w / 2;
-    this.add.image(X(mid), Y(R.h), 'ladder-up').setOrigin(0.5, 1).setDepth(-8.5);
-    this.caveLabel = this.add
-      .text(X(mid), Y(1) + 4, '', { fontFamily: 'monospace', fontSize: '9px', color: '#f2dcb0', stroke: '#2a1d17', strokeThickness: 3 })
-      .setOrigin(0.5)
-      .setResolution(4)
-      .setDepth(-8);
-    // deeper zones are darker; the lantern around the player still shows the way
-    this.caveDark = this.add.rectangle(X(0) - 8, Y(0) - 8, R.w * TILE + 16, R.h * TILE + 16, 0x05030a, 0).setOrigin(0).setDepth(9500);
-    // a few lanterns on the back wall
-    for (const lx of [3, mid, R.w - 4]) {
-      this.add.image(X(lx), Y(2) - 2, 'lamp').setOrigin(0.5, 1).setScale(0.8).setDepth(-8.4);
-      this.add.image(X(lx), Y(1), 'glow').setScale(1.2).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0.55);
-    }
+  buildCave() {
+    return cave.buildCave(this);
   }
 
   /** Go into the cave at a floor (fresh rocks every time), or one floor deeper. */
-  private enterCave(floor: number) {
-    if (!this.state.ownedTools.includes('beliung')) return this.fail('Gua tambang gelap dan berbatu. Bawa Beliung dulu (beli di toko).');
-    const R = CAVE_ROOM;
-    const before = zoneIndex(this.state.cave?.deepest ?? 0);
-    this.moveTo((R.x + R.w / 2) * TILE, (R.y + R.h - 1) * TILE - 2, 'up', () => {
-      genFloor(this.state, floor);
-      this.refreshCave();
-    });
-    const z = zoneOf(floor);
-    const first = floor === z.from && zoneIndex(floor) > before;
-    if (floor >= CAVE_BOTTOM) this.toast(this.state.caveTreasure ? 'Dasar gua. Petinya sudah kamu buka.' : 'Dasar gua! Ada peti harta di sini...');
-    else if (first) this.toast(`Zona baru: ${z.name}! ${ZONE_HINTS[zoneIndex(floor)]}`);
-    else this.toast(`Gua Tambang · Lantai ${floor} · ${z.name}`);
+  enterCave(floor: number) {
+    return cave.enterCave(this, floor);
   }
 
   /** A small picture of the whole world (MAP_PX per tile) for the map window. */
-  private paintMinimap(G: string[][]) {
-    if (this.textures.exists('minimap')) this.textures.remove('minimap');
-    const tex = this.textures.createCanvas('minimap', MAP_W * MAP_PX, MAP_H * MAP_PX)!;
-    const ctx = tex.getContext();
-    const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
-    const tint = (base: number, t: number) => {
-      const ch = (sh: number) => Math.round((((base >> sh) & 255) * ((t >> sh) & 255)) / 255);
-      return hex((ch(16) << 16) | (ch(8) << 8) | ch(0));
-    };
-    const ground: Record<string, string> = { g: '#6fae4c', p: '#d8b67e', s: '#b9b4a8', d: '#ead39a', k: '#8d5a34', q: '#a89c88' };
-    for (let y = 0; y < MAP_H; y++)
-      for (let x = 0; x < MAP_W; x++) {
-        const k = plotKey(x, y);
-        const lake = this.waterAt.get(k);
-        let col = ground[G[y][x]] ?? ground.g;
-        if (G[y][x] === 'w' || (lake && this.blocked.has(k) && this.spots.get(k) === 'pond')) col = tint(0x4a90d8, LAKES[lake ?? 'danau'].tint);
-        else if (this.treeTiles.has(k)) col = '#2f6b34';
-        else if (this.blocked.has(k)) col = '#a5623e'; // buildings and props
-        if (x >= FIELD.x && x < FIELD.x + FIELD.w && y >= FIELD.y && y < FIELD.y + FIELD.h && col === ground.g) col = '#5b9440';
-        ctx.fillStyle = col;
-        ctx.fillRect(x * MAP_PX, y * MAP_PX, MAP_PX, MAP_PX);
-      }
-    tex.refresh();
+  paintMinimap(G: string[][]) {
+    return map.paintMinimap(this, G);
   }
 
   // ---------- farmhouse interior ----------
 
   /** Per house interior: window glass, evening dimming and the lamp over the table. */
-  private roomViews: { R: typeof ROOM; glass: Phaser.GameObjects.Graphics; windows: number[]; night: Phaser.GameObjects.Rectangle; lamp: Phaser.GameObjects.Image }[] = [];
-  private indoors = false;
-  private currentRoom?: { x: number; y: number; w: number; h: number };
+  roomViews: { R: typeof ROOM; glass: Phaser.GameObjects.Graphics; windows: number[]; night: Phaser.GameObjects.Rectangle; lamp: Phaser.GameObjects.Image }[] = [];
+  indoors = false;
+  currentRoom?: { x: number; y: number; w: number; h: number };
 
-  private buildRoom(R: typeof ROOM, tier: number) {
-    const X = (lx: number) => (R.x + lx) * TILE;
-    const Y = (ly: number) => (R.y + ly) * TILE;
-    const spot = (lx: number, ly: number, what: Spot | null) => {
-      this.blocked.add(plotKey(R.x + lx, R.y + ly));
-      if (what) this.spots.set(plotKey(R.x + lx, R.y + ly), what);
-    };
-    const mid = R.w / 2;
-    // floor, wallpapered back wall (two tiles tall), side walls, front wall with the door gap
-    for (let ly = 2; ly < R.h; ly++) for (let lx = 0; lx < R.w; lx++) this.add.image(X(lx), Y(ly), 'in-floor').setOrigin(0).setDepth(-10);
-    for (let lx = 0; lx < R.w; lx++) {
-      this.add.image(X(lx), Y(0), 'in-wall').setOrigin(0).setDepth(-9);
-      spot(lx, 0, null);
-      spot(lx, 1, null);
-    }
-    for (let ly = 0; ly < R.h; ly++) {
-      this.add.image(X(0) - 4, Y(ly), 'in-wall-side').setOrigin(0).setDepth(Y(R.h));
-      this.add.image(X(R.w), Y(ly), 'in-wall-side').setOrigin(0).setDepth(Y(R.h));
-    }
-    this.add.rectangle(X(0) - 4, Y(R.h), X(mid - 1) - X(0) + 4, 4, 0x5a3a22).setOrigin(0).setDepth(Y(R.h));
-    this.add.rectangle(X(mid + 1), Y(R.h), X(R.w) - X(mid + 1) + 4, 4, 0x5a3a22).setOrigin(0).setDepth(Y(R.h));
-
-    // windows with glass that follows the sky, a calendar between the first two
-    const windows = [4.5, 12.5, ...(tier >= 1 ? [21.5] : []), ...(tier >= 2 ? [28.5] : [])];
-    const glass = this.add.graphics().setDepth(-8.6);
-    for (const lx of windows) this.add.image(X(lx), Y(0) + 4, 'in-window').setOrigin(0.5, 0).setDepth(-8.5);
-    this.add.image(X(8.5), Y(0) + 6, 'in-calendar').setOrigin(0.5, 0).setDepth(-8.5);
-
-    // furniture along the back wall, with room to walk between the pieces
-    // (the same in every tier, so nothing moves when you renovate)
-    const put = (key: string, lx: number, lyBottom: number, origin = 0.5) =>
-      this.add.image(X(lx), Y(lyBottom), key).setOrigin(origin, 1).setDepth(Y(lyBottom));
-    this.bedImgs.push({ img: put('in-bed', 1, 5), x: R.x });
-    for (const [lx, ly] of [[0, 2], [1, 2], [0, 3], [1, 3], [0, 4], [1, 4]]) spot(lx, ly, 'bed');
-    put('in-tv', 6, 4);
-    for (const lx of [5, 6]) spot(lx, 2, 'tv'), spot(lx, 3, 'tv');
-    put('in-shelf', 9, 4);
-    for (const lx of [8, 9]) spot(lx, 2, 'shelf'), spot(lx, 3, 'shelf');
-    put('in-stove', 13.5, 4);
-    for (const lx of [12, 13, 14]) spot(lx, 2, 'stove'), spot(lx, 3, 'stove');
-    put('in-wardrobe', 19, 5);
-    for (const [lx, ly] of [[18, 2], [19, 2], [18, 3], [19, 3], [18, 4], [19, 4]]) spot(lx, ly, 'wardrobe');
-
-    // furniture slots, filled from the Toko Mebel (dashed outline until bought)
-    const slot = (id: string, x: number, y: number, w: number, h: number, key: string, tiles: [number, number][], spotKind: Spot | null) => {
-      const ph = this.add.graphics().setDepth(-8.4);
-      dashed(ph, x, y, w, h);
-      const img = this.add.image(x + w / 2, y + h, key).setOrigin(0.5, 1).setDepth(y + h);
-      for (const [lx, ly] of tiles) {
-        const k = plotKey(R.x + lx, R.y + ly);
-        if (spotKind) this.blocked.add(k);
-        this.furnitureTiles.set(k, id);
-      }
-      const list = this.furnitureObjs.get(id) ?? [];
-      list.push({ img, ph, spot: spotKind });
-      this.furnitureObjs.set(id, list);
-    };
-    slot('kulkas', X(15), Y(2) - 16, TILE, 32, 'in-fridge', [[15, 2], [15, 3]], 'fridge');
-    slot('radio', X(3), Y(2), TILE, TILE, 'in-radio', [[3, 2]], 'radio');
-    slot('peti', X(0), Y(7), TILE, TILE, 'in-chest', [[0, 7]], 'storage');
-    slot('jam', X(16.5) - 7, Y(0) + 6, 14, 14, 'in-clock', [], null);
-    slot('piala', X(18), Y(7) - 8, 32, 40, 'in-trophy', [[18, 7], [19, 7], [18, 8], [19, 8]], 'trophy');
-
-    // dining corner on a rug, in the middle of the room
-    this.add.image(X(10), Y(8), 'in-rug').setOrigin(0.5, 0.5).setDepth(-9);
-    put('in-table', 10, 8);
-    spot(9, 7, null);
-    spot(10, 7, null);
-    put('in-chair', 8.5, 8);
-    spot(8, 7, null);
-    put('in-chair', 11.5, 8).setFlipX(true);
-    spot(11, 7, null);
-
-    // Rumah Sedang: a living room with a sofa (rest once a day)
-    if (tier >= 1) {
-      this.add.image(X(23.5), Y(6.5), 'in-rug2').setOrigin(0.5, 0.5).setDepth(-9);
-      put('in-sofa', 23.5, 6);
-      for (const lx of [22, 23, 24]) spot(lx, 5, 'sofa');
-      put('in-coffee', 23.5, 8);
-      spot(23, 7, null);
-      put('in-floorlamp', 21, 6);
-      spot(20, 5, null);
-      this.lamps.push(this.add.image(X(21), Y(4), 'glow').setScale(1.4).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0));
-    }
-    // Rumah Besar: a reading corner with an aquarium, a second shelf and an armchair
-    if (tier >= 2) {
-      put('in-aquarium', 27.5, 5);
-      for (const lx of [26, 27, 28]) spot(lx, 3, null), spot(lx, 4, null);
-      put('in-shelf', 30.5, 4);
-      for (const lx of [30, 31]) spot(lx, 2, 'shelf'), spot(lx, 3, 'shelf');
-      put('in-armchair', 29.5, 9);
-      spot(29, 8, null);
-      put('in-floorlamp', 31, 9);
-      spot(30, 8, null);
-      this.lamps.push(this.add.image(X(31), Y(7), 'glow').setScale(1.4).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0));
-    }
-
-    // plants in the front corners, doormat in the middle
-    for (const lx of [0, R.w - 1]) {
-      put('in-plant', lx + 0.5, R.h);
-      spot(lx, R.h - 1, null);
-    }
-    this.add.image(X(mid), Y(R.h) - 1, 'in-mat').setOrigin(0.5, 1).setDepth(-8.5);
-
-    // lighting: a hanging lamp over the table, and evening dimming
-    const lamp = this.add.image(X(10), Y(5) + 4, 'in-lamp').setOrigin(0.5, 0).setDepth(Y(R.h) + 1);
-    const night = this.add.rectangle(X(0) - 8, Y(0), X(R.w) - X(0) + 16, Y(R.h) - Y(0) + 8, 0x1b1530, 0).setOrigin(0).setDepth(9500);
-    this.lamps.push(this.add.image(X(10), Y(6) + 2, 'glow').setScale(2.4).setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0));
-    this.roomViews.push({ R, glass, windows, night, lamp });
+  buildRoom(R: typeof ROOM, tier: number) {
+    return interiors.buildRoom(this, R, tier);
   }
 
-  private bedImgs: { img: Phaser.GameObjects.Image; x: number }[] = [];
-  private furnitureObjs = new Map<string, { img: Phaser.GameObjects.Image; ph: Phaser.GameObjects.Graphics; spot: Spot | null }[]>();
+  bedImgs: { img: Phaser.GameObjects.Image; x: number }[] = [];
+  furnitureObjs = new Map<string, { img: Phaser.GameObjects.Image; ph: Phaser.GameObjects.Graphics; spot: Spot | null }[]>();
   /** World tile → furniture id, for furniture slots in the house and display stands in the shop. */
-  private furnitureTiles = new Map<string, string>();
+  furnitureTiles = new Map<string, string>();
   /** Which lake each water tile belongs to, and the signposts naming them. */
-  private waterAt = new Map<string, Water>();
-  private lakeSigns = new Map<string, Water>();
-  private treeTiles = new Set<string>();
+  waterAt = new Map<string, Water>();
+  lakeSigns = new Map<string, Water>();
+  treeTiles = new Set<string>();
   /** The smith works by day: hammer and sparks, a lit forge; at night the shed is dark and empty. */
-  private smithy!: { open: boolean; parts: Phaser.GameObjects.Image[]; fire: Phaser.GameObjects.Image; fireGlow: Phaser.GameObjects.Image };
+  smithy!: { open: boolean; parts: Phaser.GameObjects.Image[]; fire: Phaser.GameObjects.Image; fireGlow: Phaser.GameObjects.Image };
 
   /** Show bought furniture and dashed placeholders for the rest. */
-  private refreshFurniture() {
-    const owned = this.state.furniture;
-    for (const [id, list] of this.furnitureObjs)
-      for (const o of list) {
-        o.img.setVisible(!!owned[id]);
-        o.ph.setVisible(!owned[id]);
-      }
-    for (const [k, id] of this.furnitureTiles) {
-      if (this.spots.get(k) === 'display') continue; // shop stands stay stands
-      const o = this.furnitureObjs.get(id)?.[0];
-      if (!o?.spot) continue;
-      this.spots.set(k, owned[id] ? o.spot : 'slot');
-    }
-    // the big bed replaces the old one
-    for (const b of this.bedImgs) b.img.setTexture(owned.kasur ? 'in-bigbed' : 'in-bed').setX((b.x + (owned.kasur ? 1.2 : 1)) * TILE);
+  refreshFurniture() {
+    return interiors.refreshFurniture(this);
   }
 
-  private buildShop() {
-    const R = SHOP;
-    const X = (lx: number) => (R.x + lx) * TILE;
-    const Y = (ly: number) => (R.y + ly) * TILE;
-    const spot = (lx: number, ly: number, what: Spot | null) => {
-      this.blocked.add(plotKey(R.x + lx, R.y + ly));
-      if (what) this.spots.set(plotKey(R.x + lx, R.y + ly), what);
-    };
-    for (let ly = 2; ly < R.h; ly++) for (let lx = 0; lx < R.w; lx++) this.add.image(X(lx), Y(ly), 'shop-floor').setOrigin(0).setDepth(-10);
-    for (let lx = 0; lx < R.w; lx++) {
-      this.add.image(X(lx), Y(0), 'shop-wall').setOrigin(0).setDepth(-9);
-      spot(lx, 0, null);
-      spot(lx, 1, null);
-    }
-    for (let ly = 0; ly < R.h; ly++) {
-      this.add.image(X(0) - 4, Y(ly), 'in-wall-side').setOrigin(0).setDepth(Y(R.h));
-      this.add.image(X(R.w), Y(ly), 'in-wall-side').setOrigin(0).setDepth(Y(R.h));
-    }
-    const mid = R.w / 2;
-    this.add.rectangle(X(0) - 4, Y(R.h), X(mid - 1) - X(0) + 4, 4, 0x1a5a56).setOrigin(0).setDepth(Y(R.h));
-    this.add.rectangle(X(mid + 1), Y(R.h), X(R.w) - X(mid + 1) + 4, 4, 0x1a5a56).setOrigin(0).setDepth(Y(R.h));
-
-    // back wall: shelves of goods and the counter with the shopkeeper
-    for (const lx of [1.5, R.w - 1.5]) {
-      this.add.image(X(lx), Y(4), 'in-shelf').setOrigin(0.5, 1).setDepth(Y(4));
-      spot(Math.floor(lx - 0.5), 2, null), spot(Math.floor(lx + 0.5), 2, null), spot(Math.floor(lx - 0.5), 3, null), spot(Math.floor(lx + 0.5), 3, null);
-    }
-    this.add.image(X(mid) + 1, Y(3) - 1, 'npc-mebel-0').setOrigin(0.5, 1).setDepth(Y(3));
-    this.add.image(X(mid), Y(4), 'counter').setOrigin(0.5, 1).setDepth(Y(4));
-    for (let lx = mid - 2; lx < mid + 2; lx++) spot(lx, 2, null), spot(lx, 3, 'counter');
-    this.add.image(X(mid), Y(0) + 4, 'sign-mebel').setOrigin(0.5, 0).setDepth(-8.5);
-    this.add
-      .text(X(mid), Y(0) + 10, 'MEBEL', { fontFamily: 'monospace', fontSize: '8px', color: '#1a5a56', fontStyle: 'bold' })
-      .setOrigin(0.5)
-      .setResolution(4)
-      .setDepth(-8.4);
-
-    // display stands, each showing one piece of furniture and its price
-    FURNITURE.forEach((f, i) => {
-      const lx = 1 + i * 2;
-      const cx = X(lx + 1);
-      this.add.image(cx, Y(7) - 2, 'pedestal').setOrigin(0.5, 1).setDepth(Y(7) - 3);
-      const key = { jam: 'in-clock', radio: 'in-radio', piala: 'in-trophy', kulkas: 'in-fridge', kasur: 'in-bigbed', peti: 'in-chest' }[f.id] ?? 'in-radio';
-      const img = this.add.image(cx, Y(7) - 10, key).setOrigin(0.5, 1).setDepth(Y(7) - 2);
-      if (img.height > 34) img.setScale(34 / img.height);
-      this.add
-        .text(cx, Y(7) + 1, `${f.price.toLocaleString('id-ID')}`, { fontFamily: 'monospace', fontSize: '7px', color: '#fffbe6', stroke: '#2a1d17', strokeThickness: 2 })
-        .setOrigin(0.5, 0)
-        .setResolution(4)
-        .setDepth(Y(8));
-      for (const ly of [5, 6]) {
-        spot(lx, ly, 'display');
-        spot(lx + 1, ly, 'display');
-        this.furnitureTiles.set(plotKey(R.x + lx, R.y + ly), f.id);
-        this.furnitureTiles.set(plotKey(R.x + lx + 1, R.y + ly), f.id);
-      }
-    });
-    for (const [lx, ly] of [[0, 8], [R.w - 1, 8]]) {
-      this.add.image(X(lx + 0.5), Y(ly + 1), 'in-plant').setOrigin(0.5, 1).setDepth(Y(ly + 1));
-      spot(lx, ly, null);
-    }
-    this.add.image(X(mid), Y(R.h) - 1, 'in-mat').setOrigin(0.5, 1).setDepth(-8.5);
+  buildShop() {
+    return interiors.buildShop(this);
   }
 
-  private enterShop() {
+  enterShop() {
     this.moveTo((SHOP.x + SHOP.w / 2) * TILE, (SHOP.y + SHOP.h - 1) * TILE - 2, 'up');
   }
 
   /** The radio reads out today's rare fish and tomorrow's weather. */
-  private radio() {
+  radio() {
     const s = this.state;
     const season = seasonOf(s.day);
     const wet = isWet(s.weather);
@@ -897,17 +277,17 @@ export class FarmScene extends Phaser.Scene {
   }
 
   /** Step through the farmhouse door. */
-  private enterHouse() {
+  enterHouse() {
     const R = HOUSE_ROOMS[this.state.houseTier] ?? ROOM;
     this.moveTo((R.x + R.w / 2) * TILE, (R.y + R.h - 1) * TILE - 2, 'up');
   }
 
-  private leaveRoom(exit: { x: number; y: number }) {
+  leaveRoom(exit: { x: number; y: number }) {
     this.moveTo(exit.x, exit.y, 'down');
   }
 
   /** Fade, move the player, fade back. */
-  private moveTo(x: number, y: number, dir: Dir, whileDark?: () => void) {
+  moveTo(x: number, y: number, dir: Dir, whileDark?: () => void) {
     if (this.busy) return;
     this.busy = true;
     this.moveTarget = undefined;
@@ -926,7 +306,7 @@ export class FarmScene extends Phaser.Scene {
   }
 
   /** Inside, the camera frames the room; outside, it follows the player across the map. */
-  private updateIndoors() {
+  updateIndoors() {
     const tx = Math.floor(this.player.x / TILE);
     const ty = Math.floor((this.player.y - 4) / TILE);
     const here = roomAt(tx, ty);
@@ -953,7 +333,7 @@ export class FarmScene extends Phaser.Scene {
    * Fit a room between the HUD (top ~150 layout px) and the toolbar (bottom ~90),
    * zooming out for big rooms and never zooming in past the outdoor scale.
    */
-  private frameRoom(R: { x: number; y: number; w: number; h: number }) {
+  frameRoom(R: { x: number; y: number; w: number; h: number }) {
     const cam = this.cameras.main;
     const top = 150 * UI_SCALE, bottom = 125 * UI_SCALE; // clear the tool dock and its name pill
     const zoom = Math.min(2 * UI_SCALE, (cam.width * 0.94) / ((R.w + 1) * TILE), (cam.height - top - bottom) / ((R.h + 0.5) * TILE));
@@ -964,7 +344,7 @@ export class FarmScene extends Phaser.Scene {
   }
 
   /** Window glass follows the sky; the room dims gently at night while the lamp glows. */
-  private updateRoomLight(darkness: number) {
+  updateRoomLight(darkness: number) {
     const hr = this.state.minutes / 60;
     const sky = hr < 5 ? 0x1d2a4a : hr < 7 ? 0xf2b07a : hr < 17 ? 0x9fd8f5 : hr < 19.5 ? 0xf0905a : 0x1d2a4a;
     for (const v of this.roomViews) {
@@ -976,14 +356,14 @@ export class FarmScene extends Phaser.Scene {
   }
 
   /** A 4x4-tile building with its top-left corner at tile (x, y). */
-  private building(tex: string, x: number, y: number) {
+  building(tex: string, x: number, y: number) {
     this.shadow((x + 2) * TILE, (y + 4) * TILE - 1, 70);
     this.add.image(x * TILE, y * TILE, tex).setOrigin(0).setDepth((y + 4) * TILE);
     for (let yy = y; yy <= y + 3; yy++) for (let xx = x; xx <= x + 3; xx++) this.block(xx, yy);
   }
 
   /** Warm window light for a 4x4 building, shown at night. */
-  private windowGlow(x: number, y: number) {
+  windowGlow(x: number, y: number) {
     for (const wx of [15, 49]) {
       this.lamps.push(
         this.add.image(x * TILE + wx, y * TILE + 42, 'glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(9600).setAlpha(0),
@@ -991,20 +371,20 @@ export class FarmScene extends Phaser.Scene {
     }
   }
 
-  private deco(key: string, x: number, y: number, shadow = true) {
+  deco(key: string, x: number, y: number, shadow = true) {
     if (this.blocked.has(plotKey(x, y))) return;
     if (shadow) this.shadow((x + 0.5) * TILE, (y + 1) * TILE - 2, 14);
     this.add.image((x + 0.5) * TILE, (y + 1) * TILE, key).setOrigin(0.5, 1).setDepth((y + 1) * TILE);
     this.block(x, y);
   }
 
-  private shadow(x: number, y: number, w: number) {
+  shadow(x: number, y: number, w: number) {
     return this.add.image(x, y, 'shadow').setDisplaySize(w, w * 0.32).setAlpha(0.28).setDepth(-6);
   }
 
   // ---------- atmosphere ----------
 
-  private setupAmbient() {
+  setupAmbient() {
     // animated water
     let wf = 0;
     this.time.addEvent({
@@ -1102,7 +482,7 @@ export class FarmScene extends Phaser.Scene {
   }
 
   /** 0 = full day, 1 = deep night. */
-  private darkness() {
+  darkness() {
     const hr = this.state.minutes / 60;
     if (hr < 5) return 1; // after midnight it is still deep night
     if (hr < 7) return Math.min(1, 0.35 * (7 - hr));
@@ -1111,7 +491,7 @@ export class FarmScene extends Phaser.Scene {
     return 1;
   }
 
-  private updateAmbient(dt: number) {
+  updateAmbient(dt: number) {
     const s = this.state;
     this.updateIndoors();
     this.updateRoomLight(this.darkness());
@@ -1163,12 +543,12 @@ export class FarmScene extends Phaser.Scene {
     }
   }
 
-  private block(x: number, y: number, spot?: Spot) {
+  block(x: number, y: number, spot?: Spot) {
     this.blocked.add(plotKey(x, y));
     if (spot) this.spots.set(plotKey(x, y), spot);
   }
 
-  private isBlocked(wx: number, wy: number) {
+  isBlocked(wx: number, wy: number) {
     const tx = Math.floor(wx / TILE);
     const ty = Math.floor(wy / TILE);
     const outside = tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H;
@@ -1176,17 +556,17 @@ export class FarmScene extends Phaser.Scene {
     return this.blocked.has(plotKey(tx, ty));
   }
 
-  private inField(x: number, y: number) {
+  inField(x: number, y: number) {
     return x >= FIELD.x && x < FIELD.x + FIELD.w && y >= FIELD.y && y < FIELD.y + FIELD.h;
   }
 
   // ---------- input ----------
 
-  private modal() {
+  modal() {
     return this.registry.get('modal') === true;
   }
 
-  private onKey(ev: KeyboardEvent) {
+  onKey(ev: KeyboardEvent) {
     unlockAudio();
     startMusic();
     const k = ev.key.toLowerCase();
@@ -1221,7 +601,7 @@ export class FarmScene extends Phaser.Scene {
     this.game.events.emit('hud');
   }
 
-  private onTap(p: Phaser.Input.Pointer) {
+  onTap(p: Phaser.Input.Pointer) {
     unlockAudio();
     startMusic();
     if (this.fishing) return this.reel();
@@ -1246,18 +626,18 @@ export class FarmScene extends Phaser.Scene {
     }
   }
 
-  private feet(): [number, number] {
+  feet(): [number, number] {
     return [this.player.x, this.player.y - 2];
   }
 
-  private facingTile(): [number, number] {
+  facingTile(): [number, number] {
     // the tile the player stands on, plus one step in the facing direction
     const [fx, fy] = this.feet();
     const [dx, dy] = DIR_VEC[this.dir];
     return [Math.floor(fx / TILE) + dx, Math.floor((fy - 1) / TILE) + dy];
   }
 
-  private faceTowards(x: number, y: number) {
+  faceTowards(x: number, y: number) {
     const [fx, fy] = this.feet();
     const dx = x - fx;
     const dy = y - (fy - 4);
@@ -1377,7 +757,7 @@ export class FarmScene extends Phaser.Scene {
     this.cursor.setPosition(cx * TILE, cy * TILE);
   }
 
-  private tryMove(dx: number, dy: number): number {
+  tryMove(dx: number, dy: number): number {
     if (!dx && !dy) return 0;
     const nx = this.player.x + dx;
     const ny = this.player.y + dy;
@@ -1390,7 +770,7 @@ export class FarmScene extends Phaser.Scene {
     return 1;
   }
 
-  private setPlayerFrame(f: number) {
+  setPlayerFrame(f: number) {
     const d = this.dir === 'left' || this.dir === 'right' ? 'side' : this.dir;
     this.player.setTexture(`player-${d}-${f}`);
     this.player.setFlipX(this.dir === 'left');
@@ -1398,27 +778,27 @@ export class FarmScene extends Phaser.Scene {
 
   // ---------- actions ----------
 
-  private lastPosSave = 0;
+  lastPosSave = 0;
 
   /** Store where the player stands; called on stop, on sleep, and when the page closes. */
-  private savePosition = () => {
+  savePosition = () => {
     if (!this.player || !this.sys.isActive()) return; // never write from a stopped game
     this.state.pos = { x: Math.round(this.player.x), y: Math.round(this.player.y), dir: this.dir };
     this.lastPosSave = this.time.now;
     save(this.state);
   };
 
-  private toast(msg: string) {
+  toast(msg: string) {
     this.game.events.emit('toast', msg);
   }
 
-  private fail(msg: string) {
+  fail(msg: string) {
     play('error');
     this.toast(msg);
   }
 
   /** Use the tool on the facing tile; upgraded hoes and watering cans also work the tiles around it. */
-  private work(tx: number, ty: number) {
+  work(tx: number, ty: number) {
     const s = this.state;
     const area = AREA_BY_TIER[s.tool]?.[tierOf(s, s.tool)] ?? 'line1';
     this.act(tx, ty);
@@ -1427,7 +807,7 @@ export class FarmScene extends Phaser.Scene {
   }
 
   /** The extra tiles an upgraded tool reaches (not the facing tile itself). */
-  private areaTiles(tx: number, ty: number, area: 'line2' | 'line3' | 'square'): [number, number][] {
+  areaTiles(tx: number, ty: number, area: 'line2' | 'line3' | 'square'): [number, number][] {
     const [dx, dy] = this.dir === 'up' ? [0, -1] : this.dir === 'down' ? [0, 1] : this.dir === 'left' ? [-1, 0] : [1, 0];
     if (area === 'square') {
       const out: [number, number][] = [];
@@ -1438,7 +818,7 @@ export class FarmScene extends Phaser.Scene {
     return Array.from({ length: n }, (_, i) => [tx + dx * (i + 1), ty + dy * (i + 1)] as [number, number]);
   }
 
-  private act(tx: number, ty: number, extra = false) {
+  act(tx: number, ty: number, extra = false) {
     const s = this.state;
     const k = plotKey(tx, ty);
     const spot = this.spots.get(k);
@@ -1684,7 +1064,7 @@ export class FarmScene extends Phaser.Scene {
   }
 
   /** Consume one bag item; when it runs out, select the next item the player still owns. */
-  private useBagItem(id: string) {
+  useBagItem(id: string) {
     const s = this.state;
     add(s.seeds, id, -1);
     if (!s.seeds[id]) {
@@ -1696,14 +1076,14 @@ export class FarmScene extends Phaser.Scene {
     }
   }
 
-  private ship() {
+  ship() {
     if (!Object.keys(this.state.produce).length && !Object.keys(this.state.shipping).length)
       return this.fail('Tidak ada hasil panen untuk dikirim.');
     this.game.events.emit('open-shipping');
   }
 
 
-  private visitStage() {
+  visitStage() {
     const s = this.state;
     if (!isFestivalDay(s.day)) {
       const d = nextFestivalDay(s.day);
@@ -1720,72 +1100,25 @@ export class FarmScene extends Phaser.Scene {
 
   // ---------- fishing ----------
 
-  private startFishing(tx: number, ty: number) {
-    const s = this.state;
-    s.stamina -= STAMINA_COST.pancing;
-    const where = this.waterAt.get(plotKey(tx, ty)) ?? 'danau';
-    const bobber = this.add.image((tx + 0.5) * TILE, (ty + 0.5) * TILE, 'bobber').setDepth(9001);
-    this.tweens.add({ targets: bobber, y: bobber.y + 1, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-    const alert = this.add.image(this.player.x, this.player.y - 22, 'bubble').setDepth(9200).setVisible(false);
-    this.swing();
-    play('water');
-    this.splash(tx, ty, 0x8fd0f5);
-    this.toast(`${LAKES[where].name} · menunggu ikan menggigit...`);
-    const timer = this.time.delayedCall(Phaser.Math.Between(1500, 4500) * (1 - 0.15 * tierOf(this.state, 'pancing')), () => this.bite());
-    this.fishing = { stage: 'wait', where, bobber, alert, timer };
-    this.changed();
+  startFishing(tx: number, ty: number) {
+    return fishing.startFishing(this, tx, ty);
   }
 
-  private bite() {
-    const f = this.fishing;
-    if (!f) return;
-    f.stage = 'bite';
-    f.biteAt = this.time.now;
-    f.alert.setVisible(true);
-    this.tweens.add({ targets: f.bobber, y: f.bobber.y + 3, duration: 90, yoyo: true, repeat: 3 });
-    play('click');
-    // a short window to react
-    f.timer = this.time.delayedCall(BITE_WINDOW_MS[tierOf(this.state, 'pancing')], () => this.endFishing('Ikannya lepas... Coba lagi.', true));
+  bite() {
+    return fishing.bite(this);
   }
 
-  private reel() {
-    const f = this.fishing;
-    if (!f) return;
-    if (f.stage === 'wait') return this.endFishing('Terlalu cepat! Ikannya kabur.', true);
-    const s = this.state;
-    const id = rollFish(f.where, seasonOf(s.day), s.minutes / 60, isWet(s.weather), Math.random, tierOf(s, 'pancing') >= 3 ? 1.5 : 1);
-    // quicker reaction to the bite = better quality
-    const q = fishStars(this.time.now - (f.biteAt ?? this.time.now), s.level);
-    const key = qualityKey(id, q);
-    const fish = produceById(key);
-    if (!canAdd(s, 'produce', key)) return this.endFishing(`Tas penuh! ${fish.name} dilepas lagi.`, true);
-    add(s.produce, key, 1);
-    const first = !s.fishCaught[id];
-    s.fishCaught[id] = Math.max(s.fishCaught[id] ?? 0, q);
-    const fishReward = checkStaminaRewards(s)[0]; // completing the Fish Book
-    const [tx, ty] = [Math.floor(f.bobber.x / TILE), Math.floor(f.bobber.y / TILE)];
-    this.flyIcon(tx, ty, `icon-${id}`);
-    this.starBurst(tx, ty, q);
-    play(q >= 4 || first ? 'quest' : 'harvest');
-    this.xp(fishXp(id), tx, ty);
-    this.endFishing(fishReward ?? `${first ? 'Ikan baru! ' : ''}Dapat ${fish.name} (${fish.sellPrice} G)`);
+  reel() {
+    return fishing.reel(this);
   }
 
-  private endFishing(msg: string, failed = false) {
-    const f = this.fishing;
-    if (!f) return;
-    f.timer.remove();
-    f.bobber.destroy();
-    f.alert.destroy();
-    this.fishing = undefined;
-    if (failed) this.fail(msg);
-    else this.toast(msg);
-    this.changed();
+  endFishing(msg: string, failed = false) {
+    return fishing.endFishing(this, msg, failed);
   }
 
   // ---------- villagers ----------
 
-  private spawnVillagers() {
+  spawnVillagers() {
     for (const h of NPC_HOMES) {
       // they potter about on the path in front of their door
       const area = new Phaser.Geom.Rectangle((h.x + 0.6) * TILE, (h.y + 4.85) * TILE, 2.8 * TILE, 0.3 * TILE);
@@ -1813,7 +1146,7 @@ export class FarmScene extends Phaser.Scene {
     }
   }
 
-  private villagerAt(tx: number, ty: number) {
+  villagerAt(tx: number, ty: number) {
     const cx = (tx + 0.5) * TILE;
     const cy = (ty + 0.5) * TILE;
     for (const [id, img] of this.villagers)
@@ -1821,7 +1154,7 @@ export class FarmScene extends Phaser.Scene {
     return undefined;
   }
 
-  private talk(id: string) {
+  talk(id: string) {
     const s = this.state;
     const npc = npcById(id);
     const img = this.villagers.get(id)!;
@@ -1842,7 +1175,7 @@ export class FarmScene extends Phaser.Scene {
 
   // ---------- livestock ----------
 
-  private syncAnimals() {
+  syncAnimals() {
     const alive = new Set(this.state.animals.map((a) => a.id));
     for (const [id, img] of this.hens) if (!alive.has(id)) (img.destroy(), this.hens.delete(id));
     for (const a of this.state.animals) {
@@ -1875,7 +1208,7 @@ export class FarmScene extends Phaser.Scene {
   }
 
   /** The chicken closest to the centre of a tile, if one stands there. */
-  private henAt(tx: number, ty: number) {
+  henAt(tx: number, ty: number) {
     const cx = (tx + 0.5) * TILE;
     const cy = (ty + 0.5) * TILE;
     for (const a of this.state.animals) {
@@ -1885,7 +1218,7 @@ export class FarmScene extends Phaser.Scene {
     return undefined;
   }
 
-  private pet(a: GameState['animals'][number]) {
+  pet(a: GameState['animals'][number]) {
     const img = this.hens.get(a.id)!;
     play('cluck');
     if (a.petted) return this.toast(`${a.name} sudah dielus hari ini (♥ ${a.affection}/${AFFECTION_MAX}).`);
@@ -1898,7 +1231,7 @@ export class FarmScene extends Phaser.Scene {
     this.changed();
   }
 
-  private tendCoop() {
+  tendCoop() {
     const s = this.state;
     if (!s.animals.length) return this.toast('Kandang masih kosong. Beli ayam di toko (tab Ternak).');
     const msgs: string[] = [];
@@ -1936,7 +1269,7 @@ export class FarmScene extends Phaser.Scene {
   }
 
   /** Award XP with a small floating number; announces level-ups. */
-  private xp(n: number, tx: number, ty: number) {
+  xp(n: number, tx: number, ty: number) {
     const reached = gainXp(this.state, n);
     const t = this.add
       .text((tx + 0.5) * TILE, ty * TILE, `+${n} XP`, {
@@ -1953,21 +1286,21 @@ export class FarmScene extends Phaser.Scene {
     if (reached.length) this.game.events.emit('level-up', reached);
   }
 
-  private changed() {
+  changed() {
     this.game.events.emit('hud');
     save(this.state);
   }
 
   /** The last late-night warning shown today (minutes), so each shows once. */
-  private lateWarned = 0;
-  private drainAcc = 0; // fractional stamina lost to the night
-  private lowWarned = false;
+  lateWarned = 0;
+  drainAcc = 0; // fractional stamina lost to the night
+  lowWarned = false;
 
   /** A report from a midnight you were awake for, shown the next time you wake up. */
-  private pendingReport?: DayReport;
+  pendingReport?: DayReport;
 
   /** The date changes at 00:00 while you play: grow, pay, new requests, a fresh cave. */
-  private midnight() {
+  midnight() {
     const report = rollover(this.state);
     this.lateWarned = 0;
     this.redrawAfterRollover();
@@ -1978,7 +1311,7 @@ export class FarmScene extends Phaser.Scene {
     this.game.events.emit('hud');
   }
 
-  private redrawAfterRollover() {
+  redrawAfterRollover() {
     for (const k of new Set([...this.soilImgs.keys(), ...this.propImgs.keys(), ...Object.keys(this.state.plots)]))
       this.refreshPlot(k);
     this.refreshCave();
@@ -2034,7 +1367,7 @@ export class FarmScene extends Phaser.Scene {
     });
   }
 
-  private refreshPlot(k: string, pop = false) {
+  refreshPlot(k: string, pop = false) {
     const p = this.state.plots[k];
     const [x, y] = k.split(',').map(Number);
     let soil = this.soilImgs.get(k);
@@ -2095,7 +1428,7 @@ export class FarmScene extends Phaser.Scene {
 
   // ---------- juice ----------
 
-  private spraySprinklers() {
+  spraySprinklers() {
     for (const [k, p] of Object.entries(this.state.plots)) {
       if (!p.sprinkler) continue;
       const [x, y] = k.split(',').map(Number);
@@ -2103,11 +1436,11 @@ export class FarmScene extends Phaser.Scene {
     }
   }
 
-  private swing() {
+  swing() {
     this.tweens.add({ targets: this.player, y: this.player.y - 2, duration: 70, yoyo: true });
   }
 
-  private splash(tx: number, ty: number, color: number) {
+  splash(tx: number, ty: number, color: number) {
     for (let i = 0; i < 6; i++) {
       const d = this.add.rectangle((tx + 0.5) * TILE, (ty + 0.6) * TILE, 2, 2, color).setDepth(9001);
       this.tweens.add({
@@ -2122,7 +1455,7 @@ export class FarmScene extends Phaser.Scene {
   }
 
   /** Little gold stars popping out of a quality harvest. */
-  private starBurst(tx: number, ty: number, q: number) {
+  starBurst(tx: number, ty: number, q: number) {
     for (let i = 0; i < q; i++) {
       const t = this.add
         .text((tx + 0.5) * TILE, ty * TILE + 4, '★', { fontFamily: 'monospace', fontSize: '9px', color: '#f2c94c', stroke: '#5a3a22', strokeThickness: 2 })
@@ -2142,22 +1475,8 @@ export class FarmScene extends Phaser.Scene {
     }
   }
 
-  private flyIcon(tx: number, ty: number, key: string) {
+  flyIcon(tx: number, ty: number, key: string) {
     const icon = this.add.image((tx + 0.5) * TILE, ty * TILE, key).setDepth(9002);
     this.tweens.add({ targets: icon, y: icon.y - 14, alpha: 0, duration: 700, ease: 'Quad.Out', onComplete: () => icon.destroy() });
-  }
-}
-
-/** Dashed rounded outline marking an empty furniture slot. */
-function dashed(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number) {
-  g.fillStyle(0xffffff, 0.12).fillRect(x, y, w, h);
-  g.fillStyle(0xfff6dc, 0.7);
-  for (let i = 0; i < w; i += 4) {
-    g.fillRect(x + i, y, 2, 1);
-    g.fillRect(x + i, y + h - 1, 2, 1);
-  }
-  for (let i = 0; i < h; i += 4) {
-    g.fillRect(x, y + i, 1, 2);
-    g.fillRect(x + w - 1, y + i, 1, 2);
   }
 }
