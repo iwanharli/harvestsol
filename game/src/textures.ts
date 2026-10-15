@@ -846,6 +846,15 @@ export function makeTextures(scene: Phaser.Scene) {
       for (let r = 0; r < 6; r++) px(c, x + Math.floor(r / 2), 2 + r, col, 5 - r, 1);
     }
   });
+  canvas(scene, 'signpost', 16, 22, (c) => {
+    px(c, 7, 9, '#5a3a22', 2, 13); // post
+    px(c, 1, 2, '#5a3a22', 14, 9); // board outline
+    px(c, 2, 3, '#c08552', 12, 7);
+    px(c, 2, 3, '#d9a06a', 12, 1);
+    px(c, 4, 5, '#5a3a22', 8, 1); // carved letters
+    px(c, 4, 7, '#5a3a22', 6, 1);
+    px(c, 12, 4, '#3b6fd0', 1, 4); // a little blue wave mark
+  }, true);
   canvas(scene, 'sign-lock', 16, 20, (c) => {
     px(c, 7, 10, '#6b4224', 2, 10);
     px(c, 1, 1, '#a36c40', 14, 10);
@@ -1166,7 +1175,7 @@ export function makeTextures(scene: Phaser.Scene) {
         px(c, 12, 6, '#2b2b2b');
         return;
       }
-      const art = FISH_ART[f.id];
+      const art = FISH_ART[f.art ?? f.id];
       if (art) {
         const pal: Record<string, string> = { o: shade(dark, 0.55), b: body, l: light, d: dark, e: '#1b1b1b', w: '#fbf6ee', r: '#e2434b' };
         art.forEach((row, y) => [...row].forEach((ch, x) => pal[ch] && px(c, x, y + 1, pal[ch])));
