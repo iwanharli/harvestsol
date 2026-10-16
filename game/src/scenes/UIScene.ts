@@ -205,7 +205,7 @@ export class UIScene extends Phaser.Scene {
       ['hud', () => this.refresh()],
       ['toast', (m: string) => this.toast(m)],
       ['cycle-seed', () => this.cycleSeed()],
-      ['open-shop', (kind?: 'benih' | 'alat') => openShop(this, kind)],
+      ['open-shop', (kind?: 'benih' | 'alat') => openShop(this, kind ?? 'benih')],
       ['open-board', () => openBoard(this)],
       ['open-festival', () => openFestival(this)],
       ['open-kitchen', () => openKitchen(this)],

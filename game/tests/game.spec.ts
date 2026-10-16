@@ -1374,3 +1374,19 @@ test('punya lebih dari satu: kostum dari toko dan cangkul cadangan bisa ditukar'
   expect(r).toEqual({ a: null, b: null, coins: 4700, shirt: 'kaos-merah', tier: 0, spares: [{ tool: 'cangkul', tier: 2 }], box: ['cos:kemeja-biru', 'spare:0'] });
   noErrors(errors);
 });
+
+test('dua toko: kios benih dan kios peralatan isinya beda', async ({ page }) => {
+  const errors = await start(page);
+  const title = () => page.evaluate(() => {
+    const ui = window.game.scene.getScene('ui') as any;
+    return ui.modalLayer.list.filter((o: any) => o.type === 'Text').map((o: any) => o.text).find((t: string) => t.startsWith('Toko'));
+  });
+  await at(page, 40, 7, 'up');
+  await press(page, 'Space');
+  expect(await title()).toBe('Toko Peralatan & Pakaian');
+  await press(page, 'Escape');
+  await at(page, 46, 7, 'up');
+  await press(page, 'Space');
+  expect(await title()).toContain('Toko Benih & Ternak');
+  noErrors(errors);
+});
