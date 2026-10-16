@@ -56,6 +56,7 @@ import { openFishBook } from '../ui/windows/fishbook';
 import { showReport, showWelcome, askSleep, askConfirm, type Confirm } from '../ui/windows/report';
 
 const INK = C.ink;
+const TIRED_AT = 20; // stamina at or below this tints the screen edges red
 const SLOT = 54, SLOT_GAP = 6, DOCK_PAD = 7;
 
 /** Buttons that dismiss or postpone get the quiet secondary style. */
@@ -114,6 +115,21 @@ export class UIScene extends Phaser.Scene {
     const { w: W, h: H } = VIEW;
 
     this.buildWeather();
+
+    // tired: a soft red glow around the screen edges that breathes in and out
+    if (!this.textures.exists('vignette-red')) {
+      const t = this.textures.createCanvas('vignette-red', 256, 144)!;
+      const ctx = t.getContext();
+      const grd = ctx.createRadialGradient(128, 72, 40, 128, 72, 150);
+      grd.addColorStop(0, 'rgba(200,20,20,0)');
+      grd.addColorStop(0.6, 'rgba(200,20,20,0.18)');
+      grd.addColorStop(1, 'rgba(170,0,0,0.75)');
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, 256, 144);
+      t.refresh();
+    }
+    this.tiredGlow = this.add.image(VIEW.w / 2, VIEW.h / 2, 'vignette-red').setDisplaySize(VIEW.w, VIEW.h).setAlpha(0).setDepth(-5);
+    this.tiredTween = undefined;
 
     // top-left: date, time, coins, bars
     this.panel(12, 12, 250, 84);
@@ -298,6 +314,7 @@ export class UIScene extends Phaser.Scene {
     this.applyWeather();
     this.refreshClock();
     this.refreshQuests();
+    this.refreshTired();
 
     const g = this.bars.clear();
     const bar = (y: number, value: number, max: number, color: number, label: string) => {
@@ -501,6 +518,22 @@ export class UIScene extends Phaser.Scene {
   }
 
   private hiddenHud: Phaser.GameObjects.GameObject[] = [];
+  private tiredGlow!: Phaser.GameObjects.Image;
+  private tiredTween?: Phaser.Tweens.Tween;
+
+  /** Stamina at or below TIRED_AT: a red glow at the screen edges breathes slowly in and out. */
+  private refreshTired() {
+    const s = this.state;
+    const low = s.stamina <= TIRED_AT;
+    if (low && !this.tiredTween) {
+      this.tiredGlow.setAlpha(0);
+      this.tiredTween = this.tweens.add({ targets: this.tiredGlow, alpha: { from: 0.25, to: 0.85 }, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    } else if (!low && this.tiredTween) {
+      this.tiredTween.remove();
+      this.tiredTween = undefined;
+      this.tweens.add({ targets: this.tiredGlow, alpha: 0, duration: 500 });
+    }
+  }
   private questLabel!: Phaser.GameObjects.Text;
   private questBadge!: Phaser.GameObjects.Graphics;
   private questBadgeText!: Phaser.GameObjects.Text;

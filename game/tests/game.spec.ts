@@ -1466,3 +1466,14 @@ test('beli cangkul cadangan di toko: masuk Perlengkapan dan label menghitung cad
   expect(box).toContain('spare:0');
   noErrors(errors);
 });
+
+test('tenaga <= 20: tepi layar berdenyut merah, hilang lagi setelah pulih', async ({ page }) => {
+  const errors = await start(page);
+  const on = () => page.evaluate(() => !!(window.game.scene.getScene('ui') as any).tiredTween);
+  expect(await on()).toBe(false);
+  await patch(page, 's.stamina = 20');
+  expect(await on()).toBe(true);
+  await patch(page, 's.stamina = 80');
+  expect(await on()).toBe(false);
+  noErrors(errors);
+});
