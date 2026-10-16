@@ -1,6 +1,6 @@
-import { SPARE_TOOL_PRICE, TIER_COLORS, TIER_EFFECTS, TOOLS, TOOL_TIERS, UPGRADABLE, UPGRADE_COST, needsPurchase, produceById } from '../../data';
+import { TIER_COLORS, TIER_EFFECTS, TOOLS, TOOL_TIERS, UPGRADABLE, UPGRADE_COST, needsPurchase, produceById } from '../../data';
 import { play } from '../../sfx';
-import { buySpareTool, collectUpgrade, countBase, dayOfSeason, save, seasonOf, startUpgrade, tierOf } from '../../state';
+import { collectUpgrade, countBase, dayOfSeason, save, seasonOf, startUpgrade, tierOf } from '../../state';
 import { C, card, txt, well } from '../theme';
 import type { UIScene } from '../../scenes/UIScene';
 
@@ -67,13 +67,6 @@ export function openBengkel(ui: UIScene) {
     c.add(chip);
     // the steps so far as pips, next to the tier chip
     for (let p = 1; p <= 3; p++) g.fillStyle(p <= tier ? TIER_COLORS[p] : 0xd8d8de, 1).fillCircle(chip.x + chip.width + 4 + p * 12, cy + 43, 4);
-    // a brand-new spare copy (Biasa), kept in Tas › Perlengkapan
-    const price = SPARE_TOOL_PRICE[id];
-    const spares = (s.spareTools ?? []).filter((sp) => sp.tool === id).length;
-    if (price && owned) {
-      ui.button(c, cx + cw - 124, cy + 10, `+ Cadangan ${price} G`, () => done(buySpareTool(s, id), `${t.name} cadangan jadi! Ada di Tas › Perlengkapan (${spares + 1}).`), 112, s.coins < price, true);
-      if (spares) c.add(ui.add.text(cx + cw - 68, cy + 48, `cadangan: ${spares}`, txt(10, C.tertiary)).setOrigin(0.5, 0));
-    }
 
     const fx = TIER_EFFECTS[id]!;
     c.add(ui.add.text(cx + 14, cy + 66, `Sekarang: ${fx[tier]}`, { ...txt(11, C.secondary, false), wordWrap: { width: cw - 28 } }));

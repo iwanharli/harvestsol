@@ -264,7 +264,7 @@ export function openCharacter(ui: UIScene) {
     else if (!on && atForge(s, tool)) {
       const spare = box.some((b) => b.slot === picked);
       para(`${t.name} utamamu sedang ditempa di Bengkel Pandai Besi.`, C.orange);
-      para(spare ? 'Pakai cadangan dari kotak Perlengkapan sementara: klik 2× atau seret ke slot ini.' : 'Beli cadangan di Bengkel kalau mau tetap bekerja sambil menunggu.', C.secondary);
+      para(spare ? 'Pakai cadangan dari kotak Perlengkapan sementara: klik 2× atau seret ke slot ini.' : 'Beli cadangan di Toko Peralatan kalau mau tetap bekerja sambil menunggu.', C.secondary);
     } else if (!on) para('Slot kosong. Pasang dari kotak Perlengkapan di bawah.', C.secondary);
     else {
       if (canUnequip(picked)) actionButton('Copot', false);

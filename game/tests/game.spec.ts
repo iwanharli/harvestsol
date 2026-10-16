@@ -1412,3 +1412,15 @@ test('bengkel: selagi alat ditempa, cadangan bisa dipakai; hasil tempa masuk kot
   expect((await state(page)).tool).toBe('cangkul'); // the spare works while the main one was away
   noErrors(errors);
 });
+
+test('alat di bengkel tapi ada cadangan: memilih alatnya langsung memakai cadangan', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.spareTools = [{ tool: 'siram', tier: 1 }]; s.unequipped = ['tool:siram']; s.toolTier = {}; s.forge = { tool: 'siram', tier: 1, ready: 99 }");
+  await press(page, '2');
+  const s = await state(page);
+  expect(s.tool).toBe('siram');
+  expect(s.toolTier.siram).toBe(1); // the Tembaga spare was the best one in the box
+  expect(s.unequipped).toEqual([]);
+  expect(s.spareTools).toEqual([]);
+  noErrors(errors);
+});
