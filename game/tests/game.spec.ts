@@ -1388,5 +1388,7 @@ test('dua toko: kios benih dan kios peralatan isinya beda', async ({ page }) => 
   await at(page, 46, 7, 'up');
   await press(page, 'Space');
   expect(await title()).toContain('Toko Benih & Ternak');
+  const names = await page.evaluate(() => (window.game.scene.getScene('ui') as any).modalLayer.list.filter((o: any) => o.type === 'Text').map((o: any) => o.text));
+  expect(names).toContain('Pupuk Cepat');
   noErrors(errors);
 });
