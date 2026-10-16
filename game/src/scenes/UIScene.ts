@@ -21,6 +21,7 @@ import { C, HEX, UI_SCALE, VIEW, bar as drawBar, card, glass, txt } from '../ui/
 import {
   bagCapacity,
   requestReady,
+  isWorn,
   waterMax,
   tierOf,
   atForge,
@@ -367,6 +368,9 @@ export class UIScene extends Phaser.Scene {
       let name = locked ? `${t.name} · beli di Toko` : tier ? `${t.name} ${TOOL_TIERS[tier]}` : t.name;
       if (away) {
         name = `${t.name} · sedang di Bengkel`;
+        icon.setAlpha(0.3);
+      } else if (!locked && !isWorn(s, `tool:${t.id}`)) {
+        name = `${t.name} · dicopot`;
         icon.setAlpha(0.3);
       }
       if (tier && !locked) frame.fillStyle(TIER_COLORS[tier], 1).fillCircle(x + 9, y + SLOT - 9, 4).lineStyle(1, 0xffffff, 1).strokeCircle(x + 9, y + SLOT - 9, 4);

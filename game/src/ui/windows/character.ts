@@ -1,11 +1,12 @@
 import { TIER_COLORS, TIER_EFFECTS, TOOLS, TOOL_TIERS, UPGRADABLE, needsPurchase, type Tool } from '../../data';
 import { play } from '../../sfx';
-import { maxStamina, tierOf, waterMax } from '../../state';
+import { BAG_TIERS } from '../../data';
+import { bagCapacity, canUnequip, isWorn, maxStamina, save, slotsUsed, tierOf, toggleEquip, waterMax, type Wear } from '../../state';
+import { openInventory } from './bag';
 import { C, HEX, card, txt } from '../theme';
 import type { UIScene } from '../../scenes/UIScene';
 
-type Wear = 'topi' | 'baju' | 'celana' | 'sepatu';
-type Slot = { kind: 'wear'; id: Wear } | { kind: 'tool'; id: Tool } | { kind: 'stat'; id: 'level' | 'tenaga' };
+type Slot = { kind: 'wear'; id: Wear } | { kind: 'tool'; id: Tool } | { kind: 'stat'; id: 'level' | 'tas' };
 
 const WEAR: Record<Wear, { name: string; slot: string; desc: string }> = {
   topi: { name: 'Caping Bambu', slot: 'Kepala', desc: 'Topi anyaman bambu dengan pita merah. Menahan terik matahari di ladang.' },
@@ -44,15 +45,19 @@ export function openCharacter(ui: UIScene) {
     if (edge !== undefined) g.lineStyle(2, edge, 1).strokeRoundedRect(cx + 1, cy + 1, size - 2, size - 2, 11);
     if (sel) g.lineStyle(2.5, HEX.blue, 1).strokeRoundedRect(cx - 1, cy - 1, size + 2, size + 2, 13);
     const mid = [cx + size / 2, cy + size / 2] as const;
-    if (slot.kind === 'stat') {
-      const [v, l] = slot.id === 'level' ? [`${s.level}`, 'Level'] : [`${maxStamina(s)}`, 'Tenaga'];
-      c.add(ui.add.text(mid[0], mid[1] - 6, v, txt(15, slot.id === 'level' ? C.purple : C.orange)).setOrigin(0.5));
-      c.add(ui.add.text(mid[0], mid[1] + 11, l, txt(9, C.tertiary)).setOrigin(0.5));
+    if (slot.kind === 'stat' && slot.id === 'level') {
+      c.add(ui.add.text(mid[0], mid[1] - 6, `${s.level}`, txt(15, C.purple)).setOrigin(0.5));
+      c.add(ui.add.text(mid[0], mid[1] + 11, 'Level', txt(9, C.tertiary)).setOrigin(0.5));
+    } else if (slot.kind === 'stat') {
+      c.add(ui.add.image(mid[0], mid[1] - 5, 'icon-tas').setScale(2));
+      c.add(ui.add.text(mid[0], mid[1] + 15, `${slotsUsed(s)}/${bagCapacity(s)}`, txt(9, C.tertiary)).setOrigin(0.5));
     } else {
       const key = slot.kind === 'wear' ? `wear-${slot.id}` : `tool-${slot.id}`;
       const img = ui.add.image(mid[0], mid[1], key).setScale(slot.kind === 'wear' ? 4.6 : size >= B ? 3.6 : 2.4);
-      if (slot.kind === 'tool' && !owned(slot.id)) img.setTint(0x1d1d1f).setAlpha(0.22);
+      const off = !isWorn(s, `${slot.kind}:${slot.id}`);
+      if ((slot.kind === 'tool' && !owned(slot.id)) || off) img.setTint(0x1d1d1f).setAlpha(0.18);
       c.add(img);
+      if (off) c.add(ui.add.text(mid[0], cy + size - 6, 'kosong', txt(9, C.tertiary)).setOrigin(0.5, 1));
       if (slot.kind === 'tool' && s.tool === slot.id) c.add(ui.add.text(cx + size - 5, cy + 4, '●', txt(9, C.blue)).setOrigin(1, 0));
     }
     const z = ui.add.zone(cx, cy, size, size).setOrigin(0).setInteractive({ useHandCursor: true });
@@ -65,9 +70,9 @@ export function openCharacter(ui: UIScene) {
   };
 
   // row 0: head, with level and stamina in the small side slots
-  cell({ kind: 'stat', id: 'level' }, col(0) + B - S, row(0) + B - S, S);
+  cell({ kind: 'stat', id: 'tas' }, col(0) + B - S, row(0) + B - S, S);
   cell({ kind: 'wear', id: 'topi' }, col(1), row(0), B);
-  cell({ kind: 'stat', id: 'tenaga' }, col(2), row(0) + B - S, S);
+  cell({ kind: 'stat', id: 'level' }, col(2), row(0) + B - S, S);
   // rows 1-2: tools on the sides, shirt and trousers in the middle
   cell({ kind: 'tool', id: 'cangkul' }, col(0), row(1), B);
   cell({ kind: 'wear', id: 'baju' }, col(1), row(1), B);
@@ -97,6 +102,17 @@ export function openCharacter(ui: UIScene) {
     c.add(ui.add.text(tx + (icon ? 66 : 0), ty + 30, sub, txt(11, C.tertiary)));
     ty += 70;
   };
+  const equipButton = (key: string) => {
+    if (!canUnequip(key)) return;
+    const on = isWorn(s, key);
+    ui.button(c, px + pw - 128, py + 22, on ? 'Copot' : 'Pasang', () => {
+      play('click');
+      toggleEquip(s, key);
+      save(s);
+      ui.game.events.emit('hud');
+      openCharacter(ui);
+    }, 108, false, on);
+  };
   const para = (t: string, color: string = C.secondary) => {
     const o = ui.add.text(tx, ty, t, { ...txt(12, color, false), wordWrap: { width: pw - 40 }, lineSpacing: 3 });
     c.add(o);
@@ -105,22 +121,28 @@ export function openCharacter(ui: UIScene) {
 
   if (p.kind === 'wear') {
     const w = WEAR[p.id];
-    head(`wear-${p.id}`, w.name, `KOSTUM · ${w.slot.toUpperCase()}`);
+    const on = isWorn(s, `wear:${p.id}`);
+    head(`wear-${p.id}`, w.name, `KOSTUM · ${w.slot.toUpperCase()} · ${on ? 'DIPAKAI' : 'DI TAS'}`, !on);
     para(w.desc, C.ink);
     para('Bawaan Petani Desa. Kostum lain belum tersedia.', C.tertiary);
+    equipButton(`wear:${p.id}`);
   } else if (p.kind === 'stat') {
     if (p.id === 'level') {
-      head(undefined, `Level ${s.level}`, 'PENGALAMAN');
+      head(undefined, `Level ${s.level}`, `TENAGA ${s.stamina}/${maxStamina(s)} · AIR ${s.water}/${waterMax(s)}`);
       para('Naik level dengan bertani, memancing, memasak, dan membantu warga. Level membuka benih, alat, dan bangunan baru.');
+      para('Tenaga maksimal naik tiap 4 level dan dari hadiah khusus.', C.tertiary);
     } else {
-      head(undefined, `Tenaga ${s.stamina}/${maxStamina(s)}`, `AIR ${s.water}/${waterMax(s)}`);
-      para('Tenaga maksimal naik tiap 4 level dan dari hadiah khusus. Lihat Lemari di rumah untuk catatannya.');
+      head('icon-tas', BAG_TIERS[s.bagTier].name, `TAS · ${slotsUsed(s)}/${bagCapacity(s)} SLOT`);
+      para('Menyimpan hasil panen, benih, dan barang. Alat dan kostum yang dicopot disimpan di tab Perlengkapan.');
+      ui.button(c, tx, py + ph - 52, 'Buka Tas', () => openInventory(ui, 'perlengkapan'), 130);
     }
   } else {
     const t = TOOLS.find((o) => o.id === p.id)!;
     const has = owned(p.id);
     const using = s.tool === p.id;
-    head(`tool-${p.id}`, t.name, `ALAT · TOMBOL ${t.key}${using ? ' · DIPAKAI' : ''}`, !has);
+    const on = isWorn(s, `tool:${p.id}`);
+    head(`tool-${p.id}`, t.name, `ALAT · TOMBOL ${t.key}${!on ? ' · DI TAS' : using ? ' · DIPEGANG' : ''}`, !has || !on);
+    if (has) equipButton(`tool:${p.id}`);
     if (!has) para('Belum punya. Beli di toko.', C.red);
     else if (UPGRADABLE.includes(p.id)) {
       const tier = tierOf(s, p.id);

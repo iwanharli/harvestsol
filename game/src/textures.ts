@@ -917,9 +917,25 @@ export function makeTextures(scene: Phaser.Scene) {
     up: [HEAD_UP, BODY_FRONT],
     side: [HEAD_SIDE, BODY_SIDE],
   };
+  // every combination of outfit pieces taken off: t topi, b baju, c celana, s sepatu
+  const PAL = { ...PLAYER_PAL, w: '#eeeae0' };
+  const strip = (rows: string[], off: string) =>
+    rows.map((r, y) => {
+      let o = r;
+      if (off.includes('t')) {
+        if (y >= 1 && y <= 2) o = o.replace(/[yYL]/g, '.');
+        if (y === 3) o = [...o].map((ch, x) => (/[yYLr]/.test(ch) ? (x >= 5 && x <= 10 ? 'H' : '.') : ch)).join('');
+      }
+      if (off.includes('b') && y >= 8 && y <= 10) o = o.replace(/[Ccl]/g, 'S');
+      if (off.includes('c') && y >= 11) o = y <= 12 ? o.replace(/[Pp]/g, y === 11 ? 'w' : 'S') : o.replace(/[Pp]/g, 'S');
+      if (off.includes('s')) o = o.replace(/B/g, 'S');
+      return o;
+    });
+  const combos = ['', 't', 'b', 'c', 's', 'tb', 'tc', 'ts', 'bc', 'bs', 'cs', 'tbc', 'tbs', 'tcs', 'bcs', 'tbcs'];
   for (const [dir, [head, body]] of Object.entries(dirs)) {
     LEGS.forEach((legs, f) => {
-      canvas(scene, `player-${dir}-${f}`, TILE, TILE, (c) => art(c, [...head, ...body, ...legs].slice(0, 16), PLAYER_PAL), true);
+      for (const off of combos)
+        canvas(scene, `player-${dir}-${f}${off ? `-${off}` : ''}`, TILE, TILE, (c) => art(c, strip([...head, ...body, ...legs].slice(0, 16), off), PAL), true);
     });
   }
 
