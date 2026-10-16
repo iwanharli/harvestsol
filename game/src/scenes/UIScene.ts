@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { npcById, produceById } from '../data';
 import {
-  WEEKDAYS,
   WEATHER_INFO,
   isWet,
   baseId,
@@ -21,6 +20,7 @@ import { C, HEX, UI_SCALE, VIEW, bar as drawBar, card, glass, txt } from '../ui/
 import {
   bagCapacity,
   requestReady,
+  weekdayOf,
   isWorn,
   waterMax,
   tierOf,
@@ -785,7 +785,7 @@ export class UIScene extends Phaser.Scene {
   /** Compact pill at the top centre: weather, time, day. Click (or K) for the calendar. */
   private buildClock() {
     const W = VIEW.w;
-    const w = 248, h = 46, x = W / 2 - w / 2;
+    const w = 304, h = 46, x = W / 2 - w / 2;
     const y = W - 2 * 250 < w + 24 ? 132 : 10; // too narrow for three across → below the panels
     const g = this.add.graphics();
     glass(g, x, y, w, h, h / 2, { alpha: 0.76, shadow: 3, sheen: false });
@@ -805,10 +805,10 @@ export class UIScene extends Phaser.Scene {
   private refreshClockPill() {
     const s = this.state;
     this.clockIcon.setTexture(`wx-${s.weather}`);
-    this.clockDay.setText(`${seasonOf(s.day)} ${dayOfSeason(s.day)}`);
+    this.clockDay.setText(`Tanggal ${dayOfSeason(s.day)} ${seasonOf(s.day)}`);
     const festival = isFestivalDay(s.day);
     this.clockSub
-      .setText(`${WEEKDAYS[(s.day - 1) % 7]} · ${festival ? 'Festival!' : WEATHER_INFO[s.weather].name}`)
+      .setText(`Hari ${weekdayOf(s.day)} · ${festival ? 'Festival!' : WEATHER_INFO[s.weather].name}`)
       .setColor(festival ? C.red : C.secondary);
   }
 

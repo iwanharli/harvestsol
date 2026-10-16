@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import {
   isNight,
-  WEEKDAYS,
   LATE_WARNINGS,
   NIGHT_DRAIN,
   LOW_STAMINA,
@@ -71,6 +70,7 @@ import {
   waterMax,
   atForge,
   isWorn,
+  weekdayOf,
   gearBox,
   equipFromBox,
   outfitKey,
@@ -1372,7 +1372,7 @@ export class FarmScene extends Phaser.Scene {
     this.redrawAfterRollover();
     this.pendingReport = report;
     const money = report.income ? ` Kiriman terjual +${report.income.toLocaleString('id-ID')} G.` : '';
-    this.toast(`Tengah malam: hari baru, ${WEEKDAYS[(this.state.day - 1) % 7]} ${seasonOf(this.state.day)} ${dayOfSeason(this.state.day)}.${money} Tenaga makin cepat berkurang!`);
+    this.toast(`Tengah malam: tanggal ${dayOfSeason(this.state.day)} ${seasonOf(this.state.day)}, hari ${weekdayOf(this.state.day)}.${money} Tenaga makin cepat berkurang!`);
     save(this.state);
     this.game.events.emit('hud');
   }
