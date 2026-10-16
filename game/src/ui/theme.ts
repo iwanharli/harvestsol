@@ -74,6 +74,7 @@ export function glass(
   opts: { alpha?: number; shadow?: number; sheen?: boolean } = {},
 ) {
   const { alpha = 0.78, shadow: depth = 14, sheen = true } = opts;
+  r = Math.min(r, h / 2, w / 2); // a bigger radius draws a stray line through short pills
   if (depth) shadow(g, x, y, w, h, r, depth);
   g.fillStyle(0xffffff, alpha).fillRoundedRect(x, y, w, h, r);
   if (sheen) g.fillStyle(0xffffff, 0.35).fillRoundedRect(x + 1, y + 1, w - 2, Math.min(h / 2, 28), { tl: r - 1, tr: r - 1, bl: 0, br: 0 });
