@@ -48,14 +48,35 @@ export function buildCave(scene: FarmScene) {
     const R = CAVE_ROOM;
     const X = (lx: number) => (R.x + lx) * TILE;
     const Y = (ly: number) => (R.y + ly) * TILE;
+    // a ring of solid rock outside the room, so the edges fade into darkness
+    scene.add.rectangle(X(-6), Y(-6), (R.w + 12) * TILE, (R.h + 12) * TILE, 0x0e0b09).setOrigin(0).setDepth(-11);
+    const hash = (x: number, y: number) => ((x * 73856093) ^ (y * 19349663)) >>> 0;
     for (let ly = 0; ly < R.h; ly++)
       for (let lx = 0; lx < R.w; lx++) {
-        const wall = ly < 2 || lx === 0 || lx === R.w - 1;
-        const img = scene.add.image(X(lx), Y(ly), wall ? 'cave-wall' : 'cave-floor').setOrigin(0).setDepth(-10);
-        if ((lx * 7 + ly * 3) % 4 === 0) img.setFlipX(true);
+        const side = lx === 0 || lx === R.w - 1;
+        const wall = ly < 2 || side;
+        const h = hash(lx, ly);
+        const key = side ? 'cave-side' : ly === 0 ? 'cave-face' : ly === 1 ? 'cave-face-base' : (h >> 3) % 9 < 6 ? 'cave-floor-0' : `cave-floor-${1 + ((h >> 5) % 3)}`;
+        const img = scene.add.image(X(lx), Y(ly), key).setOrigin(0).setDepth(-10);
+        if (!side && h % 2) img.setFlipX(true);
         scene.caveFloorImgs.push(img);
         if (wall) scene.blocked.add(plotKey(R.x + lx, R.y + ly));
+        // scattered decor on open floor (walkable, drawn flat under everything)
+        if (!wall && ly < R.h - 2 && h % 23 === 0) {
+          const deco = ['cave-crystal', 'cave-shroom', 'cave-bones'][h % 3];
+          const d = scene.add.image(X(lx) + 8, Y(ly) + 16, deco).setOrigin(0.5, 1).setDepth(-9).setScale(0.75);
+          scene.caveFloorImgs.push(d);
+        }
       }
+    // soft shadow along the walls, so the room has depth
+    const sh = scene.add.graphics().setDepth(-9.5);
+    for (let i = 0; i < 6; i++) {
+      const a = 0.09 * (1 - i / 6);
+      sh.fillStyle(0x000000, a);
+      sh.fillRect(X(1), Y(2) + i * 2, (R.w - 2) * TILE, 2); // below the back wall
+      sh.fillRect(X(1) + i * 2, Y(2), 2, (R.h - 2) * TILE); // left
+      sh.fillRect(X(R.w - 1) - (i + 1) * 2, Y(2), 2, (R.h - 2) * TILE); // right
+    }
     const mid = R.w / 2;
     scene.add.image(X(mid), Y(R.h), 'ladder-up').setOrigin(0.5, 1).setDepth(-8.5);
     scene.caveLabel = scene.add
