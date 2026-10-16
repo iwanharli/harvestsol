@@ -6,6 +6,7 @@ import {
   NIGHT_DRAIN,
   LOW_STAMINA,
   FIELD,
+  TOOL_TIERS,
   GAME_MIN_PER_SEC,
   MAP_H,
   BENGKEL_HOURS,
@@ -70,6 +71,8 @@ import {
   waterMax,
   atForge,
   isWorn,
+  gearBox,
+  equipFromBox,
   outfitKey,
   openCaveTreasure,
   liftFloors,
@@ -609,10 +612,24 @@ export class FarmScene extends Phaser.Scene {
     const tool = TOOLS[i].id;
     if (needsPurchase(tool) && !this.state.ownedTools.includes(tool))
       return this.fail(`Kamu belum punya ${TOOLS[i].name}. Beli di Toko Peralatan (sebelah papan warga).`);
+    const inBox = gearBox(this.state)
+      .filter((g) => g.slot === `tool:${tool}`)
+      .sort((a, b) => (b.tier ?? 0) - (a.tier ?? 0));
+    if (!isWorn(this.state, `tool:${tool}`) && atForge(this.state, tool)) {
+      // the main one is at the smith and a spare waits in the box: take the best spare and use it
+      const spare = inBox[0];
+      if (spare && !equipFromBox(this.state, spare.key)) {
+        this.toast(`${spare.name}${spare.tier ? ` ${TOOL_TIERS[spare.tier]}` : ''} diambil dari Perlengkapan.`);
+        this.state.tool = tool;
+        save(this.state);
+        this.game.events.emit('hud');
+        return;
+      }
+    }
     if (!isWorn(this.state, `tool:${tool}`))
       return this.fail(atForge(this.state, tool)
         ? `${TOOLS[i].name} sedang ditempa di Bengkel. Pakai cadangan dari jendela Karakter (C) kalau punya.`
-        : `${TOOLS[i].name} sedang dicopot. Pasang lagi di Tas › Perlengkapan.`);
+        : `${TOOLS[i].name} sedang dicopot.${inBox.length > 1 ? ` Ada ${inBox.length} di Perlengkapan,` : ''} Pasang lewat jendela Karakter (C).`);
     this.state.tool = tool;
     this.game.events.emit('hud');
   }

@@ -463,7 +463,7 @@ function drawGear(ui: UIScene, c: Phaser.GameObjects.Container, x: number, y: nu
     gy += Math.ceil(list.length / COLS) * (SZ + GAP) + 14;
   };
   section('DIPAKAI', worn, 'Tidak ada yang dipakai');
-  section('DI TAS', kept, 'Kosong. Beli kostum di Toko Peralatan & Pakaian atau alat cadangan di Bengkel.');
+  section('DI TAS', kept, 'Kosong. Beli kostum dan alat cadangan di Toko Peralatan & Pakaian.');
   c.add(ui.add.text(gx, y + H - 92, 'Alat & kostum tidak memakai slot tas.', txt(11, C.tertiary, false)));
 
   const dx = x + W - 250, dy = y + 98, dw = 222, dh = 284;
