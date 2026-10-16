@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { TIER_COLORS, TIER_EFFECTS, TOOLS, TOOL_TIERS, UPGRADABLE, UPGRADE_COST, needsPurchase, produceById } from '../../data';
 import { play } from '../../sfx';
-import { collectUpgrade, countBase, dateLabel, save, startUpgrade, tierOf } from '../../state';
+import { collectUpgrade, countBase, dateLabel, isWorn, save, startUpgrade, tierOf } from '../../state';
 import { C, card, txt, well } from '../theme';
 import type { UIScene } from '../../scenes/UIScene';
 
@@ -98,7 +98,12 @@ export function openBengkel(ui: UIScene) {
       c.add(ui.add.text(tx + bw + 8, by + 3, `${done0}/${days} hari`, txt(10, C.tertiary)).setOrigin(0, 0.5));
     }
     const tierName = TOOL_TIERS[f.tier]; // read before collecting clears the forge
-    if (ready) ui.button(c, x + W - 144, mid - 17, 'Ambil', () => done(collectUpgrade(s), `${name} ${tierName} siap dipakai!`), 104);
+    // a spare in the slot keeps its place: the upgraded one goes to the box
+    const spareWorn = isWorn(s, `tool:${f.tool}`);
+    if (ready)
+      ui.button(c, x + W - 144, mid - 17, 'Ambil', () => done(collectUpgrade(s), spareWorn
+        ? `${name} ${tierName} masuk Tas › Perlengkapan (cadanganmu masih terpasang). Tukar di jendela Karakter (C).`
+        : `${name} ${tierName} terpasang, siap dipakai!`), 104);
   }
 
   // one card per tool: now, next tier, cost

@@ -1493,3 +1493,22 @@ test('festival mulai jam 09:00: muncul pemberitahuan di layar, hari biasa tidak'
   expect(await shown()).toBe(true);
   noErrors(errors);
 });
+
+test('cadangan dipakai selagi alat ditempa: tidak hilang setelah muat ulang dan ambil hasil tempa', async ({ page }) => {
+  const errors = await start(page);
+  const r = await page.evaluate(async () => {
+    const m = await import('/src/state.ts');
+    const s = window.game.registry.get('state');
+    s.coins = 9000; s.level = 5; s.produce = { 'bijih-tembaga': 5 };
+    s.spareTools = [{ tool: 'siram', tier: 0 }];
+    m.startUpgrade(s, 'siram');
+    m.equipFromBox(s, 'spare:0');
+    const s2 = m.migrate(JSON.parse(JSON.stringify(s))); // save and load again
+    const s3 = m.migrate(JSON.parse(JSON.stringify(s2))); // and once more
+    s3.day = s3.forge.ready;
+    m.collectUpgrade(s3);
+    return { worn: m.isWorn(s3, 'tool:siram'), tier: s3.toolTier.siram ?? 0, spares: s3.spareTools };
+  });
+  expect(r).toEqual({ worn: true, tier: 0, spares: [{ tool: 'siram', tier: 1 }] });
+  noErrors(errors);
+});

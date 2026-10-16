@@ -167,6 +167,7 @@ export interface GameState {
   outfit?: Record<WearSlot, string>; // costume id per body slot, '' when taken off
   wardrobe?: string[]; // costumes owned
   spareTools?: { tool: Tool; tier: number }[]; // extra copies of tools in the box
+  migrated?: string[]; // one-time save fixes already applied
   toolTier?: Partial<Record<Tool, number>>; // 0 Biasa, 1 Tembaga, 2 Besi, 3 Emas
   forge?: { tool: Tool; tier: number; ready: number }; // a tool at the Bengkel, ready on that day
   caveTreasure?: boolean; // the chest at the bottom has been opened
@@ -189,6 +190,7 @@ export function newGame(): GameState {
     tool: 'cangkul',
     ownedTools: [],
     wardrobe: Object.values(DEFAULT_OUTFIT),
+    migrated: ['forge-slot'],
     outfit: { ...DEFAULT_OUTFIT },
     bagTier: 0,
     weather: 'cerah',
@@ -244,7 +246,7 @@ function migrateTropical(s: GameState) {
   if (s.forecasts) s.forecasts = s.forecasts.map(snow);
 }
 
-function migrate(s: GameState): GameState {
+export function migrate(s: GameState): GameState {
   migrateTropical(s);
   s.level ??= 1;
   s.ownedTools ??= [];
@@ -254,7 +256,12 @@ function migrate(s: GameState): GameState {
   for (const w of ['topi', 'baju', 'celana', 'sepatu'] as WearSlot[])
     if (s.unequipped?.includes(`wear:${w}`)) s.outfit![w] = '';
   if (s.unequipped) s.unequipped = s.unequipped.filter((k) => !k.startsWith('wear:'));
-  if (s.forge && !s.unequipped?.includes(`tool:${s.forge.tool}`)) s.unequipped = [...(s.unequipped ?? []), `tool:${s.forge.tool}`];
+  // once only: saves from before a forged tool emptied its slot. Never again, or a spare
+  // worn in that slot while the main one is at the smith would be wiped on every load.
+  if (!s.migrated?.includes('forge-slot')) {
+    if (s.forge && !s.unequipped?.includes(`tool:${s.forge.tool}`)) s.unequipped = [...(s.unequipped ?? []), `tool:${s.forge.tool}`];
+    s.migrated = [...(s.migrated ?? []), 'forge-slot'];
+  }
   s.bagTier ??= 0;
   s.weather ??= 'cerah';
   if (!s.forecasts) {
