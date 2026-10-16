@@ -86,7 +86,7 @@ export function openShop(ui: UIScene, kind?: 'benih' | 'alat') {
         ...BUYABLE_TOOLS.map((t) => {
           const has = s.ownedTools.includes(t.id);
           return {
-            id: t.id, name: has ? `${t.name} (cadangan)` : t.name, price: has ? SPARE_TOOL_PRICE[t.id] ?? t.price : t.price, level: t.level,
+            id: t.id, name: t.name, price: has ? SPARE_TOOL_PRICE[t.id] ?? t.price : t.price, level: t.level,
             info: has ? 'alat kedua, disimpan di Tas › Perlengkapan' : t.desc,
             owned: () => (has ? `${spares(t.id)}` : ''),
             ownedLabel: 'cadangan',
@@ -104,7 +104,7 @@ export function openShop(ui: UIScene, kind?: 'benih' | 'alat') {
           };
         }),
         ...(['cangkul', 'siram'] as const).map((id) => ({
-          id: `tool-${id}`, name: `${TOOLS.find((x) => x.id === id)!.name} (cadangan)`, price: SPARE_TOOL_PRICE[id]!, level: 1, icon: `tool-${id}`,
+          id: `tool-${id}`, name: TOOLS.find((x) => x.id === id)!.name, price: SPARE_TOOL_PRICE[id]!, level: 1, icon: `tool-${id}`,
           info: 'alat kedua, disimpan di Tas › Perlengkapan',
           owned: () => `${spares(id)}`,
           ownedLabel: 'cadangan',
