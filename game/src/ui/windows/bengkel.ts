@@ -1,6 +1,6 @@
 import { TIER_COLORS, TIER_EFFECTS, TOOLS, TOOL_TIERS, UPGRADABLE, UPGRADE_COST, needsPurchase, produceById } from '../../data';
 import { play } from '../../sfx';
-import { collectUpgrade, countBase, dayOfSeason, save, seasonOf, startUpgrade, tierOf } from '../../state';
+import { collectUpgrade, countBase, dateLabel, save, startUpgrade, tierOf } from '../../state';
 import { C, card, txt, well } from '../theme';
 import type { UIScene } from '../../scenes/UIScene';
 
@@ -36,7 +36,7 @@ export function openBengkel(ui: UIScene) {
     const ready = s.day >= s.forge.ready;
     c.add(
       ui.add
-        .text(x + 40, y + 78, ready ? `${name} ${TOOL_TIERS[s.forge.tier]} sudah jadi!` : `Sedang ditempa: ${name} → ${TOOL_TIERS[s.forge.tier]} · siap hari ${dayOfSeason(s.forge.ready)} ${seasonOf(s.forge.ready)}`, txt(13, ready ? C.green : INK))
+        .text(x + 40, y + 78, ready ? `${name} ${TOOL_TIERS[s.forge.tier]} sudah jadi!` : `Sedang ditempa: ${name} → ${TOOL_TIERS[s.forge.tier]} · siap ${dateLabel(s.forge.ready, s.day)}`, txt(13, ready ? C.green : INK))
         .setOrigin(0, 0.5),
     );
     const tierName = TOOL_TIERS[s.forge.tier]; // read before collecting clears the forge

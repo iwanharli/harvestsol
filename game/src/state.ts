@@ -313,6 +313,10 @@ export function resetSave() {
 
 export const seasonOf = (day: number): Season => SEASONS[Math.floor((day - 1) / DAYS_PER_SEASON) % 4];
 export const dayOfSeason = (day: number) => ((day - 1) % DAYS_PER_SEASON) + 1;
+const WEEKDAY_FULL = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+/** "tanggal 17, hari Rabu"; the season is added only when it is not this season. */
+export const dateLabel = (day: number, today: number) =>
+  `tanggal ${dayOfSeason(day)}${seasonOf(day) !== seasonOf(today) ? ` musim ${seasonOf(day)}` : ''}, hari ${WEEKDAY_FULL[(day - 1) % 7]}`;
 export const yearOf = (day: number) => Math.floor((day - 1) / (DAYS_PER_SEASON * 4)) + 1;
 
 export const plotKey = (x: number, y: number) => `${x},${y}`;
@@ -1284,7 +1288,7 @@ export function startUpgrade(s: GameState, t: Tool): string | null {
 /** Collect a finished tool; returns an error or null. */
 export function collectUpgrade(s: GameState): string | null {
   if (!s.forge) return 'Tidak ada alat di bengkel.';
-  if (s.day < s.forge.ready) return `Belum selesai. Ambil hari ke-${dayOfSeason(s.forge.ready)} ${seasonOf(s.forge.ready)}.`;
+  if (s.day < s.forge.ready) return `Belum selesai. Ambil ${dateLabel(s.forge.ready, s.day)}.`;
   const { tool, tier } = s.forge;
   const slot = `tool:${tool}`;
   if (isWorn(s, slot)) {
