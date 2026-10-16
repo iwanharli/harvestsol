@@ -115,7 +115,7 @@ export class UIScene extends Phaser.Scene {
 
     // top-left: date, time, coins, bars
     this.panel(12, 12, 250, 84);
-    this.dateText = this.add.text(28, 22, '', txt(14, C.secondary));
+    this.dateText = this.add.text(28, 22, '', txt(14, INK));
     this.levelText = this.add.text(246, 22, '', txt(14, C.purple)).setOrigin(1, 0);
     this.bars = this.add.graphics();
     this.xpLine = this.add.graphics();
@@ -150,7 +150,7 @@ export class UIScene extends Phaser.Scene {
     this.bagTitle = this.add.text(W - 216, 22, 'Tas', txt(16));
     this.coinText = this.add.text(W - 28, 22, '', txt(16, C.orange)).setOrigin(1, 0);
     this.bagMini = this.add.container(0, 0);
-    this.bagText = this.add.text(W - 216, 96, '', txt(11, C.secondary, false));
+    this.bagText = this.add.text(W - 216, 96, '', txt(11, INK, false));
     const bagHit = this.add.zone(W - 232, 12, 220, 112).setOrigin(0).setInteractive({ useHandCursor: true });
     bagHit.on('pointerdown', () => {
       if (this.registry.get('modal')) return;
@@ -262,7 +262,7 @@ export class UIScene extends Phaser.Scene {
   // ---------- HUD ----------
 
   private panel(x: number, y: number, w: number, h: number) {
-    return glass(this.add.graphics(), x, y, w, h, 16, { alpha: 0.58, shadow: 3, sheen: false });
+    return glass(this.add.graphics(), x, y, w, h, 16, { alpha: 0.76, shadow: 3, sheen: false });
   }
 
   private refreshClock() {
@@ -287,7 +287,7 @@ export class UIScene extends Phaser.Scene {
     const bar = (y: number, value: number, max: number, color: number, label: string) => {
       drawBar(g, 82, y + 3, 104, value / max, color);
       // label and value are created once, then only their text changes
-      if (!this.children.getByName(label)) this.add.text(28, y - 1, label, txt(12, C.secondary)).setName(label);
+      if (!this.children.getByName(label)) this.add.text(28, y - 1, label, txt(12, INK)).setName(label);
       const key = `${label}-val`;
       const v = (this.children.getByName(key) as Phaser.GameObjects.Text | null) ?? this.add.text(246, y - 1, '', txt(12, INK)).setOrigin(1, 0).setName(key);
       v.setText(`${Math.floor(value)}/${max}`);
@@ -312,7 +312,7 @@ export class UIScene extends Phaser.Scene {
     const used = slotsUsed(s), cap = bagCapacity(s);
     this.bagTitle.setText(`Tas ${used}/${cap}`).setColor(used >= cap ? C.red : INK);
     const produce = Object.entries(s.produce);
-    if (!produce.length) this.bagMini.add(this.add.text(W - 216, 54, 'Hasil panen kosong', txt(13, C.tertiary, false)));
+    if (!produce.length) this.bagMini.add(this.add.text(W - 216, 54, 'Hasil panen kosong', txt(13, C.secondary, false)));
     produce.slice(0, 5).forEach(([id, q], i) => {
       const sx = W - 216 + i * 38;
       const g = this.add.graphics();
@@ -321,7 +321,7 @@ export class UIScene extends Phaser.Scene {
       const badge = this.starBadge(sx + 2, 47, id, 9);
       if (badge) this.bagMini.add(badge);
     });
-    if (produce.length > 5) this.bagMini.add(this.add.text(W - 26, 63, `+${produce.length - 5}`, txt(12, C.tertiary)).setOrigin(1, 0.5));
+    if (produce.length > 5) this.bagMini.add(this.add.text(W - 26, 63, `+${produce.length - 5}`, txt(12, C.secondary)).setOrigin(1, 0.5));
     const status: string[] = [];
     const ship = Object.values(s.shipping).reduce((a, b) => a + b, 0);
     if (ship) status.push(`Kirim: ${ship}`);
@@ -334,7 +334,7 @@ export class UIScene extends Phaser.Scene {
     const first = UIScene.slotPos(0), last = UIScene.slotPos(TOOLS.length - 1);
     const dockW = last.x + SLOT - first.x + DOCK_PAD * 2;
     this.dock.clear();
-    glass(this.dock, first.x - DOCK_PAD, first.y - DOCK_PAD, dockW, SLOT + DOCK_PAD * 2, 20, { alpha: 0.58, shadow: 3, sheen: false });
+    glass(this.dock, first.x - DOCK_PAD, first.y - DOCK_PAD, dockW, SLOT + DOCK_PAD * 2, 20, { alpha: 0.76, shadow: 3, sheen: false });
 
     let activeName = '';
     TOOLS.forEach((t, i) => {
@@ -485,7 +485,7 @@ export class UIScene extends Phaser.Scene {
   private refreshQuests() {
     const s = this.state;
     const marked = s.requests.filter((r) => r.marked);
-    this.questLabel.setText(`Quest ${marked.length}`).setColor(marked.length ? C.ink : C.secondary);
+    this.questLabel.setText(`Quest ${marked.length}`).setColor(C.ink);
     this.questList.removeAll(true);
     if (!this.questOpen || !marked.length) return; // nothing marked: just the button, no empty box
     const rows: { text: string; color: string; icon?: string }[] = [];
@@ -757,12 +757,12 @@ export class UIScene extends Phaser.Scene {
     const w = 248, h = 46, x = W / 2 - w / 2;
     const y = W - 2 * 250 < w + 24 ? 132 : 10; // too narrow for three across → below the panels
     const g = this.add.graphics();
-    glass(g, x, y, w, h, h / 2, { alpha: 0.58, shadow: 3, sheen: false });
+    glass(g, x, y, w, h, h / 2, { alpha: 0.76, shadow: 3, sheen: false });
     g.fillStyle(HEX.hairline, 0.1).fillRect(x + 132, y + 12, 1, h - 24);
     this.clockIcon = this.add.image(x + 30, y + h / 2, 'wx-cerah').setScale(2);
     this.timeText = this.add.text(x + 52, y + h / 2, '', txt(24, C.ink)).setOrigin(0, 0.5);
     this.clockDay = this.add.text(x + 146, y + 9, '', txt(14));
-    this.clockSub = this.add.text(x + 146, y + 27, '', txt(11, C.secondary, false));
+    this.clockSub = this.add.text(x + 146, y + 27, '', txt(11, INK, false));
     const z = this.add.zone(x, y, w, h).setOrigin(0).setInteractive({ useHandCursor: true });
     z.on('pointerdown', () => {
       if (this.registry.get('modal')) return;
@@ -778,7 +778,7 @@ export class UIScene extends Phaser.Scene {
     const festival = isFestivalDay(s.day);
     this.clockSub
       .setText(`${WEEKDAYS[(s.day - 1) % 7]} · ${festival ? 'Festival!' : WEATHER_INFO[s.weather].name}`)
-      .setColor(festival ? C.red : C.tertiary);
+      .setColor(festival ? C.red : C.secondary);
   }
 
   // ---------- fish book ----------
