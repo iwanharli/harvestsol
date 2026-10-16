@@ -720,6 +720,20 @@ export function cook(s: GameState, dishId: string): string | null {
   return null;
 }
 
+/** Names of the 5-star ingredients a cook would use up (empty when none). */
+export function fiveStarsUsed(s: GameState, dishId: string): string[] {
+  const dish = dishById(dishId);
+  if (!dish) return [];
+  const t: GameState = JSON.parse(JSON.stringify(s));
+  const names: string[] = [];
+  for (const [id, n] of Object.entries(dish.ingredients)) {
+    const fromBag = Math.min(n, countBase(t, id));
+    const taken = { ...takeBase(t, id, fromBag), ...takeFrom(t.fridge, id, n - fromBag) };
+    if (Object.keys(taken).some((k) => starsOf(k) >= 5)) names.push(produceById(id).name);
+  }
+  return names;
+}
+
 /** Eat a dish from the bag to restore stamina. */
 export function eat(s: GameState, dishId: string): string | null {
   const dish = dishById(dishId);

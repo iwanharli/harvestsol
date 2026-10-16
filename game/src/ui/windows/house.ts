@@ -1,8 +1,9 @@
 import { DISHES, XP_COOK, produceById } from '../../data';
 import { play } from '../../sfx';
 import { C, card, txt, well } from '../theme';
-import { cook, countIngredient, gainXp, save, maxStamina } from '../../state';
+import { cook, countIngredient, fiveStarsUsed, gainXp, save, maxStamina } from '../../state';
 
+import { askConfirm } from './report';
 import type { UIScene } from '../../scenes/UIScene';
 
 
@@ -29,7 +30,7 @@ export function openKitchen(ui: UIScene) {
       );
     });
     c.add(ui.add.text(cx + 12, cy + ch - 26, `${d.sellPrice} G · +${d.stamina}⚡`, txt(12, C.orange)));
-    ui.button(c, cx + cw - 96, cy + ch - 42, 'Masak', () => {
+    const doCook = () => {
       const err = cook(s, d.id);
       if (err) {
         play('error');
@@ -41,6 +42,17 @@ export function openKitchen(ui: UIScene) {
       ui.toast(`${d.name} jadi! +${XP_COOK} XP`);
       openKitchen(ui);
       if (reached.length) ui.queueLevelUp(reached);
+    };
+    ui.button(c, cx + cw - 96, cy + ch - 42, 'Masak', () => {
+      const best = fiveStarsUsed(s, d.id);
+      if (!best.length) return doCook();
+      ui.closeModal();
+      askConfirm(ui, {
+        title: 'Pakai bahan bintang 5?',
+        body: `${best.join(', ')} bintang 5 akan ikut dimasak jadi ${d.name}.\nBahan terbaik bisa juga dijual mahal atau dibawa ke festival.`,
+        ok: 'Tetap masak',
+        onOk: doCook,
+      });
     }, 84, !ready);
   });
   ui.button(c, x + W / 2 - 60, y + H - 46, 'Tutup', () => ui.closeModal(), 120);
