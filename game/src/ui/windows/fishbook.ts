@@ -79,7 +79,7 @@ export function openFishBook(ui: UIScene) {
 
     // line 2: best quality caught
     c.add(
-      ui.add.text(tx, cy + 26, best ? '★'.repeat(best) + '☆'.repeat(5 - best) : 'Belum tertangkap', txt(11, best ? '#d4a017' : C.disabled, !!best)),
+      ui.add.text(tx, cy + 26, '★'.repeat(best) + '☆'.repeat(5 - best), txt(11, best ? '#d4a017' : C.disabled)),
     );
 
     // line 3: when it bites, as small pills
@@ -95,9 +95,16 @@ export function openFishBook(ui: UIScene) {
       c.add(t);
       px += t.width + 18;
     }
-    // other lakes, small and to the right of the stars
-    const also = f.where.filter((w) => w !== lake).map((w) => SHORT[w]);
-    if (also.length) c.add(ui.add.text(cx + cw - 12, cy + 27, `juga di ${also.join(', ')}`, txt(10, C.tertiary, false)).setOrigin(1, 0));
+    // every lake it lives in, right-aligned; the open tab's lake in bold
+    const parts = ['Lokasi:', ...f.where.flatMap((w, j) => (j ? [' · ', w] : [w]))];
+    let lx = cx + cw - 12;
+    for (const p of parts.reverse()) {
+      const here = p === lake;
+      const t = ui.add.text(lx, cy + 27, SHORT[p as Water] ?? p, txt(10, here ? INK : C.tertiary, here)).setOrigin(1, 0);
+      if (p === 'Lokasi:') t.setX(lx - 4);
+      c.add(t);
+      lx = t.x - t.width;
+    }
   });
   ui.button(c, x + W / 2 - 60, y + H - 46, 'Tutup', () => ui.closeModal(), 120);
 }
