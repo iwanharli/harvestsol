@@ -71,13 +71,13 @@ export function glass(
   w: number,
   h: number,
   r = 18,
-  opts: { alpha?: number; shadow?: number } = {},
+  opts: { alpha?: number; shadow?: number; sheen?: boolean } = {},
 ) {
-  const { alpha = 0.78, shadow: depth = 14 } = opts;
+  const { alpha = 0.78, shadow: depth = 14, sheen = true } = opts;
   if (depth) shadow(g, x, y, w, h, r, depth);
   g.fillStyle(0xffffff, alpha).fillRoundedRect(x, y, w, h, r);
-  g.fillStyle(0xffffff, 0.35).fillRoundedRect(x + 1, y + 1, w - 2, Math.min(h / 2, 28), { tl: r - 1, tr: r - 1, bl: 0, br: 0 });
-  g.lineStyle(1, 0xffffff, 0.9).strokeRoundedRect(x + 0.5, y + 0.5, w - 1, h - 1, r);
+  if (sheen) g.fillStyle(0xffffff, 0.35).fillRoundedRect(x + 1, y + 1, w - 2, Math.min(h / 2, 28), { tl: r - 1, tr: r - 1, bl: 0, br: 0 });
+  g.lineStyle(1, 0xffffff, sheen ? 0.9 : 0.5).strokeRoundedRect(x + 0.5, y + 0.5, w - 1, h - 1, r);
   g.lineStyle(1, HEX.hairline, 0.08).strokeRoundedRect(x - 0.5, y - 0.5, w + 1, h + 1, r + 0.5);
   return g;
 }
