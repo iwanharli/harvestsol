@@ -1,3 +1,4 @@
+import Phaser from 'phaser';
 import { TIER_COLORS, TIER_EFFECTS, TOOLS, TOOL_TIERS, UPGRADABLE, UPGRADE_COST, needsPurchase, produceById } from '../../data';
 import { play } from '../../sfx';
 import { collectUpgrade, countBase, dateLabel, save, startUpgrade, tierOf } from '../../state';
@@ -5,11 +6,12 @@ import { C, card, txt, well } from '../theme';
 import type { UIScene } from '../../scenes/UIScene';
 
 const INK = C.ink;
+const HEX_ORANGE = 0xf07a2a;
 
 /** Bengkel Pandai Besi: raise a tool one tier at a time with coins and ore; it stays at the forge for a day or two. */
 export function openBengkel(ui: UIScene) {
   const s = ui.state;
-  const W = 640, H = 494;
+  const W = 640, H = 512;
   const { c, x, y } = ui.openModal(W, H, 'Bengkel Pandai Besi');
   c.add(ui.add.text(x + W - 28, y + 24, `${s.coins.toLocaleString('id-ID')} G`, txt(16, C.orange)).setOrigin(1, 0));
   const redraw = () => openBengkel(ui);
@@ -25,29 +27,85 @@ export function openBengkel(ui: UIScene) {
     redraw();
   };
 
-  // what is on the anvil right now
+  // what is on the anvil right now: a little animated forge while a tool is in the works
+  const SH = 70; // status card height
   const sg = ui.add.graphics();
-  card(sg, x + 24, y + 56, W - 48, 44, s.forge && s.day >= s.forge.ready ? 'ready' : 'normal', 14);
+  card(sg, x + 24, y + 56, W - 48, SH, s.forge && s.day >= s.forge.ready ? 'ready' : 'normal', 14);
   c.add(sg);
+  const mid = y + 56 + SH / 2;
   if (!s.forge) {
-    c.add(ui.add.text(x + 40, y + 78, 'Tungku kosong. Pilih satu alat untuk ditempa, tingkatnya naik satu per satu.', txt(12, C.secondary, false)).setOrigin(0, 0.5));
+    c.add(ui.add.image(x + 64, mid + 6, 'anvil').setScale(3).setAlpha(0.45));
+    c.add(ui.add.text(x + 104, mid, 'Tungku kosong. Pilih satu alat untuk ditempa, tingkatnya naik satu per satu.', txt(12, C.secondary, false)).setOrigin(0, 0.5));
   } else {
-    const name = TOOLS.find((t) => t.id === s.forge!.tool)!.name;
-    const ready = s.day >= s.forge.ready;
-    c.add(
-      ui.add
-        .text(x + 40, y + 78, ready ? `${name} ${TOOL_TIERS[s.forge.tier]} sudah jadi!` : `Sedang ditempa: ${name} → ${TOOL_TIERS[s.forge.tier]} · siap ${dateLabel(s.forge.ready, s.day)}`, txt(13, ready ? C.green : INK))
-        .setOrigin(0, 0.5),
-    );
-    const tierName = TOOL_TIERS[s.forge.tier]; // read before collecting clears the forge
-    if (ready) ui.button(c, x + W - 144, y + 61, 'Ambil', () => done(collectUpgrade(s), `${name} ${tierName} siap dipakai!`), 104);
+    const f = s.forge;
+    const name = TOOLS.find((t) => t.id === f.tool)!.name;
+    const ready = s.day >= f.ready;
+    const anims: Phaser.Tweens.Tween[] = [];
+    c.once('destroy', () => anims.forEach((t) => t.remove()));
+
+    // the stage: fire, anvil, the tool on it
+    const ax = x + 100;
+    const fire = ui.add.image(x + 50, mid + 22, 'forge-fire').setScale(2.4).setOrigin(0.5, 1);
+    const glow = ui.add.image(x + 50, mid + 8, 'glow').setScale(0.55).setBlendMode(Phaser.BlendModes.ADD).setAlpha(ready ? 0.15 : 0.5);
+    const anvil = ui.add.image(ax, mid + 30, 'anvil').setScale(2.6).setOrigin(0.5, 1);
+    const tool = ui.add.image(ax - 2, mid - 6, `tool-${f.tool}`).setScale(2).setAngle(-15);
+    c.add([glow, fire, anvil, tool]);
+    if (ready) {
+      // done: cooled down, bobbing gently
+      fire.setAlpha(0.4);
+      anims.push(ui.tweens.add({ targets: tool, y: tool.y - 4, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.InOut' }));
+    } else {
+      fire.setAlpha(1);
+      tool.setTint(0xffa060); // red-hot metal
+      anims.push(ui.tweens.add({ targets: fire, scaleY: 2.8, scaleX: 2.2, duration: 260, yoyo: true, repeat: -1, ease: 'Sine.InOut' }));
+      anims.push(ui.tweens.add({ targets: [glow], alpha: 0.75, duration: 420, yoyo: true, repeat: -1 }));
+      anims.push(ui.tweens.add({ targets: tool, alpha: 0.75, duration: 500, yoyo: true, repeat: -1 }));
+      // the hammer swings down onto the tool; every hit throws sparks
+      const hammer = ui.add.image(ax + 30, mid - 8, 'smith-hammer').setScale(2.6).setOrigin(1, 0.5).setFlipX(true).setAngle(35);
+      c.add(hammer);
+      const sparks = () => {
+        for (let i = 0; i < 6; i++) {
+          const sp = ui.add.rectangle(ax - 4, mid - 8, 3, 3, Phaser.Math.RND.pick([0xfff3a8, 0xf8c84a, 0xf07a2a]));
+          c.add(sp);
+          const ang = Phaser.Math.FloatBetween(-Math.PI * 0.95, -Math.PI * 0.05);
+          const dist = Phaser.Math.Between(14, 30);
+          anims.push(ui.tweens.add({
+            targets: sp, x: sp.x + Math.cos(ang) * dist, y: sp.y + Math.sin(ang) * dist + 6, alpha: 0, duration: 380,
+            ease: 'Quad.Out', onComplete: () => sp.destroy(),
+          }));
+        }
+      };
+      anims.push(ui.tweens.add({
+        targets: hammer, angle: -14, duration: 180, ease: 'Quad.In', yoyo: true, hold: 60, repeatDelay: 380, repeat: -1,
+        onYoyo: () => {
+          sparks();
+          anims.push(ui.tweens.add({ targets: tool, y: tool.y + 1, duration: 50, yoyo: true }));
+        },
+      }));
+    }
+
+    // text and a progress bar of the days at the forge
+    const tx = x + 144;
+    c.add(ui.add.text(tx, mid - 22, ready ? `${name} ${TOOL_TIERS[f.tier]} sudah jadi!` : `Sedang ditempa: ${name} → ${TOOL_TIERS[f.tier]}`, txt(14, ready ? C.green : INK)));
+    if (ready) c.add(ui.add.text(tx, mid + 2, 'Ambil untuk memasangnya (atau masuk Perlengkapan kalau slotnya terisi).', txt(11, C.secondary, false)));
+    else {
+      const days = UPGRADE_COST[f.tier]?.days ?? 1;
+      const done0 = Math.max(0, Math.min(days, days - (f.ready - s.day)));
+      c.add(ui.add.text(tx, mid + 1, `Siap ${dateLabel(f.ready, s.day)}`, txt(11, C.secondary, false)));
+      const bw = W - 24 - (tx - x) - 80, by = mid + 20;
+      sg.fillStyle(0x767680, 0.15).fillRoundedRect(tx, by, bw, 6, 3);
+      sg.fillStyle(TIER_COLORS[f.tier] || HEX_ORANGE, 1).fillRoundedRect(tx, by, Math.max(6, (bw * done0) / days), 6, 3);
+      c.add(ui.add.text(tx + bw + 8, by + 3, `${done0}/${days} hari`, txt(10, C.tertiary)).setOrigin(0, 0.5));
+    }
+    const tierName = TOOL_TIERS[f.tier]; // read before collecting clears the forge
+    if (ready) ui.button(c, x + W - 144, mid - 17, 'Ambil', () => done(collectUpgrade(s), `${name} ${tierName} siap dipakai!`), 104);
   }
 
   // one card per tool: now, next tier, cost
-  const cw = (W - 48 - 10) / 2, ch = 160;
+  const cw = (W - 48 - 10) / 2, ch = 150;
   UPGRADABLE.forEach((id, i) => {
     const t = TOOLS.find((tt) => tt.id === id)!;
-    const cx = x + 24 + (i % 2) * (cw + 10), cy = y + 112 + Math.floor(i / 2) * (ch + 10);
+    const cx = x + 24 + (i % 2) * (cw + 10), cy = y + 56 + SH + 12 + Math.floor(i / 2) * (ch + 10);
     const tier = tierOf(s, id);
     const next = tier + 1;
     const cost = UPGRADE_COST[next];
