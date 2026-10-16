@@ -262,7 +262,7 @@ export class UIScene extends Phaser.Scene {
   // ---------- HUD ----------
 
   private panel(x: number, y: number, w: number, h: number) {
-    return glass(this.add.graphics(), x, y, w, h, 16, { alpha: 0.8, shadow: 10 });
+    return glass(this.add.graphics(), x, y, w, h, 16, { alpha: 0.58, shadow: 3, sheen: false });
   }
 
   private refreshClock() {
@@ -334,7 +334,7 @@ export class UIScene extends Phaser.Scene {
     const first = UIScene.slotPos(0), last = UIScene.slotPos(TOOLS.length - 1);
     const dockW = last.x + SLOT - first.x + DOCK_PAD * 2;
     this.dock.clear();
-    glass(this.dock, first.x - DOCK_PAD, first.y - DOCK_PAD, dockW, SLOT + DOCK_PAD * 2, 20, { alpha: 0.8, shadow: 10 });
+    glass(this.dock, first.x - DOCK_PAD, first.y - DOCK_PAD, dockW, SLOT + DOCK_PAD * 2, 20, { alpha: 0.58, shadow: 3, sheen: false });
 
     let activeName = '';
     TOOLS.forEach((t, i) => {
@@ -379,7 +379,7 @@ export class UIScene extends Phaser.Scene {
     this.toolPill.clear();
     if (activeName) {
       const w = this.toolName.width + 24;
-      glass(this.toolPill, VIEW.w / 2 - w / 2, this.toolName.y - 12, w, 24, 12, { alpha: 0.9, shadow: 4 });
+      glass(this.toolPill, VIEW.w / 2 - w / 2, this.toolName.y - 12, w, 24, 12, { alpha: 0.6, shadow: 2, sheen: false });
     }
     this.toolName.setVisible(!!activeName);
   }
@@ -485,11 +485,10 @@ export class UIScene extends Phaser.Scene {
   private refreshQuests() {
     const s = this.state;
     const marked = s.requests.filter((r) => r.marked);
-    this.questLabel.setText(`Quest ${marked.length}`).setColor(marked.length ? C.ink : C.tertiary);
+    this.questLabel.setText(`Quest ${marked.length}`).setColor(marked.length ? C.ink : C.secondary);
     this.questList.removeAll(true);
-    if (!this.questOpen) return;
+    if (!this.questOpen || !marked.length) return; // nothing marked: just the button, no empty box
     const rows: { text: string; color: string; icon?: string }[] = [];
-    if (!marked.length) rows.push({ text: 'Tandai permintaan di papan', color: C.tertiary });
     for (const r of marked) {
       const left = r.until - s.day + 1;
       const ready = requestReady(s, r);
@@ -758,7 +757,7 @@ export class UIScene extends Phaser.Scene {
     const w = 248, h = 46, x = W / 2 - w / 2;
     const y = W - 2 * 250 < w + 24 ? 132 : 10; // too narrow for three across → below the panels
     const g = this.add.graphics();
-    glass(g, x, y, w, h, h / 2, { alpha: 0.8, shadow: 10 });
+    glass(g, x, y, w, h, h / 2, { alpha: 0.58, shadow: 3, sheen: false });
     g.fillStyle(HEX.hairline, 0.1).fillRect(x + 132, y + 12, 1, h - 24);
     this.clockIcon = this.add.image(x + 30, y + h / 2, 'wx-cerah').setScale(2);
     this.timeText = this.add.text(x + 52, y + h / 2, '', txt(24, C.ink)).setOrigin(0, 0.5);
