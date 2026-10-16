@@ -31,7 +31,7 @@ export function openShop(ui: UIScene, kind?: 'benih' | 'alat') {
   }
   const s = ui.state;
   const spares = (t: string) => (s.spareTools ?? []).filter((sp) => sp.tool === t).length;
-  type Entry = { id: string; name: string; price: number; level: number; info: string; owned: () => string; buy: (n: number) => string | null; unique?: () => boolean; icon?: string };
+  type Entry = { id: string; name: string; price: number; level: number; info: string; owned: () => string; buy: (n: number) => string | null; unique?: () => boolean; icon?: string; ownedLabel?: string };
   const bag = (id: string) => (n: number) => {
     if (!canAdd(s, 'seeds', id, n)) return 'Tas penuh! Upgrade tas atau kosongkan slot.';
     add(s.seeds, id, n);
@@ -88,7 +88,8 @@ export function openShop(ui: UIScene, kind?: 'benih' | 'alat') {
           return {
             id: t.id, name: has ? `${t.name} (cadangan)` : t.name, price: has ? SPARE_TOOL_PRICE[t.id] ?? t.price : t.price, level: t.level,
             info: has ? 'alat kedua, disimpan di Tas › Perlengkapan' : t.desc,
-            owned: () => (has ? `${1 + spares(t.id)}` : ''),
+            owned: () => (has ? `${spares(t.id)}` : ''),
+            ownedLabel: 'cadangan',
             unique: () => false,
             buy: () => {
               if (!s.ownedTools.includes(t.id)) {
@@ -105,7 +106,8 @@ export function openShop(ui: UIScene, kind?: 'benih' | 'alat') {
         ...(['cangkul', 'siram'] as const).map((id) => ({
           id: `tool-${id}`, name: `${TOOLS.find((x) => x.id === id)!.name} (cadangan)`, price: SPARE_TOOL_PRICE[id]!, level: 1, icon: `tool-${id}`,
           info: 'alat kedua, disimpan di Tas › Perlengkapan',
-          owned: () => `${1 + spares(id)}`,
+          owned: () => `${spares(id)}`,
+          ownedLabel: 'cadangan',
           unique: () => false,
           buy: () => {
             s.spareTools = [...(s.spareTools ?? []), { tool: id, tier: 0 }];
@@ -207,7 +209,7 @@ export function openShop(ui: UIScene, kind?: 'benih' | 'alat') {
     c.add(ui.add.text(tx, cy + 31, it.info, { ...txt(11, C.secondary, false), wordWrap: { width: textW, useAdvancedWrap: true } }));
     const price = ui.add.text(tx, cy + ch - 24, '', txt(13, locked ? C.disabled : C.orange));
     c.add(price);
-    refresh.push(() => price.setText(it.owned() ? `${it.price.toLocaleString('id-ID')} G · punya ${it.owned()}` : `${it.price.toLocaleString('id-ID')} G`));
+    refresh.push(() => price.setText(it.owned() ? `${it.price.toLocaleString('id-ID')} G · ${it.ownedLabel ?? 'punya'} ${it.owned()}` : `${it.price.toLocaleString('id-ID')} G`));
 
     const bx = cx + cw - 76;
     if (locked) {
