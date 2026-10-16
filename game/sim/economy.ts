@@ -36,7 +36,7 @@ import {
   genFloor,
   type GameState,
 } from '../src/state';
-import { FESTIVAL_REWARDS } from '../src/data';
+import { FESTIVAL_NPC_RANGE, FESTIVAL_REWARDS, festivalTarget } from '../src/data';
 
 const DAYS = Number(process.env.SIM_DAYS ?? 112); // one year by default; SIM_DAYS=224 for two
 const FIELD_MAX = 16 * 9;
@@ -341,8 +341,8 @@ function simulate(style: Style, seed: number): Result {
       const theme = festivalTheme(s.day);
       const entry = Array(5).fill(bestKey);
       const yours = festivalScore(entry, theme.id);
-      const target = 220 + s.day * 12;
-      const npcs = Array.from({ length: 4 }, () => target * (0.55 + rand() * 0.75));
+      const target = festivalTarget(s.day);
+      const npcs = Array.from({ length: 4 }, () => target * (FESTIVAL_NPC_RANGE[0] + rand() * (FESTIVAL_NPC_RANGE[1] - FESTIVAL_NPC_RANGE[0])));
       const place = npcs.filter((n) => n > yours).length;
       const reward = FESTIVAL_REWARDS[place];
       s.coins += reward.coins; // entries are handed back after judging

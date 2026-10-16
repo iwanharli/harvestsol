@@ -8,6 +8,7 @@ import {
 } from '../../data';
 import { play } from '../../sfx';
 import { C, card, txt } from '../theme';
+import { FESTIVAL_NPC_RANGE, FESTIVAL_STAR_POINTS, festivalTarget } from '../../data';
 import { enterFestival, festivalScore, festivalTheme, type FestivalResult, save } from '../../state';
 import type { UIScene } from '../../scenes/UIScene';
 
@@ -24,7 +25,7 @@ export function openFestival(ui: UIScene) {
   const left = { ...s.produce };
   festivalPick = festivalPick.filter((id) => (left[id] ?? 0) > 0 && (left[id]--, true));
 
-  c.add(ui.add.text(x + W / 2, y + 54, `Maks ${FESTIVAL_MAX_ITEMS} barang · ${theme.name} ×${FESTIVAL_THEME_MULT} · +${FESTIVAL_VARIETY_BONUS} per jenis · barang dikembalikan`, txt(12, C.secondary, false)).setOrigin(0.5, 0));
+  c.add(ui.add.text(x + W / 2, y + 54, `Maks ${FESTIVAL_MAX_ITEMS} barang · ${theme.name} ×${FESTIVAL_THEME_MULT} · +${FESTIVAL_VARIETY_BONUS} per jenis · +${FESTIVAL_STAR_POINTS} per ★ · barang dikembalikan`, txt(12, C.secondary, false)).setOrigin(0.5, 0));
 
   // entry slots
   for (let i = 0; i < FESTIVAL_MAX_ITEMS; i++) {
@@ -48,7 +49,13 @@ export function openFestival(ui: UIScene) {
     c.add(z);
   }
   const score = festivalScore(festivalPick, theme.id);
-  c.add(ui.add.text(x + W / 2, y + 150, `Skor kamu: ${score}`, txt(18, C.purple)).setOrigin(0.5, 0));
+  // your score next to what the villagers usually bring, so you can judge your chances
+  const t = festivalTarget(s.day);
+  const lo = Math.round((t * FESTIVAL_NPC_RANGE[0]) / 5) * 5, hi = Math.round((t * FESTIVAL_NPC_RANGE[1]) / 5) * 5;
+  const chance = score > hi ? ['Hampir pasti juara 1!', C.green] : score >= (lo + hi) / 2 ? ['Peluang bagus', C.blue] : score >= lo ? ['Bisa menang, bisa kalah', C.orange] : ['Masih kurang kuat', C.red];
+  c.add(ui.add.text(x + W / 2 - 12, y + 148, `Skor kamu: ${score}`, txt(18, C.purple)).setOrigin(1, 0));
+  c.add(ui.add.text(x + W / 2 + 12, y + 146, `Warga: ${lo}–${hi}`, txt(12, C.secondary)).setOrigin(0, 0));
+  if (festivalPick.length) c.add(ui.add.text(x + W / 2 + 12, y + 162, chance[0], txt(11, chance[1])).setOrigin(0, 0));
 
   // produce to choose from
   c.add(ui.add.text(x + 32, y + 184, 'Tas kamu (klik untuk menambah):', txt(13)));
