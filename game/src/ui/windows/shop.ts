@@ -46,6 +46,12 @@ export function openShop(ui: UIScene, kind?: 'benih' | 'alat') {
         owned: () => `${s.seeds[d.id] ?? 0}`,
         buy: bag(d.id),
       })),
+      // fertiliser sits with the seeds: both are for the field
+      ...ITEMS.filter((i) => i.id === 'pupuk').map((i) => ({
+        id: i.id, name: i.name, price: i.price, level: i.level, info: i.desc, icon: `icon-${i.id}`,
+        owned: () => `${s.seeds[i.id] ?? 0}`,
+        buy: bag(i.id),
+      })),
     },
     {
       id: 'alat',
@@ -83,7 +89,7 @@ export function openShop(ui: UIScene, kind?: 'benih' | 'alat') {
             return null;
           },
         })),
-        ...ITEMS.map((i) => ({
+        ...ITEMS.filter((i) => i.id !== 'pupuk').map((i) => ({
           id: i.id, name: i.name, price: i.price, level: i.level, info: i.desc,
           owned: () => `${s.seeds[i.id] ?? 0}`,
           buy: bag(i.id),
@@ -168,7 +174,7 @@ export function openShop(ui: UIScene, kind?: 'benih' | 'alat') {
     card(g, cx, cy, cw, ch, locked ? 'locked' : 'normal', 16);
     well(g, cx + 40, cy + ch / 2, 26, locked);
     c.add(g);
-    const icon = ui.add.image(cx + 40, cy + ch / 2, it.icon ?? (shopTab === 'benih' ? seedIcon(it.id) : `icon-${it.id}`)).setScale(it.icon ? 3.2 : 2.5);
+    const icon = ui.add.image(cx + 40, cy + ch / 2, it.icon ?? (shopTab === 'benih' ? seedIcon(it.id) : `icon-${it.id}`)).setScale(it.icon?.startsWith('wear') ? 3.2 : 2.5);
     if (locked) icon.setTint(0x9a9aa0).setAlpha(0.5);
     c.add(icon);
     const tx = cx + 78;
