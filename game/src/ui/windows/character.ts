@@ -49,8 +49,8 @@ export function openCharacter(ui: UIScene) {
       c.add(ui.add.text(mid[0], mid[1] - 6, `${s.level}`, txt(15, C.purple)).setOrigin(0.5));
       c.add(ui.add.text(mid[0], mid[1] + 11, 'Level', txt(9, C.tertiary)).setOrigin(0.5));
     } else if (slot.kind === 'stat') {
-      c.add(ui.add.image(mid[0], mid[1] - 5, 'icon-tas').setScale(2));
-      c.add(ui.add.text(mid[0], mid[1] + 15, `${slotsUsed(s)}/${bagCapacity(s)}`, txt(9, C.tertiary)).setOrigin(0.5));
+      c.add(ui.add.image(mid[0], mid[1] - 6, 'icon-tas').setScale(2));
+      c.add(ui.add.text(mid[0], mid[1] + 15, 'Tas', txt(9, C.tertiary)).setOrigin(0.5));
     } else {
       const key = slot.kind === 'wear' ? `wear-${slot.id}` : `tool-${slot.id}`;
       const img = ui.add.image(mid[0], mid[1], key).setScale(slot.kind === 'wear' ? 4.6 : size >= B ? 3.6 : 2.4);
