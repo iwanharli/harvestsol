@@ -1100,7 +1100,7 @@ test('zona gua: makin dalam makin beda, dasar di lantai 50 dengan peti harta sek
   expect(r.crystal.pillars).toBeGreaterThan(0);
   expect(r.crystal.ladderIsOre).toBe(true);
   expect(r.crystal.kristalWeight).toBeGreaterThan(0);
-  expect(r.hits).toEqual({ shallowGold: 4, deepGold: 8, deepStone: 1 });
+  expect(r.hits).toEqual({ shallowGold: 4, deepGold: 11, deepStone: 3 });
   expect(r.cost).toEqual([2, 3, 4]);
   expect(r.mulia[0]).toBe(0);
   expect(r.mulia[1]).toBeGreaterThan(0);

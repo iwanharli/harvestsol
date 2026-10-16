@@ -193,8 +193,10 @@ export const ORES: Record<Ore, { name: string; hits: number; drop: [number, numb
   kristal: { name: 'Batu Kristal', hits: 3, drop: [1, 2] },
   'batu-mulia': { name: 'Batu Mulia', hits: 6, drop: [1, 1] },
 };
-/** Ore rocks get one extra hit every 10 floors; plain stone stays easy. */
-export const rockHits = (ore: Ore, floor: number) => ORES[ore].hits + (ore === 'batu' ? 0 : Math.floor(floor / 10));
+/** Ore rocks get one extra hit every 10 floors; the Gua Panas and Perut Bumi harden every rock further. */
+const deepHard = (floor: number) => (floor >= 40 ? 3 : floor >= 30 ? 1 : 0);
+export const rockHits = (ore: Ore, floor: number) =>
+  ORES[ore].hits + (ore === 'batu' ? Math.min(2, deepHard(floor)) : Math.floor(floor / 10) + deepHard(floor));
 /** Swinging in the hot zone and below takes more out of you. */
 export const mineCost = (floor: number) => (floor >= 40 ? 4 : floor >= 30 ? 3 : 2);
 /** How common each rock is on a floor, by zone. */
@@ -561,7 +563,7 @@ export const UPGRADE_COST: { coins: number; ore: string; qty: number; days: numb
   { coins: 0, ore: '', qty: 0, days: 0, level: 0 },
   { coins: 2000, ore: 'bijih-tembaga', qty: 5, days: 1, level: 3 },
   { coins: 5000, ore: 'bijih-besi', qty: 5, days: 2, level: 6 },
-  { coins: 12000, ore: 'bijih-emas', qty: 5, days: 2, level: 9 },
+  { coins: 8000, ore: 'bijih-emas', qty: 5, days: 2, level: 9 },
 ];
 /** What each tier does, per tool (shown in the forge). */
 export const TIER_EFFECTS: Partial<Record<Tool, string[]>> = {
