@@ -774,7 +774,8 @@ test('peti lumbung: jendela dibuka dari rumah setelah dibeli', async ({ page }) 
 test('mencopot sprinkler minta konfirmasi', async ({ page }) => {
   const errors = await start(page);
   await patch(page, "s.level = 5; s.seeds = {}; s.plots['11,10'] = { tilled: false, watered: false, sprinkler: true }");
-  await page.evaluate(() => window.game.events.emit('plots-changed'));
+  await page.evaluate(() => window.game.scene.getScene('farm').refreshPlot('11,10'));
+  expect(await page.evaluate(() => (window.game.scene.getScene('farm') as any).propImgs.has('11,10'))).toBe(true);
   await at(page, 11, 9, 'down');
   await use(page, 4); // Tangan
   expect(await modalOpen(page)).toBe(true);
@@ -788,6 +789,8 @@ test('mencopot sprinkler minta konfirmasi', async ({ page }) => {
   s = await state(page);
   expect(s.plots['11,10']).toBeUndefined();
   expect(s.seeds.sprinkler).toBe(1);
+  // and it is gone from the ground, not just from the save
+  expect(await page.evaluate(() => (window.game.scene.getScene('farm') as any).propImgs.has('11,10'))).toBe(false);
   noErrors(errors);
 });
 
@@ -1512,3 +1515,4 @@ test('cadangan dipakai selagi alat ditempa: tidak hilang setelah muat ulang dan 
   expect(r).toEqual({ worn: true, tier: 0, spares: [{ tool: 'siram', tier: 1 }] });
   noErrors(errors);
 });
+

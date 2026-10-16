@@ -1093,6 +1093,7 @@ export class FarmScene extends Phaser.Scene {
             onOk: () => {
               if (!s.plots[k]?.sprinkler || !canAdd(s, 'seeds', 'sprinkler')) return;
               delete s.plots[k];
+              this.refreshPlot(k); // take it off the ground too
               add(s.seeds, 'sprinkler', 1);
               play('place');
               this.toast('Sprinkler diambil.');
