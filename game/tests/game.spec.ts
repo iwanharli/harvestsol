@@ -1477,3 +1477,19 @@ test('tenaga <= 20: tepi layar berdenyut merah, hilang lagi setelah pulih', asyn
   expect(await on()).toBe(false);
   noErrors(errors);
 });
+
+test('festival mulai jam 09:00: muncul pemberitahuan di layar, hari biasa tidak', async ({ page }) => {
+  const errors = await start(page);
+  const shown = () => page.evaluate(() => !!(window.game.scene.getScene('ui') as any).bannerBox?.active);
+  await patch(page, 's.day = 6; s.minutes = 8 * 60 + 59');
+  await page.waitForTimeout(100);
+  await patch(page, 's.minutes = 9 * 60');
+  await page.waitForTimeout(100);
+  expect(await shown()).toBe(false);
+  await patch(page, 's.day = 7; s.minutes = 8 * 60 + 59');
+  await page.waitForTimeout(100);
+  await patch(page, 's.minutes = 9 * 60');
+  await page.waitForTimeout(100);
+  expect(await shown()).toBe(true);
+  noErrors(errors);
+});
