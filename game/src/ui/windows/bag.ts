@@ -19,10 +19,11 @@ import {
   TOOL_TIERS,
   needsPurchase,
   TIER_COLORS,
+  UPGRADABLE,
   costumeById,
 } from '../../data';
 import { play } from '../../sfx';
-import { C, HEX, bar as drawBar, card, segmented, txt, well } from '../theme';
+import { C, HEX, bar as drawBar, card, segmented, tierBadge, txt, well } from '../theme';
 import {
   bagCapacity,
   wantsItem,
@@ -447,7 +448,9 @@ function drawGear(ui: UIScene, c: Phaser.GameObjects.Container, x: number, y: nu
       if (it.tier) g.lineStyle(2, TIER_COLORS[it.tier], 1).strokeRoundedRect(sx + 1, sy + 1, SZ - 2, SZ - 2, 11);
       if (sel) g.lineStyle(2, HEX.blue, 1).strokeRoundedRect(sx - 1, sy - 1, SZ + 2, SZ + 2, 13);
       c.add(g);
-      c.add(ui.add.image(sx + SZ / 2, sy + SZ / 2, it.icon).setScale(it.icon.startsWith('wear') ? 3 : 2.2));
+      const up = it.tier !== undefined && it.icon.startsWith('tool') && UPGRADABLE.includes(it.icon.slice(5) as never);
+      c.add(ui.add.image(sx + SZ / 2, sy + SZ / 2 - (up ? 6 : 0), it.icon).setScale(it.icon.startsWith('wear') ? 3 : up ? 1.9 : 2.2));
+      if (up) c.add(tierBadge(ui, g, sx + SZ / 2, sy + SZ, it.tier ?? 0, true));
       if (it.sel === `tool:${s.tool}`) c.add(ui.add.text(sx + SZ - 5, sy + 3, '●', txt(9, C.blue)).setOrigin(1, 0));
       const z = ui.add.zone(sx, sy, SZ, SZ).setOrigin(0).setInteractive({ useHandCursor: true });
       z.on('pointerdown', () => {
