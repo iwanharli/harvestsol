@@ -159,9 +159,9 @@ export const PRODUCTS: { id: string; name: string; sellPrice: number }[] = [
   // from the Tambang (mining); kept for tool upgrades later, or sold
   { id: 'batu', name: 'Batu', sellPrice: 4 },
   { id: 'bijih-tembaga', name: 'Bijih Tembaga', sellPrice: 25 },
-  { id: 'bijih-besi', name: 'Bijih Besi', sellPrice: 45 },
-  { id: 'bijih-emas', name: 'Bijih Emas', sellPrice: 120 },
-  { id: 'kristal', name: 'Kristal Kuarsa', sellPrice: 90 },
+  { id: 'bijih-besi', name: 'Bijih Besi', sellPrice: 60 },
+  { id: 'bijih-emas', name: 'Bijih Emas', sellPrice: 155 },
+  { id: 'kristal', name: 'Kristal Kuarsa', sellPrice: 115 },
   { id: 'batu-mulia', name: 'Batu Mulia', sellPrice: 400 },
 ];
 
@@ -193,8 +193,8 @@ export const ORES: Record<Ore, { name: string; hits: number; drop: [number, numb
   kristal: { name: 'Batu Kristal', hits: 3, drop: [1, 2] },
   'batu-mulia': { name: 'Batu Mulia', hits: 6, drop: [1, 1] },
 };
-/** Ore rocks get one extra hit every 15 floors; plain stone stays easy. */
-export const rockHits = (ore: Ore, floor: number) => ORES[ore].hits + (ore === 'batu' ? 0 : Math.floor(floor / 15));
+/** Ore rocks get one extra hit every 10 floors; plain stone stays easy. */
+export const rockHits = (ore: Ore, floor: number) => ORES[ore].hits + (ore === 'batu' ? 0 : Math.floor(floor / 10));
 /** Swinging in the hot zone and below takes more out of you. */
 export const mineCost = (floor: number) => (floor >= 40 ? 4 : floor >= 30 ? 3 : 2);
 /** How common each rock is on a floor, by zone. */
