@@ -52,6 +52,7 @@ export function openKitchen(ui: UIScene) {
         body: `${best.join(', ')} bintang 5 akan ikut dimasak jadi ${d.name}.\nBahan terbaik bisa juga dijual mahal atau dibawa ke festival.`,
         ok: 'Tetap masak',
         onOk: doCook,
+        onCancel: () => openKitchen(ui),
       });
     }, 84, !ready);
   });

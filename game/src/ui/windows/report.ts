@@ -61,7 +61,7 @@ export function askSleep(ui: UIScene) {
   }
 }
 
-export type Confirm = { title: string; body: string; ok: string; onOk: () => void };
+export type Confirm = { title: string; body: string; ok: string; onOk: () => void; onCancel?: () => void };
 
 /** A small yes/no question; the action only runs on the first button. */
 export function askConfirm(ui: UIScene, q: Confirm) {
@@ -71,7 +71,10 @@ export function askConfirm(ui: UIScene, q: Confirm) {
     ui.closeModal();
     q.onOk();
   }, 130);
-  ui.button(c, x + 206, y + 118, 'Batal', () => ui.closeModal(), 130);
+  ui.button(c, x + 206, y + 118, 'Batal', () => {
+    ui.closeModal();
+    q.onCancel?.();
+  }, 130);
 }
 
 /** Morning report: a header, an iOS-style grouped list, sales detail and notices. */
