@@ -140,6 +140,8 @@ export class UIScene extends Phaser.Scene {
     // quest button: the requests marked on the board, so they are not forgotten
     this.panel(12, 142, 92, 30);
     this.questLabel = this.add.text(58, 157, '', txt(12)).setOrigin(0.5);
+    this.questBadge = this.add.graphics();
+    this.questBadgeText = this.add.text(0, 0, '', txt(9, C.white)).setOrigin(0.5);
     this.add.zone(12, 142, 92, 30).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
       if (this.registry.get('modal')) return;
       play('click');
@@ -327,7 +329,9 @@ export class UIScene extends Phaser.Scene {
     this.bagTitle.setText(`Tas ${used}/${cap}`).setColor(used >= cap ? C.red : INK);
     const produce = Object.entries(s.produce);
     if (!produce.length) this.bagMini.add(this.add.text(W - 216, 54, 'Hasil panen kosong', txt(13, C.secondary, false)));
-    produce.slice(0, 5).forEach(([id, q], i) => {
+    // five slots; with more items the fifth becomes a "+N" slot
+    const shown = produce.length > 5 ? 4 : 5;
+    produce.slice(0, shown).forEach(([id, q], i) => {
       const sx = W - 216 + i * 38;
       const g = this.add.graphics();
       card(g, sx, 46, 34, 34, 'muted', 9);
@@ -335,12 +339,15 @@ export class UIScene extends Phaser.Scene {
       const badge = this.starBadge(sx + 2, 47, id, 9);
       if (badge) this.bagMini.add(badge);
     });
-    if (produce.length > 5) this.bagMini.add(this.add.text(W - 26, 63, `+${produce.length - 5}`, txt(12, C.secondary)).setOrigin(1, 0.5));
+    if (produce.length > 5) {
+      const sx = W - 216 + 4 * 38;
+      const g = this.add.graphics();
+      card(g, sx, 46, 34, 34, 'muted', 9);
+      this.bagMini.add([g, this.add.text(sx + 17, 63, `+${produce.length - 4}`, txt(12, C.secondary)).setOrigin(0.5)]);
+    }
     const status: string[] = [];
     const ship = Object.values(s.shipping).reduce((a, b) => a + b, 0);
     if (ship) status.push(`Kirim: ${ship}`);
-    const ready = s.requests.filter((r) => requestReady(s, r)).length;
-    if (ready) status.push(`Permintaan siap: ${ready}`);
     if (s.animals.length) status.push(`Pakan: ${s.feed}`);
     this.bagText.setText(status.join(' · '));
 
@@ -495,6 +502,8 @@ export class UIScene extends Phaser.Scene {
 
   private hiddenHud: Phaser.GameObjects.GameObject[] = [];
   private questLabel!: Phaser.GameObjects.Text;
+  private questBadge!: Phaser.GameObjects.Graphics;
+  private questBadgeText!: Phaser.GameObjects.Text;
   private questList!: Phaser.GameObjects.Container;
   private questOpen = true;
 
@@ -503,6 +512,11 @@ export class UIScene extends Phaser.Scene {
     const s = this.state;
     const marked = s.requests.filter((r) => r.marked);
     this.questLabel.setText(`Quest ${marked.length}`).setColor(C.ink);
+    // a small green dot on the button when a request on the board can be handed in
+    const ready = s.requests.filter((r) => requestReady(s, r)).length;
+    this.questBadge.clear();
+    this.questBadgeText.setText(ready ? `${ready}` : '').setPosition(98, 144);
+    if (ready) this.questBadge.fillStyle(HEX.green, 1).fillCircle(98, 144, 7).lineStyle(1.5, 0xffffff, 1).strokeCircle(98, 144, 7);
     this.questList.removeAll(true);
     if (!this.questOpen || !marked.length) return; // nothing marked: just the button, no empty box
     const rows: { text: string; color: string; icon?: string }[] = [];
