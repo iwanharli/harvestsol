@@ -512,8 +512,8 @@ export class UIScene extends Phaser.Scene {
     const s = this.state;
     const marked = s.requests.filter((r) => r.marked);
     this.questLabel.setText(`Quest ${marked.length}`).setColor(C.ink);
-    // a small green dot on the button when a request on the board can be handed in
-    const ready = s.requests.filter((r) => requestReady(s, r)).length;
+    // a small green dot on the button when a marked request can be handed in
+    const ready = marked.filter((r) => requestReady(s, r)).length;
     this.questBadge.clear();
     this.questBadgeText.setText(ready ? `${ready}` : '').setPosition(98, 144);
     if (ready) this.questBadge.fillStyle(HEX.green, 1).fillCircle(98, 144, 7).lineStyle(1.5, 0xffffff, 1).strokeCircle(98, 144, 7);
