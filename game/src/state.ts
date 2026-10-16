@@ -158,6 +158,7 @@ export interface GameState {
   fridge: Record<string, number>; // kulkas contents (same keys as produce)
   storage: Record<string, number>; // peti lumbung contents (same keys as produce)
   cave?: CaveState;
+  unequipped?: string[]; // 'tool:cangkul', 'wear:topi'... taken off and kept in the bag
   toolTier?: Partial<Record<Tool, number>>; // 0 Biasa, 1 Tembaga, 2 Besi, 3 Emas
   forge?: { tool: Tool; tier: number; ready: number }; // a tool at the Bengkel, ready on that day
   caveTreasure?: boolean; // the chest at the bottom has been opened
@@ -1120,6 +1121,30 @@ export function mineHit(s: GameState, key: string, rand = Math.random, damage = 
 export const tierOf = (s: GameState, t: Tool) => s.toolTier?.[t] ?? 0;
 export const waterMax = (s: GameState) => WATER_BY_TIER[tierOf(s, 'siram')];
 export const atForge = (s: GameState, t: Tool) => s.forge?.tool === t;
+
+// ---------- equipment ----------
+
+export type Wear = 'topi' | 'baju' | 'celana' | 'sepatu';
+export const WEARS: Wear[] = ['topi', 'baju', 'celana', 'sepatu'];
+export const isWorn = (s: GameState, key: string) => !(s.unequipped ?? []).includes(key);
+/** The hand can never be taken off; anything else toggles between worn and kept in the bag. */
+export const canUnequip = (key: string) => key !== 'tool:tangan';
+export function toggleEquip(s: GameState, key: string): boolean {
+  if (!canUnequip(key)) return false;
+  const off = new Set(s.unequipped ?? []);
+  if (off.has(key)) off.delete(key);
+  else {
+    off.add(key);
+    if (key === `tool:${s.tool}`) s.tool = 'tangan'; // put down what you were holding
+  }
+  s.unequipped = [...off];
+  return true;
+}
+/** Texture suffix for the outfit pieces taken off, e.g. '-ts' without hat and boots. */
+export const outfitSuffix = (s: GameState) => {
+  const off = WEARS.filter((w) => !isWorn(s, `wear:${w}`)).map((w) => w[0]).join('');
+  return off ? `-${off}` : '';
+};
 
 /** Hand a tool to the smith for its next tier; returns an error or null. One tool at a time. */
 export function startUpgrade(s: GameState, t: Tool): string | null {

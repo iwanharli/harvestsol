@@ -1303,3 +1303,27 @@ test('jendela karakter: tombol C membuka dan menutup', async ({ page }) => {
   expect(await modalOpen(page)).toBe(false);
   noErrors(errors);
 });
+
+test('perlengkapan: alat dan kostum bisa dicopot dan dipasang lagi', async ({ page }) => {
+  const errors = await start(page);
+  const r = await page.evaluate(async () => {
+    const m = await import('/src/state.ts');
+    const s = window.game.registry.get('state');
+    s.tool = 'cangkul';
+    m.toggleEquip(s, 'tool:cangkul');
+    m.toggleEquip(s, 'wear:topi');
+    const handOff = m.toggleEquip(s, 'tool:tangan');
+    return { tool: s.tool, off: [...s.unequipped], suffix: m.outfitSuffix(s), handOff };
+  });
+  expect(r).toEqual({ tool: 'tangan', off: ['tool:cangkul', 'wear:topi'], suffix: '-t', handOff: false });
+  await press(page, '1');
+  expect((await toasts(page)).join()).toContain('sedang dicopot');
+  expect(await page.evaluate(() => window.game.scene.getScene('farm').player.texture.key)).toMatch(/-t$/);
+  await page.evaluate(async () => {
+    const m = await import('/src/state.ts');
+    m.toggleEquip(window.game.registry.get('state'), 'tool:cangkul');
+  });
+  await press(page, '1');
+  expect((await state(page)).tool).toBe('cangkul');
+  noErrors(errors);
+});

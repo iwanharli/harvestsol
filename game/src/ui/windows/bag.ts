@@ -15,6 +15,9 @@ import {
   seedIcon,
   isBought,
   isOre,
+  TOOLS,
+  TOOL_TIERS,
+  needsPurchase,
 } from '../../data';
 import { play } from '../../sfx';
 import { C, HEX, bar as drawBar, card, segmented, txt, well } from '../theme';
@@ -32,18 +35,25 @@ import {
   slotsUsed,
   upgradeBag,
   maxStamina,
+  WEARS,
+  isWorn,
+  canUnequip,
+  toggleEquip,
+  tierOf,
+  type Wear,
 } from '../../state';
 import type { UIScene } from '../../scenes/UIScene';
 
 const INK = C.ink;
 
-type InvTab = 'semua' | 'panen' | 'benih' | 'ternak';
+type InvTab = 'semua' | 'panen' | 'benih' | 'ternak' | 'perlengkapan';
 
 let invSel: { bag: 'produce' | 'seeds' | 'other'; id: string } | undefined;
 
 let invTab: InvTab = 'semua';
 
-export function openInventory(ui: UIScene) {
+export function openInventory(ui: UIScene, openTab?: InvTab) {
+  if (openTab) invTab = openTab;
   const s = ui.state;
   const W = 700, H = 480;
   const cap = bagCapacity(s);
@@ -90,6 +100,7 @@ export function openInventory(ui: UIScene) {
     { id: 'panen', name: 'Hasil Panen', empty: 'Belum ada hasil panen' },
     { id: 'benih', name: 'Benih & Alat', empty: 'Belum ada benih atau alat · beli di toko' },
     ...(livestock.length ? [{ id: 'ternak' as const, name: 'Ternak', empty: 'Belum ada ternak' }] : []),
+    { id: 'perlengkapan', name: 'Perlengkapan', empty: '' },
   ];
   if (!tabs.some((t) => t.id === invTab)) invTab = 'semua';
   const tab = tabs.find((t) => t.id === invTab)!;
@@ -98,8 +109,9 @@ export function openInventory(ui: UIScene) {
       play('click');
       invTab = tabs[i].id;
       openInventory(ui);
-    }, 112),
+    }, tabs.length > 4 ? 100 : 112),
   );
+  if (invTab === 'perlengkapan') return drawGear(ui, c, x, y, W, H);
 
   ui.button(c, x + W - 130, y + 54, 'Rapikan', () => {
     play('click');
@@ -389,4 +401,88 @@ export function describe(ui: UIScene, bag: 'produce' | 'seeds' | 'other', id: st
       `Hasil dijual ${crop.sellPrice} G`,
     ],
   };
+}
+
+let gearSel: string | undefined;
+const WEAR_NAMES: Record<Wear, string> = { topi: 'Caping Bambu', baju: 'Kemeja Biru', celana: 'Celana Kerja', sepatu: 'Sepatu Bot' };
+
+/** Perlengkapan: tools and outfit pieces, worn ones on top, the ones taken off below. Tap one to wear or remove it. */
+function drawGear(ui: UIScene, c: Phaser.GameObjects.Container, x: number, y: number, W: number, H: number) {
+  const s = ui.state;
+  type Gear = { key: string; name: string; icon: string; sub: string };
+  const all: Gear[] = [
+    ...WEARS.map((w) => ({ key: `wear:${w}`, name: WEAR_NAMES[w], icon: `wear-${w}`, sub: 'Kostum' })),
+    ...TOOLS.filter((t) => !needsPurchase(t.id) || s.ownedTools.includes(t.id)).map((t) => {
+      const tier = tierOf(s, t.id);
+      return { key: `tool:${t.id}`, name: t.name, icon: `tool-${t.id}`, sub: tier ? `Alat · ${TOOL_TIERS[tier]}` : 'Alat' };
+    }),
+  ];
+  const worn = all.filter((g) => isWorn(s, g.key));
+  const off = all.filter((g) => !isWorn(s, g.key));
+  if (!gearSel || !all.some((g) => g.key === gearSel)) gearSel = all[0]?.key;
+
+  const SZ = 50, GAP = 8, COLS = 6;
+  const gx = x + 28;
+  let gy = y + 98;
+  const section = (title: string, list: Gear[], empty: string) => {
+    c.add(ui.add.text(gx, gy, title, txt(11, C.tertiary)));
+    gy += 20;
+    if (!list.length) {
+      c.add(ui.add.text(gx, gy + 6, empty, txt(12, C.tertiary, false)));
+      gy += 40;
+      return;
+    }
+    list.forEach((it, i) => {
+      const sx = gx + (i % COLS) * (SZ + GAP);
+      const sy = gy + Math.floor(i / COLS) * (SZ + GAP);
+      const g = ui.add.graphics();
+      const sel = it.key === gearSel;
+      card(g, sx, sy, SZ, SZ, sel ? 'selected' : 'muted', 12);
+      if (sel) g.lineStyle(2, HEX.blue, 1).strokeRoundedRect(sx, sy, SZ, SZ, 12);
+      c.add(g);
+      c.add(ui.add.image(sx + SZ / 2, sy + SZ / 2, it.icon).setScale(it.key.startsWith('wear') ? 3 : 2.2));
+      if (it.key === `tool:${s.tool}`) c.add(ui.add.text(sx + SZ - 5, sy + 3, '●', txt(9, C.blue)).setOrigin(1, 0));
+      const z = ui.add.zone(sx, sy, SZ, SZ).setOrigin(0).setInteractive({ useHandCursor: true });
+      z.on('pointerdown', () => {
+        play('click');
+        gearSel = it.key;
+        openInventory(ui);
+      });
+      c.add(z);
+    });
+    gy += Math.ceil(list.length / COLS) * (SZ + GAP) + 14;
+  };
+  section('DIPAKAI', worn, 'Tidak ada yang dipakai');
+  section('DI TAS', off, 'Belum ada yang dicopot. Pilih alat atau kostum lalu tekan Copot.');
+  c.add(ui.add.text(gx, y + H - 92, 'Alat & kostum tidak memakai slot tas.', txt(11, C.tertiary, false)));
+
+  // detail card with the wear / remove button
+  const dx = x + W - 250, dy = y + 98, dw = 222, dh = 284;
+  const g = ui.add.graphics();
+  card(g, dx, dy, dw, dh, 'normal', 18);
+  c.add(g);
+  const it = all.find((a) => a.key === gearSel);
+  if (it) {
+    const on = isWorn(s, it.key);
+    well(g, dx + dw / 2, dy + 52, 34, !on);
+    const im = ui.add.image(dx + dw / 2, dy + 52, it.icon).setScale(it.key.startsWith('wear') ? 4.5 : 3.4);
+    if (!on) im.setAlpha(0.6);
+    c.add(im);
+    c.add(ui.add.text(dx + dw / 2, dy + 96, it.name, txt(16)).setOrigin(0.5, 0));
+    c.add(ui.add.text(dx + dw / 2, dy + 120, `${it.sub} · ${on ? 'dipakai' : 'di tas'}`, txt(12, on ? C.green : C.secondary, false)).setOrigin(0.5, 0));
+    const note = !canUnequip(it.key)
+      ? 'Tangan tidak bisa dicopot.'
+      : on
+        ? it.key.startsWith('tool') ? 'Dicopot: alat tidak bisa dipakai sampai dipasang lagi.' : 'Dicopot: tampilan karakter ikut berubah.'
+        : 'Pasang lagi untuk memakainya.';
+    c.add(ui.add.text(dx + 16, dy + 150, note, { ...txt(11, C.tertiary, false), wordWrap: { width: dw - 32 }, align: 'center' }).setOrigin(0, 0).setFixedSize(dw - 32, 0));
+    ui.button(c, dx + 14, dy + dh - 48, on ? 'Copot' : 'Pasang', () => {
+      play('click');
+      toggleEquip(s, it.key);
+      save(s);
+      ui.game.events.emit('hud');
+      openInventory(ui);
+    }, dw - 28, !canUnequip(it.key), on);
+  }
+  ui.button(c, x + W - 144, y + H - 52, 'Tutup', () => ui.closeModal(), 120);
 }

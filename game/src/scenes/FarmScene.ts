@@ -69,6 +69,8 @@ import {
   tierOf,
   waterMax,
   atForge,
+  isWorn,
+  outfitSuffix,
   openCaveTreasure,
   liftFloors,
   seasonOf,
@@ -607,6 +609,7 @@ export class FarmScene extends Phaser.Scene {
     if (needsPurchase(tool) && !this.state.ownedTools.includes(tool))
       return this.fail(`Kamu belum punya ${TOOLS[i].name}. Beli di toko (tab Peralatan).`);
     if (atForge(this.state, tool)) return this.fail(`${TOOLS[i].name} sedang ditempa di Bengkel Pandai Besi.`);
+    if (!isWorn(this.state, `tool:${tool}`)) return this.fail(`${TOOLS[i].name} sedang dicopot. Pasang lagi di Tas › Perlengkapan.`);
     this.state.tool = tool;
     this.game.events.emit('hud');
   }
@@ -816,7 +819,7 @@ export class FarmScene extends Phaser.Scene {
 
   setPlayerFrame(f: number) {
     const d = this.dir === 'left' || this.dir === 'right' ? 'side' : this.dir;
-    this.player.setTexture(`player-${d}-${f}`);
+    this.player.setTexture(`player-${d}-${f}${outfitSuffix(this.state)}`);
     this.player.setFlipX(this.dir === 'left');
   }
 
