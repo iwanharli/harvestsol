@@ -273,6 +273,10 @@ export const FESTIVAL_CLOSE = 18 * 60;
 export const FESTIVAL_MAX_ITEMS = 5;
 export const FESTIVAL_VARIETY_BONUS = 40;
 export const FESTIVAL_THEME_MULT = 2;
+export const FESTIVAL_STAR_POINTS = 20; // per star of each entry: a ★5 adds 100
+/** Villagers' typical score: grows each season, levelling off after the second year. */
+export const festivalTarget = (day: number) => 400 + 160 * Math.min(7, Math.floor((day - 1) / DAYS_PER_SEASON));
+export const FESTIVAL_NPC_RANGE = [0.75, 1.1] as const; // each villager scores within this share of the target
 
 /** Rewards by finishing place (index 0 = 1st). Points feed the future reward pool (whitepaper v2). */
 export const FESTIVAL_REWARDS = [

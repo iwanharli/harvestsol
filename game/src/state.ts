@@ -68,6 +68,9 @@ import {
   FESTIVAL_MAX_ITEMS,
   FESTIVAL_REWARDS,
   FESTIVAL_THEME_MULT,
+  FESTIVAL_STAR_POINTS,
+  FESTIVAL_NPC_RANGE,
+  festivalTarget,
   FESTIVAL_VARIETY_BONUS,
   GOLDEN_EGG_AFFECTION,
   cropById,
@@ -617,7 +620,7 @@ export function festivalTheme(day: number) {
 export function festivalScore(items: string[], themeId: string) {
   let score = 0;
   // quality raises the price, the theme bonus applies to any quality of the theme crop
-  for (const key of items) score += produceById(key).sellPrice * (baseId(key) === themeId ? FESTIVAL_THEME_MULT : 1);
+  for (const key of items) score += produceById(key).sellPrice * (baseId(key) === themeId ? FESTIVAL_THEME_MULT : 1) + starsOf(key) * FESTIVAL_STAR_POINTS;
   return score + new Set(items.map(baseId)).size * FESTIVAL_VARIETY_BONUS;
 }
 
@@ -635,11 +638,12 @@ export function enterFestival(s: GameState, items: string[]): FestivalResult {
   const entry = items.filter((k) => !isBought(k) && !isOre(baseId(k))).slice(0, FESTIVAL_MAX_ITEMS); // own harvest only; handed back after judging
   const yours = festivalScore(entry, theme.id);
 
-  // villagers get stronger as the year goes on
-  const target = 220 + s.day * 12;
+  // villagers get stronger each season, up to the end of the second year
+  const target = festivalTarget(s.day);
+  const [lo, hi] = FESTIVAL_NPC_RANGE;
   const ranking = NPCS.slice(0, 4).map((n) => ({
     name: n.name,
-    score: Math.round((target * (0.55 + Math.random() * 0.75)) / 5) * 5,
+    score: Math.round((target * (lo + Math.random() * (hi - lo))) / 5) * 5,
     you: false,
   }));
   ranking.push({ name: 'Kamu', score: yours, you: true });

@@ -1251,3 +1251,20 @@ test('permintaan yang ditandai muncul di daftar quest HUD', async ({ page }) => 
   await page.screenshot({ path: 'test-results/quest-hud.png' });
   noErrors(errors);
 });
+
+test('festival: 5 hasil bintang 5 di tahun ke-2 menang dari warga', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.day = 119; s.minutes = 600; s.level = 15; s.produce = { 'kangkung@5': 2, 'timun@5': 2, 'cabai@5': 1 }");
+  await at(page, 50, 7, 'up');
+  await press(page, 'Space');
+  for (let i = 0; i < 5; i++) {
+    await page.mouse.click(242, 304);
+    await page.waitForTimeout(100);
+  }
+  await page.screenshot({ path: 'test-results/festival.png' });
+  await page.mouse.click(405, 435);
+  await page.waitForTimeout(150);
+  const s = await state(page);
+  expect(s.festival.trophies.emas ?? 0).toBeGreaterThanOrEqual(1);
+  noErrors(errors);
+});
