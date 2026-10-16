@@ -1448,3 +1448,21 @@ test('gua: keluar lalu masuk lagi ke lantai terakhir, batu yang sudah digali tid
   expect(Object.keys(s.cave.nodes).length).toBeGreaterThanOrEqual(14);
   noErrors(errors);
 });
+
+test('beli cangkul cadangan di toko: masuk Perlengkapan dan label menghitung cadangan', async ({ page }) => {
+  const errors = await start(page);
+  await at(page, 40, 7, 'up');
+  await press(page, 'Space');
+  const texts = () => page.evaluate(() => (window.game.scene.getScene('ui') as any).modalLayer.list.filter((o: any) => o.type === 'Text').map((o: any) => ({ t: o.text, x: o.x, y: o.y })));
+  const before = await texts();
+  const name = before.find((o) => o.t === 'Cangkul (cadangan)')!;
+  expect(before.some((o) => o.t === '300 G · cadangan 0')).toBe(true);
+  await page.mouse.click(name.x + 159, name.y + 37); // its "Beli" button
+  await page.waitForTimeout(150);
+  const s = await state(page);
+  expect(s.spareTools).toEqual([{ tool: 'cangkul', tier: 0 }]);
+  expect((await texts()).some((o) => o.t === '300 G · cadangan 1')).toBe(true);
+  const box = await page.evaluate(async () => (await import('/src/state.ts')).gearBox(window.game.registry.get('state')).map((b) => b.key));
+  expect(box).toContain('spare:0');
+  noErrors(errors);
+});
