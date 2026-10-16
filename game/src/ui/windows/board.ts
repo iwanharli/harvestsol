@@ -69,6 +69,13 @@ export function openBoard(ui: UIScene) {
       c.add([b, ui.add.image(b.x - b.width - 10, cy + 19, seedIcon(r.bonusSeeds.id)).setScale(1.2)]);
     }
     c.add(ui.add.text(rx, cy + 30, left <= 1 ? 'hari ini terakhir' : left === 2 ? 'sampai besok' : `sisa ${left} hari`, txt(11, left <= 1 ? C.red : C.secondary, false)).setOrigin(1, 0));
+    ui.button(c, rx - 226, cy + 48, r.marked ? '★ Ditandai' : '☆ Tandai', () => {
+      r.marked = !r.marked;
+      play('click');
+      save(s);
+      ui.refresh();
+      openBoard(ui);
+    }, 100, false, true);
     ui.button(c, rx - 120, cy + 48, ok ? 'Serahkan' : 'Belum cukup', () => {
       const err = deliverRequest(s, r.id);
       if (err) {

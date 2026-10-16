@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { npcById, produceById } from '../data';
 import {
   WEEKDAYS,
   WEATHER_INFO,
@@ -31,6 +32,8 @@ import {
   type DayReport,
   type GameState,
   maxStamina,
+  reqItems,
+  countFor,
 } from '../state';
 import type { FarmScene } from './FarmScene';
 import { openShop } from '../ui/windows/shop';
@@ -131,6 +134,17 @@ export class UIScene extends Phaser.Scene {
       play('click');
       openWorldMap(this);
     });
+
+    // quest button: the requests marked on the board, so they are not forgotten
+    this.panel(12, 142, 92, 30);
+    this.questLabel = this.add.text(58, 157, '', txt(12)).setOrigin(0.5);
+    this.add.zone(12, 142, 92, 30).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      if (this.registry.get('modal')) return;
+      play('click');
+      this.questOpen = !this.questOpen;
+      this.refresh();
+    });
+    this.questList = this.add.container(0, 0);
 
     this.panel(W - 232, 12, 220, 112);
     this.bagTitle = this.add.text(W - 216, 22, 'Tas', txt(16));
@@ -267,6 +281,7 @@ export class UIScene extends Phaser.Scene {
     this.refreshClockPill();
     this.applyWeather();
     this.refreshClock();
+    this.refreshQuests();
 
     const g = this.bars.clear();
     const bar = (y: number, value: number, max: number, color: number, label: string) => {
@@ -462,6 +477,36 @@ export class UIScene extends Phaser.Scene {
   }
 
   private hiddenHud: Phaser.GameObjects.GameObject[] = [];
+  private questLabel!: Phaser.GameObjects.Text;
+  private questList!: Phaser.GameObjects.Container;
+  private questOpen = true;
+
+  /** The marked requests under the quest button: who, what, how many you have, days left. */
+  private refreshQuests() {
+    const s = this.state;
+    const marked = s.requests.filter((r) => r.marked);
+    this.questLabel.setText(`Quest ${marked.length}`).setColor(marked.length ? C.ink : C.tertiary);
+    this.questList.removeAll(true);
+    if (!this.questOpen) return;
+    const rows: { text: string; color: string; icon?: string }[] = [];
+    if (!marked.length) rows.push({ text: 'Tandai permintaan di papan', color: C.tertiary });
+    for (const r of marked) {
+      const left = r.until - s.day + 1;
+      const ready = requestReady(s, r);
+      rows.push({ text: `${npcById(r.npc).name} · ${left <= 1 ? 'hari ini' : `${left} hari`}${ready ? ' · siap ✓' : ''}`, color: ready ? C.green : left <= 1 ? C.red : C.ink });
+      for (const it of reqItems(r)) {
+        const have = Math.min(countFor(s, it), it.qty);
+        rows.push({ icon: `icon-${it.id}`, text: `${produceById(it.id).name} ${have}/${it.qty}${it.minStars > 1 ? ` ★${it.minStars}+` : ''}`, color: have >= it.qty ? C.green : C.secondary });
+      }
+    }
+    const h = 16 + rows.length * 18;
+    this.questList.add(this.panel(12, 180, 210, h));
+    rows.forEach((row, i) => {
+      const ry = 188 + i * 18 + 8;
+      if (row.icon) this.questList.add(this.add.image(36, ry, row.icon).setScale(0.9));
+      this.questList.add(this.add.text(row.icon ? 48 : 24, ry, row.text, txt(11, row.color, !row.icon)).setOrigin(0, 0.5));
+    });
+  }
 
   /** While a window is open the HUD steps back so the window is the only thing in focus. */
   private hideHud(hide: boolean) {
