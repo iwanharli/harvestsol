@@ -1,6 +1,7 @@
 import {
   BAG_TIERS,
   BUYABLE_TOOLS,
+  COSTUMES,
   CHICKEN_PRICE,
   FEATURE_LEVEL,
   FEED_PRICE,
@@ -11,18 +12,18 @@ import {
 } from '../../data';
 import { play } from '../../sfx';
 import { C, card, segmented, txt, well } from '../theme';
-import { add, bagCapacity, canAdd, save, seasonOf, shopStock } from '../../state';
+import { add, bagCapacity, buyCostume, canAdd, save, seasonOf, shopStock } from '../../state';
 import type { UIScene } from '../../scenes/UIScene';
 
 const INK = C.ink;
 
-type ShopTab = 'benih' | 'alat' | 'ternak';
+type ShopTab = 'benih' | 'alat' | 'pakaian' | 'ternak';
 
 let shopTab: ShopTab = 'benih';
 
 export function openShop(ui: UIScene) {
   const s = ui.state;
-  type Entry = { id: string; name: string; price: number; level: number; info: string; owned: () => string; buy: (n: number) => string | null; unique?: () => boolean };
+  type Entry = { id: string; name: string; price: number; level: number; info: string; owned: () => string; buy: (n: number) => string | null; unique?: () => boolean; icon?: string };
   const bag = (id: string) => (n: number) => {
     if (!canAdd(s, 'seeds', id, n)) return 'Tas penuh! Upgrade tas atau kosongkan slot.';
     add(s.seeds, id, n);
@@ -84,6 +85,21 @@ export function openShop(ui: UIScene) {
       ],
     },
     {
+      id: 'pakaian',
+      name: 'Pakaian',
+      items: COSTUMES.filter((k) => k.price > 0).map((k) => ({
+        id: k.id, name: k.name, price: k.price, level: k.level, icon: `wear-${k.id}`,
+        info: k.desc,
+        owned: () => '',
+        unique: () => (s.wardrobe ?? []).includes(k.id),
+        buy: () => {
+          const err = buyCostume(s, k.id);
+          if (!err) ui.toast(`${k.name} masuk Tas › Perlengkapan. Pakai di jendela Karakter (C).`);
+          return err;
+        },
+      })),
+    },
+    {
       id: 'ternak',
       name: 'Ternak',
       items: [
@@ -143,7 +159,7 @@ export function openShop(ui: UIScene) {
     card(g, cx, cy, cw, ch, locked ? 'locked' : 'normal', 16);
     well(g, cx + 40, cy + ch / 2, 26, locked);
     c.add(g);
-    const icon = ui.add.image(cx + 40, cy + ch / 2, shopTab === 'benih' ? seedIcon(it.id) : `icon-${it.id}`).setScale(2.5);
+    const icon = ui.add.image(cx + 40, cy + ch / 2, it.icon ?? (shopTab === 'benih' ? seedIcon(it.id) : `icon-${it.id}`)).setScale(it.icon ? 3.2 : 2.5);
     if (locked) icon.setTint(0x9a9aa0).setAlpha(0.5);
     c.add(icon);
     const tx = cx + 78;

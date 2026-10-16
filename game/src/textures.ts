@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CROPS, DISHES, FISH, TILE } from './data';
+import { COSTUMES, CROPS, DISHES, FISH, TILE, costumeById } from './data';
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -137,6 +137,48 @@ function shade(hex: string, k: number) {
   const n = parseInt(hex.slice(1), 16);
   const ch = (v: number) => Math.round(v * k).toString(16).padStart(2, '0');
   return `#${ch(n >> 16)}${ch((n >> 8) & 255)}${ch(n & 255)}`;
+}
+
+const PLAYER_DIRS: Record<string, [string[], string[]]> = {
+  down: [HEAD_DOWN, BODY_FRONT],
+  up: [HEAD_UP, BODY_FRONT],
+  side: [HEAD_SIDE, BODY_SIDE],
+};
+
+/** The rows of the player art that make up one costume piece, centred in a 16x16 icon. */
+function wearRows(slot: 'topi' | 'baju' | 'celana' | 'sepatu') {
+  const rows =
+    slot === 'topi' ? HEAD_DOWN.slice(1, 4).map((r) => r.replace(/[^yYLr]/g, '.'))
+    : slot === 'baju' ? BODY_FRONT.slice(0, 3)
+    : slot === 'celana' ? [...BODY_FRONT.slice(3), LEGS[0][0]]
+    : [LEGS[0][1]];
+  return [...Array(Math.floor((16 - rows.length) / 2)).fill(''), ...rows];
+}
+
+/**
+ * The farmer's frame in an outfit ('caping|kaos-merah|jeans|' — '' means that piece is off),
+ * drawn the first time it is needed. Pieces recolour the sprite; a missing piece shows hair or skin.
+ */
+export function playerTexture(scene: Phaser.Scene, dir: string, f: number, outfit: string) {
+  const key = `player-${dir}-${f}~${outfit}`;
+  if (scene.textures.exists(key)) return key;
+  const [hat, shirt, pants, shoes] = outfit.split('|');
+  const pal: Record<string, string> = { ...PLAYER_PAL, w: '#eeeae0' };
+  for (const id of [hat, shirt, pants, shoes]) Object.assign(pal, costumeById(id)?.pal ?? {});
+  const [head, body] = PLAYER_DIRS[dir];
+  const rows = [...head, ...body, ...LEGS[f]].slice(0, 16).map((r, y) => {
+    let o = r;
+    if (!hat) {
+      if (y >= 1 && y <= 2) o = o.replace(/[yYL]/g, '.');
+      if (y === 3) o = [...o].map((ch, x) => (/[yYLr]/.test(ch) ? (x >= 5 && x <= 10 ? 'H' : '.') : ch)).join('');
+    }
+    if (!shirt && y >= 8 && y <= 10) o = o.replace(/[Ccl]/g, 'S');
+    if (!pants && y >= 11) o = o.replace(/[Pp]/g, y === 11 ? 'w' : 'S');
+    if (!shoes) o = o.replace(/B/g, 'S');
+    return o;
+  });
+  canvas(scene, key, TILE, TILE, (c) => art(c, rows, pal), true);
+  return key;
 }
 
 export function makeTextures(scene: Phaser.Scene) {
@@ -900,16 +942,13 @@ export function makeTextures(scene: Phaser.Scene) {
     }
   });
 
-  // ---------- outfit pieces (cut from the player art, for the Karakter window) ----------
-  const pad = (rows: string[]) => {
-    const top = Math.floor((16 - rows.length) / 2);
-    return [...Array(top).fill(''), ...rows];
-  };
-  const hatOnly = HEAD_DOWN.slice(1, 4).map((r) => r.replace(/[^yYLr]/g, '.'));
-  canvas(scene, 'wear-topi', TILE, TILE, (c) => art(c, pad(hatOnly), PLAYER_PAL), true);
-  canvas(scene, 'wear-baju', TILE, TILE, (c) => art(c, pad(BODY_FRONT.slice(0, 3)), PLAYER_PAL), true);
-  canvas(scene, 'wear-celana', TILE, TILE, (c) => art(c, pad([...BODY_FRONT.slice(3), LEGS[0][0]]), PLAYER_PAL), true);
-  canvas(scene, 'wear-sepatu', TILE, TILE, (c) => art(c, pad([LEGS[0][1]]), PLAYER_PAL), true);
+  // ---------- outfit pieces: one icon per costume, plus the default per slot ----------
+  for (const cos of COSTUMES) {
+    const pal = { ...PLAYER_PAL, ...cos.pal };
+    const rows = wearRows(cos.slot);
+    canvas(scene, `wear-${cos.id}`, TILE, TILE, (c) => art(c, rows, pal), true);
+  }
+  for (const slot of ['topi', 'baju', 'celana', 'sepatu'] as const) canvas(scene, `wear-${slot}`, TILE, TILE, (c) => art(c, wearRows(slot), PLAYER_PAL), true);
 
   // ---------- player ----------
   const dirs: Record<string, [string[], string[]]> = {
@@ -917,25 +956,9 @@ export function makeTextures(scene: Phaser.Scene) {
     up: [HEAD_UP, BODY_FRONT],
     side: [HEAD_SIDE, BODY_SIDE],
   };
-  // every combination of outfit pieces taken off: t topi, b baju, c celana, s sepatu
-  const PAL = { ...PLAYER_PAL, w: '#eeeae0' };
-  const strip = (rows: string[], off: string) =>
-    rows.map((r, y) => {
-      let o = r;
-      if (off.includes('t')) {
-        if (y >= 1 && y <= 2) o = o.replace(/[yYL]/g, '.');
-        if (y === 3) o = [...o].map((ch, x) => (/[yYLr]/.test(ch) ? (x >= 5 && x <= 10 ? 'H' : '.') : ch)).join('');
-      }
-      if (off.includes('b') && y >= 8 && y <= 10) o = o.replace(/[Ccl]/g, 'S');
-      if (off.includes('c') && y >= 11) o = y <= 12 ? o.replace(/[Pp]/g, y === 11 ? 'w' : 'S') : o.replace(/[Pp]/g, 'S');
-      if (off.includes('s')) o = o.replace(/B/g, 'S');
-      return o;
-    });
-  const combos = ['', 't', 'b', 'c', 's', 'tb', 'tc', 'ts', 'bc', 'bs', 'cs', 'tbc', 'tbs', 'tcs', 'bcs', 'tbcs'];
   for (const [dir, [head, body]] of Object.entries(dirs)) {
     LEGS.forEach((legs, f) => {
-      for (const off of combos)
-        canvas(scene, `player-${dir}-${f}${off ? `-${off}` : ''}`, TILE, TILE, (c) => art(c, strip([...head, ...body, ...legs].slice(0, 16), off), PAL), true);
+      canvas(scene, `player-${dir}-${f}`, TILE, TILE, (c) => art(c, [...head, ...body, ...legs].slice(0, 16), PLAYER_PAL), true);
     });
   }
 

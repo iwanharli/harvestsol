@@ -70,13 +70,14 @@ import {
   waterMax,
   atForge,
   isWorn,
-  outfitSuffix,
+  outfitKey,
   openCaveTreasure,
   liftFloors,
   seasonOf,
   type GameState,
 } from '../state';
 import { play, toggleMute, unlockAudio } from '../sfx';
+import { playerTexture } from '../textures';
 import { duck, setMood, startMusic, toggleMusic } from '../music';
 import { UI_SCALE, VIEW } from '../ui/theme';
 import { type Dir, DIR_VEC, SPEED, type Spot, ROOM, HOUSE_ROOMS, SHOP, roomAt, inRoom } from './farm/common';
@@ -819,7 +820,7 @@ export class FarmScene extends Phaser.Scene {
 
   setPlayerFrame(f: number) {
     const d = this.dir === 'left' || this.dir === 'right' ? 'side' : this.dir;
-    this.player.setTexture(`player-${d}-${f}${outfitSuffix(this.state)}`);
+    this.player.setTexture(playerTexture(this, d, f, outfitKey(this.state)));
     this.player.setFlipX(this.dir === 'left');
   }
 

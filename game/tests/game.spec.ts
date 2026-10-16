@@ -1310,18 +1310,18 @@ test('perlengkapan: alat dan kostum bisa dicopot dan dipasang lagi', async ({ pa
     const m = await import('/src/state.ts');
     const s = window.game.registry.get('state');
     s.tool = 'cangkul';
-    m.toggleEquip(s, 'tool:cangkul');
-    m.toggleEquip(s, 'wear:topi');
-    const handOff = m.toggleEquip(s, 'tool:tangan');
-    return { tool: s.tool, off: [...s.unequipped], suffix: m.outfitSuffix(s), handOff };
+    m.unequipSlot(s, 'tool:cangkul');
+    m.unequipSlot(s, 'wear:topi');
+    const hand = m.unequipSlot(s, 'tool:tangan');
+    return { tool: s.tool, off: [...s.unequipped], hat: s.outfit.topi, key: m.outfitKey(s), hand, box: m.gearBox(s).map((b) => b.key) };
   });
-  expect(r).toEqual({ tool: 'tangan', off: ['tool:cangkul', 'wear:topi'], suffix: '-t', handOff: false });
+  expect(r).toEqual({ tool: 'tangan', off: ['tool:cangkul'], hat: '', key: '|kemeja-biru|celana-kerja|sepatu-bot', hand: 'Tangan tidak bisa dicopot.', box: ['cos:caping', 'tool:cangkul'] });
   await press(page, '1');
   expect((await toasts(page)).join()).toContain('sedang dicopot');
-  expect(await page.evaluate(() => window.game.scene.getScene('farm').player.texture.key)).toMatch(/-t$/);
+  expect(await page.evaluate(() => window.game.scene.getScene('farm').player.texture.key)).toContain('~|kemeja-biru');
   await page.evaluate(async () => {
     const m = await import('/src/state.ts');
-    m.toggleEquip(window.game.registry.get('state'), 'tool:cangkul');
+    m.equipFromBox(window.game.registry.get('state'), 'tool:cangkul');
   });
   await press(page, '1');
   expect((await state(page)).tool).toBe('cangkul');
@@ -1354,6 +1354,23 @@ test('karakter: klik 2× atau seret untuk copot/pasang', async ({ page }) => {
   await page.mouse.move(500, 360, { steps: 6 });
   await page.mouse.up();
   await page.waitForTimeout(200);
-  expect((await state(page)).unequipped).toEqual(['wear:topi']);
+  expect((await state(page)).outfit.topi).toBe('');
+  noErrors(errors);
+});
+
+test('punya lebih dari satu: kostum dari toko dan cangkul cadangan bisa ditukar', async ({ page }) => {
+  const errors = await start(page);
+  const r = await page.evaluate(async () => {
+    const m = await import('/src/state.ts');
+    const s = window.game.registry.get('state');
+    s.coins = 5000;
+    s.toolTier = { cangkul: 2 };
+    const a = m.buyCostume(s, 'kaos-merah');
+    const b = m.buySpareTool(s, 'cangkul');
+    m.equipFromBox(s, 'cos:kaos-merah');
+    m.equipFromBox(s, 'spare:0'); // wear the new Biasa hoe, the Besi one goes to the box
+    return { a, b, coins: s.coins, shirt: s.outfit.baju, tier: s.toolTier.cangkul, spares: s.spareTools, box: m.gearBox(s).map((x) => x.key) };
+  });
+  expect(r).toEqual({ a: null, b: null, coins: 4700, shirt: 'kaos-merah', tier: 0, spares: [{ tool: 'cangkul', tier: 2 }], box: ['cos:kemeja-biru', 'spare:0'] });
   noErrors(errors);
 });
