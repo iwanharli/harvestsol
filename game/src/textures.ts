@@ -900,6 +900,17 @@ export function makeTextures(scene: Phaser.Scene) {
     }
   });
 
+  // ---------- outfit pieces (cut from the player art, for the Karakter window) ----------
+  const pad = (rows: string[]) => {
+    const top = Math.floor((16 - rows.length) / 2);
+    return [...Array(top).fill(''), ...rows];
+  };
+  const hatOnly = HEAD_DOWN.slice(1, 4).map((r) => r.replace(/[^yYLr]/g, '.'));
+  canvas(scene, 'wear-topi', TILE, TILE, (c) => art(c, pad(hatOnly), PLAYER_PAL), true);
+  canvas(scene, 'wear-baju', TILE, TILE, (c) => art(c, pad(BODY_FRONT.slice(0, 3)), PLAYER_PAL), true);
+  canvas(scene, 'wear-celana', TILE, TILE, (c) => art(c, pad([...BODY_FRONT.slice(3), LEGS[0][0]]), PLAYER_PAL), true);
+  canvas(scene, 'wear-sepatu', TILE, TILE, (c) => art(c, pad([LEGS[0][1]]), PLAYER_PAL), true);
+
   // ---------- player ----------
   const dirs: Record<string, [string[], string[]]> = {
     down: [HEAD_DOWN, BODY_FRONT],
