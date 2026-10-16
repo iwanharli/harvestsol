@@ -20,8 +20,14 @@ const INK = C.ink;
 type ShopTab = 'benih' | 'alat' | 'pakaian' | 'ternak';
 
 let shopTab: ShopTab = 'benih';
+let shopKind: 'benih' | 'alat' = 'benih';
 
-export function openShop(ui: UIScene) {
+/** Two stalls on the plaza: seeds & livestock, and tools & clothes. */
+export function openShop(ui: UIScene, kind?: 'benih' | 'alat') {
+  if (kind && kind !== shopKind) {
+    shopKind = kind;
+    shopTab = kind === 'benih' ? 'benih' : 'alat';
+  }
   const s = ui.state;
   type Entry = { id: string; name: string; price: number; level: number; info: string; owned: () => string; buy: (n: number) => string | null; unique?: () => boolean; icon?: string };
   const bag = (id: string) => (n: number) => {
@@ -30,7 +36,7 @@ export function openShop(ui: UIScene) {
     if (!s.seeds[s.seed]) s.seed = id;
     return null;
   };
-  const tabs: { id: ShopTab; name: string; items: Entry[] }[] = [
+  let tabs: { id: ShopTab; name: string; items: Entry[] }[] = [
     {
       id: 'benih',
       name: 'Benih',
@@ -127,6 +133,9 @@ export function openShop(ui: UIScene) {
       ],
     },
   ];
+  const mine: ShopTab[] = shopKind === 'benih' ? ['benih', 'ternak'] : ['alat', 'pakaian'];
+  tabs = tabs.filter((t) => mine.includes(t.id));
+  if (!mine.includes(shopTab)) shopTab = mine[0];
   const tab = tabs.find((t) => t.id === shopTab)!;
 
   // App Store-style list: two columns of horizontal cards, as many rows as needed
@@ -135,7 +144,7 @@ export function openShop(ui: UIScene) {
   // size the window for the fullest tab, so switching tabs never changes its size
   const rows = Math.max(1, ...tabs.map((t) => Math.ceil(t.items.length / COLS)));
   const W = 620, H = 108 + rows * (ch + gap) + 58;
-  const { c, x, y } = ui.openModal(W, H, `Toko · musim ${seasonOf(s.day)}`);
+  const { c, x, y } = ui.openModal(W, H, shopKind === 'benih' ? `Toko Benih & Ternak · musim ${seasonOf(s.day)}` : 'Toko Peralatan & Pakaian');
   const coin = ui.add.text(x + W - 28, y + 24, '', txt(16, C.orange)).setOrigin(1, 0);
   c.add(coin);
 

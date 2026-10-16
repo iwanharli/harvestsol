@@ -211,6 +211,10 @@ export function buildMap(scene: FarmScene) {
     scene.shadow(47 * TILE, 7 * TILE - 1, 36);
     scene.add.image(46 * TILE, 5 * TILE, 'shop').setOrigin(0).setDepth(7 * TILE);
     for (let y = 5; y <= 6; y++) for (let x = 46; x <= 47; x++) scene.block(x, y, 'shop');
+    // tools & clothes stall, left of the board
+    scene.shadow(41 * TILE, 7 * TILE - 1, 36);
+    scene.add.image(40 * TILE, 5 * TILE, 'shop-alat').setOrigin(0).setDepth(7 * TILE);
+    for (let y = 5; y <= 6; y++) for (let x = 40; x <= 41; x++) scene.block(x, y, 'shop-alat');
 
     scene.shadow(44 * TILE, 7 * TILE - 1, 22);
     scene.add.image(44 * TILE, 7 * TILE, 'board').setOrigin(0.5, 1).setDepth(7 * TILE);

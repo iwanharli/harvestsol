@@ -1245,7 +1245,7 @@ export function buyCostume(s: GameState, id: string): string | null {
 export function buySpareTool(s: GameState, t: Tool): string | null {
   const price = SPARE_TOOL_PRICE[t];
   if (!price) return 'Alat ini tidak dijual.';
-  if (needsPurchase(t) && !s.ownedTools.includes(t)) return 'Beli alatnya dulu di toko.';
+  if (needsPurchase(t) && !s.ownedTools.includes(t)) return 'Beli alatnya dulu di Toko Peralatan.';
   if (s.coins < price) return `Uang tidak cukup (butuh ${price.toLocaleString('id-ID')} G).`;
   s.coins -= price;
   s.spareTools = [...(s.spareTools ?? []), { tool: t, tier: 0 }];
@@ -1259,7 +1259,7 @@ export const outfitKey = (s: GameState) => WEARS.map((w) => outfitOf(s)[w]).join
 export function startUpgrade(s: GameState, t: Tool): string | null {
   if (!UPGRADABLE.includes(t)) return 'Alat ini tidak bisa ditempa.';
   if (s.forge) return 'Pandai besi masih mengerjakan alat lain.';
-  if (needsPurchase(t) && !s.ownedTools.includes(t)) return 'Beli alatnya dulu di toko.';
+  if (needsPurchase(t) && !s.ownedTools.includes(t)) return 'Beli alatnya dulu di Toko Peralatan.';
   const next = tierOf(s, t) + 1;
   const cost = UPGRADE_COST[next];
   if (!cost) return 'Sudah tingkat tertinggi.';

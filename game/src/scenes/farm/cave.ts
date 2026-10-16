@@ -94,7 +94,7 @@ export function buildCave(scene: FarmScene) {
 }
 
 export function enterCave(scene: FarmScene, floor: number) {
-    if (!scene.state.ownedTools.includes('beliung')) return scene.fail('Gua tambang gelap dan berbatu. Bawa Beliung dulu (beli di toko).');
+    if (!scene.state.ownedTools.includes('beliung')) return scene.fail('Gua tambang gelap dan berbatu. Bawa Beliung dulu (beli di Toko Peralatan).');
     const R = CAVE_ROOM;
     const before = zoneIndex(scene.state.cave?.deepest ?? 0);
     scene.moveTo((R.x + R.w / 2) * TILE, (R.y + R.h - 1) * TILE - 2, 'up', () => {
