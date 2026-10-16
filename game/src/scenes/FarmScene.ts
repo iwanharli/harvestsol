@@ -704,8 +704,8 @@ export class FarmScene extends Phaser.Scene {
     let vx = 0;
     let vy = 0;
     const K = this.keys;
-    if (this.fishing) {
-      this.setPlayerFrame(0);
+    if (this.fishing || this.hopping) {
+      this.setPlayerFrame(this.hopping ? 1 : 0);
       return;
     }
     let run = K.SHIFT.isDown;
@@ -747,7 +747,9 @@ export class FarmScene extends Phaser.Scene {
       const speed = SPEED * (run ? RUN_MULT : 1);
       const sx = (vx / len) * speed * dt;
       const sy = (vy / len) * speed * dt;
-      const moved = this.tryMove(sx, 0) | this.tryMove(0, sy);
+      const movedY = this.tryMove(0, sy);
+      if (!movedY && vy && Math.abs(vy) >= Math.abs(vx) && this.hopFence(Math.sign(vy))) return;
+      const moved = this.tryMove(sx, 0) | movedY;
       if (!moved && this.moveTarget) this.moveTarget = undefined; // stuck: give up
       this.dir = Math.abs(vx) > Math.abs(vy) ? (vx > 0 ? 'right' : 'left') : vy > 0 ? 'down' : 'up';
       this.walkTime += delta;
@@ -765,6 +767,38 @@ export class FarmScene extends Phaser.Scene {
     }
     const [cx, cy] = this.facingTile();
     this.cursor.setPosition(cx * TILE, cy * TILE);
+  }
+
+  hopping = false;
+
+  /** Walking into the low fence below the field hops over it, if there is room on the other side. */
+  hopFence(dir: number): boolean {
+    const fy = FIELD.y + FIELD.h;
+    const tx = Math.floor(this.player.x / TILE);
+    const ty = Math.floor((this.player.y - 3) / TILE);
+    if (ty + dir !== fy || tx < FIELD.x - 1 || tx > FIELD.x + FIELD.w || this.indoors) return false;
+    const landY = (fy + dir) * TILE + 12;
+    const x = this.player.x;
+    if ([[x - 5, landY - 5], [x + 4, landY - 5], [x - 5, landY - 1], [x + 4, landY - 1]].some(([a, b]) => this.isBlocked(a, b))) return false;
+    this.hopping = true;
+    this.moveTarget = undefined;
+    const fromY = this.player.y;
+    play('click');
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: 320,
+      onUpdate: (tw) => {
+        const t = tw.getValue() ?? 0;
+        this.player.setY(fromY + (landY - fromY) * t - Math.sin(Math.PI * t) * 10);
+        this.player.setDepth(Math.max(this.player.y, (fy + 1) * TILE + 1));
+      },
+      onComplete: () => {
+        this.player.setY(landY);
+        this.hopping = false;
+      },
+    });
+    return true;
   }
 
   tryMove(dx: number, dy: number): number {
