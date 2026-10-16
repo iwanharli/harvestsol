@@ -1034,7 +1034,7 @@ export function genFloor(s: GameState, floor: number, rand = Math.random) {
   }
   const bottom = floor >= CAVE_BOTTOM;
   const chest = bottom && !s.caveTreasure ? `${R.x + Math.floor(R.w / 2)},${R.y + 3}` : undefined;
-  const count = 14 + Math.min(10, Math.floor(floor / 2));
+  const count = 14 + Math.min(14, Math.floor(floor / 2));
   let tries = 0;
   while (Object.keys(nodes).length < count && tries++ < 800) {
     const k = spotIn();
