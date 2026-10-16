@@ -1277,3 +1277,20 @@ test('sprinkler bisa dilewati, tidak menabrak', async ({ page }) => {
   expect(blocked).toBe(false);
   noErrors(errors);
 });
+
+test('pagar bawah kebun: berjalan ke pagar langsung melompat', async ({ page }) => {
+  const errors = await start(page);
+  const tileY = () => page.evaluate(() => Math.floor((window.game.scene.getScene('farm').player.y - 3) / 16));
+  await at(page, 12, 16, 'down'); // last field row, fence is row 17
+  await page.keyboard.down('s');
+  await page.waitForTimeout(700);
+  await page.keyboard.up('s');
+  await page.waitForTimeout(200);
+  expect(await tileY()).toBeGreaterThanOrEqual(18);
+  await page.keyboard.down('w');
+  await page.waitForTimeout(700);
+  await page.keyboard.up('w');
+  await page.waitForTimeout(200);
+  expect(await tileY()).toBeLessThanOrEqual(16);
+  noErrors(errors);
+});
