@@ -1335,6 +1335,64 @@ export function makeTextures(scene: Phaser.Scene) {
     const dots: [number, number, string][] = [[2, 3, '#5e4c3a'], [10, 2, '#7e6a54'], [13, 9, '#5e4c3a'], [5, 11, '#7e6a54'], [8, 7, '#64503e']];
     for (const [x, y, col] of dots) px(c, x, y, col, 2, 2);
   });
+  // floor variants: cracks, pebbles, a damp patch, so the ground does not tile visibly
+  const floorBase = (c: Ctx) => {
+    px(c, 0, 0, '#6e5a46', 16, 16);
+    px(c, 0, 0, '#735e4a', 8, 8);
+    px(c, 8, 8, '#69563f', 8, 8);
+  };
+  canvas(scene, 'cave-floor-0', TILE, TILE, (c) => {
+    floorBase(c);
+    px(c, 11, 3, '#64503e', 1, 1);
+  });
+  canvas(scene, 'cave-floor-1', TILE, TILE, (c) => {
+    floorBase(c);
+    px(c, 3, 4, '#4e3e2e', 4, 1); px(c, 6, 5, '#4e3e2e', 3, 1); px(c, 8, 6, '#4e3e2e', 1, 3); // crack
+    px(c, 12, 12, '#8a7660', 2, 2); px(c, 12, 14, '#4e3e2e', 2, 1);
+  });
+  canvas(scene, 'cave-floor-2', TILE, TILE, (c) => {
+    floorBase(c);
+    for (const [x, y] of [[3, 10], [6, 12], [11, 4], [13, 6]]) { px(c, x, y, '#8f7c66', 2, 1); px(c, x, y + 1, '#4e3e2e', 2, 1); } // pebbles
+  });
+  canvas(scene, 'cave-floor-3', TILE, TILE, (c) => {
+    floorBase(c);
+    px(c, 4, 6, '#5a4a3a', 8, 4); px(c, 5, 5, '#5a4a3a', 6, 6); // damp patch
+    px(c, 6, 7, '#7f8a92', 2, 1); // a glint of water
+  });
+  // back wall: a rock face lit from above, with drips
+  canvas(scene, 'cave-face', TILE, TILE, (c) => {
+    px(c, 0, 0, '#3a352f', 16, 16);
+    px(c, 0, 0, '#4a443c', 7, 7); px(c, 8, 3, '#4a443c', 8, 6); px(c, 2, 9, '#46403a', 9, 5);
+    px(c, 1, 0, '#5c554b', 5, 1); px(c, 9, 3, '#5c554b', 6, 1); px(c, 3, 9, '#57504a', 7, 1); // lit top edges
+    px(c, 7, 0, '#2a2622', 1, 16); px(c, 0, 8, '#2a2622', 8, 1); // seams
+    px(c, 12, 12, '#2e2a25', 1, 3); px(c, 12, 15, '#1e1b18', 1, 1); // drip
+  });
+  canvas(scene, 'cave-face-base', TILE, TILE, (c) => {
+    px(c, 0, 0, '#3a352f', 16, 12);
+    px(c, 1, 1, '#4a443c', 6, 5); px(c, 9, 2, '#4a443c', 6, 6);
+    px(c, 1, 1, '#5c554b', 5, 1); px(c, 9, 2, '#5c554b', 5, 1);
+    px(c, 0, 12, '#2a2622', 16, 1); // foot of the wall
+    px(c, 0, 13, '#55463a', 16, 3); // shadowed floor
+    px(c, 3, 11, '#2e2a25', 3, 2); px(c, 11, 10, '#2e2a25', 2, 3); // rubble
+  });
+  canvas(scene, 'cave-side', TILE, TILE, (c) => {
+    px(c, 0, 0, '#2c2824', 16, 16);
+    px(c, 3, 2, '#3a352f', 9, 5); px(c, 2, 9, '#3a352f', 11, 5);
+    px(c, 3, 2, '#4a443c', 8, 1); px(c, 2, 9, '#4a443c', 10, 1);
+  });
+  // small decorations scattered on the floor
+  canvas(scene, 'cave-crystal', TILE, TILE, (c) => {
+    px(c, 5, 8, '#7fd0f0', 2, 7); px(c, 8, 5, '#a8e4fa', 3, 10); px(c, 11, 9, '#7fd0f0', 2, 6);
+    px(c, 9, 5, '#e4f8ff', 1, 4); px(c, 4, 14, '#3a352f', 10, 2);
+  }, true);
+  canvas(scene, 'cave-shroom', TILE, TILE, (c) => {
+    px(c, 4, 9, '#c9b8a0', 2, 5); px(c, 2, 7, '#d0805a', 6, 3); px(c, 3, 7, '#f0b080', 2, 1);
+    px(c, 10, 11, '#c9b8a0', 1, 3); px(c, 9, 9, '#d0805a', 4, 2);
+  }, true);
+  canvas(scene, 'cave-bones', TILE, TILE, (c) => {
+    px(c, 3, 10, '#d8d0c0', 9, 2); px(c, 2, 9, '#d8d0c0', 2, 4); px(c, 11, 9, '#d8d0c0', 2, 4);
+    px(c, 6, 13, '#b8b0a0', 6, 1);
+  }, true);
   canvas(scene, 'ladder-down', TILE, TILE, (c) => {
     px(c, 1, 1, '#1a1410', 14, 14); // the hole
     px(c, 2, 2, '#0a0806', 12, 12);

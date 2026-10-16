@@ -338,7 +338,11 @@ export class FarmScene extends Phaser.Scene {
     if (R === CAVE_ROOM) {
       // the cave is big: keep the outdoor zoom and follow the player inside its walls
       cam.setZoom(2 * UI_SCALE);
-      cam.setBounds(R.x * TILE - 2 * TILE, R.y * TILE - 5 * TILE, (R.w + 4) * TILE, (R.h + 9) * TILE);
+      // bounds at least as big as the view, centred on the cave, so a narrow cave sits in the middle
+      const vw = cam.width / cam.zoom, vh = cam.height / cam.zoom;
+      const bw = Math.max((R.w + 4) * TILE, vw), bh = Math.max((R.h + 9) * TILE, vh);
+      const cx = (R.x + R.w / 2) * TILE, cy = (R.y + R.h / 2 + 0.5) * TILE;
+      cam.setBounds(cx - bw / 2, cy - bh / 2, bw, bh);
       cam.startFollow(this.player, true, 0.15, 0.15);
       return;
     }
