@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { npcById, produceById } from '../data';
+import { FESTIVAL_CLOSE, FESTIVAL_OPEN, npcById, produceById } from '../data';
 import {
   WEATHER_INFO,
   isWet,
@@ -26,6 +26,7 @@ import {
   tierOf,
   atForge,
   isFestivalDay,
+  festivalTheme,
   dayOfSeason,
   seasonOf,
   slotsUsed,
@@ -286,10 +287,43 @@ export class UIScene extends Phaser.Scene {
   update() {
     const m = Math.floor(this.state.minutes);
     if (m !== this.lastMinute) {
+      const prev = this.lastMinute;
       this.lastMinute = m;
       this.refreshClock();
+      // festival day: announce the opening at 09:00 and the last hour before 18:00
+      const s = this.state;
+      if (isFestivalDay(s.day) && prev >= 0 && m > prev) {
+        const theme = festivalTheme(s.day).name;
+        if (prev < FESTIVAL_OPEN && m >= FESTIVAL_OPEN)
+          this.noticeBanner('Festival dimulai!', `Tema ${theme} ×2 · bawa hasil panen ke panggung alun-alun · sampai 18:00`);
+        else if (prev < FESTIVAL_CLOSE - 60 && m >= FESTIVAL_CLOSE - 60 && s.festival.enteredDay !== s.day)
+          this.noticeBanner('Festival tutup 1 jam lagi', `Masih sempat ikut lomba: tema ${theme} ×2`);
+      }
     }
   }
+
+  /** A banner that slides down under the clock, stays a few seconds, then fades away. */
+  noticeBanner(title: string, sub: string) {
+    this.bannerBox?.destroy();
+    const W = VIEW.w;
+    const box = this.add.container(0, 0).setDepth(190);
+    const t1 = this.add.text(0, 84, title, txt(18, C.purple));
+    const t2 = this.add.text(0, 110, sub, txt(12, C.secondary, false));
+    const w = Math.max(t1.width, t2.width) + 86, h = 62, left = W / 2 - w / 2;
+    t1.setX(left + 64);
+    t2.setX(left + 64);
+    const g = this.add.graphics();
+    glass(g, left, 76, w, h, 20, { alpha: 0.92, shadow: 8, sheen: false });
+    g.fillStyle(HEX.purple, 1).fillRoundedRect(left + 14, 76 + 14, 4, h - 28, 2); // accent bar
+    const icon = this.add.text(left + 40, 76 + h / 2, '🎉', { fontSize: '22px' }).setOrigin(0.5);
+    box.add([g, icon, t1, t2]);
+    this.bannerBox = box;
+    box.setAlpha(0).setY(-24);
+    play('quest');
+    this.tweens.add({ targets: box, y: 0, alpha: 1, duration: 450, ease: 'Back.Out' });
+    this.tweens.add({ targets: box, alpha: 0, y: -16, delay: 5500, duration: 600, onComplete: () => box.destroy() });
+  }
+  private bannerBox?: Phaser.GameObjects.Container;
 
   // ---------- HUD ----------
 
