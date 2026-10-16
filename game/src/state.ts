@@ -80,6 +80,11 @@ import {
   type Tool,
   isBought,
   isOre,
+  TOOLS,
+  costumeById,
+  DEFAULT_OUTFIT,
+  SPARE_TOOL_PRICE,
+  type WearSlot,
 } from './data';
 
 export interface Plot {
@@ -158,7 +163,10 @@ export interface GameState {
   fridge: Record<string, number>; // kulkas contents (same keys as produce)
   storage: Record<string, number>; // peti lumbung contents (same keys as produce)
   cave?: CaveState;
-  unequipped?: string[]; // 'tool:cangkul', 'wear:topi'... taken off and kept in the bag
+  unequipped?: string[]; // 'tool:cangkul'... main tools taken off and kept in the box
+  outfit?: Record<WearSlot, string>; // costume id per body slot, '' when taken off
+  wardrobe?: string[]; // costumes owned
+  spareTools?: { tool: Tool; tier: number }[]; // extra copies of tools in the box
   toolTier?: Partial<Record<Tool, number>>; // 0 Biasa, 1 Tembaga, 2 Besi, 3 Emas
   forge?: { tool: Tool; tier: number; ready: number }; // a tool at the Bengkel, ready on that day
   caveTreasure?: boolean; // the chest at the bottom has been opened
@@ -180,6 +188,8 @@ export function newGame(): GameState {
     water: WATER_CAN_MAX,
     tool: 'cangkul',
     ownedTools: [],
+    wardrobe: Object.values(DEFAULT_OUTFIT),
+    outfit: { ...DEFAULT_OUTFIT },
     bagTier: 0,
     weather: 'cerah',
     forecasts: Array.from({ length: FORECAST_DAYS }, (_, i) => rollWeather(2 + i)),
@@ -238,6 +248,12 @@ function migrate(s: GameState): GameState {
   migrateTropical(s);
   s.level ??= 1;
   s.ownedTools ??= [];
+  s.wardrobe ??= Object.values(DEFAULT_OUTFIT);
+  s.outfit ??= { ...DEFAULT_OUTFIT };
+  // older saves took costume slots off through the unequipped list
+  for (const w of ['topi', 'baju', 'celana', 'sepatu'] as WearSlot[])
+    if (s.unequipped?.includes(`wear:${w}`)) s.outfit![w] = '';
+  if (s.unequipped) s.unequipped = s.unequipped.filter((k) => !k.startsWith('wear:'));
   s.bagTier ??= 0;
   s.weather ??= 'cerah';
   if (!s.forecasts) {
@@ -1124,27 +1140,120 @@ export const atForge = (s: GameState, t: Tool) => s.forge?.tool === t;
 
 // ---------- equipment ----------
 
-export type Wear = 'topi' | 'baju' | 'celana' | 'sepatu';
+export type Wear = WearSlot;
 export const WEARS: Wear[] = ['topi', 'baju', 'celana', 'sepatu'];
-export const isWorn = (s: GameState, key: string) => !(s.unequipped ?? []).includes(key);
-/** The hand can never be taken off; anything else toggles between worn and kept in the bag. */
+const outfitOf = (s: GameState) => (s.outfit ??= { ...DEFAULT_OUTFIT });
+const toolNameOf = (t: Tool) => TOOLS.find((o) => o.id === t)!.name;
+
+/** A slot on the body ('tool:cangkul', 'wear:topi') is filled. */
+export const isWorn = (s: GameState, key: string) => {
+  const [kind, id] = key.split(':');
+  if (kind === 'wear') return !!outfitOf(s)[id as Wear];
+  return !(s.unequipped ?? []).includes(key);
+};
+/** The hand can never be taken off. */
 export const canUnequip = (key: string) => key !== 'tool:tangan';
+
+/** Something kept in the Perlengkapan box. */
+export interface BoxItem {
+  key: string; // 'tool:x' (the main tool, taken off), 'spare:i', 'cos:id'
+  kind: 'tool' | 'wear';
+  slot: string; // the body slot it goes into: 'tool:x' or 'wear:x'
+  name: string;
+  icon: string;
+  tier?: number;
+}
+export function gearBox(s: GameState): BoxItem[] {
+  const out: BoxItem[] = [];
+  const o = outfitOf(s);
+  for (const id of s.wardrobe ?? [])
+    {
+      const c = costumeById(id);
+      if (c && o[c.slot] !== id) out.push({ key: `cos:${id}`, kind: 'wear', slot: `wear:${c.slot}`, name: c.name, icon: `wear-${id}` });
+    }
+  for (const t of TOOLS)
+    if (!isWorn(s, `tool:${t.id}`) && (!needsPurchase(t.id) || s.ownedTools.includes(t.id)))
+      out.push({ key: `tool:${t.id}`, kind: 'tool', slot: `tool:${t.id}`, name: t.name, icon: `tool-${t.id}`, tier: tierOf(s, t.id) });
+  (s.spareTools ?? []).forEach((sp, i) =>
+    out.push({ key: `spare:${i}`, kind: 'tool', slot: `tool:${sp.tool}`, name: toolNameOf(sp.tool), icon: `tool-${sp.tool}`, tier: sp.tier }),
+  );
+  return out;
+}
+
+/** Take a body slot off; the piece goes into the box. Returns an error or null. */
+export function unequipSlot(s: GameState, slot: string): string | null {
+  if (!canUnequip(slot)) return 'Tangan tidak bisa dicopot.';
+  const [kind, id] = slot.split(':');
+  if (kind === 'wear') {
+    outfitOf(s)[id as Wear] = '';
+    return null;
+  }
+  if (atForge(s, id as Tool)) return `${toolNameOf(id as Tool)} sedang di Bengkel.`;
+  const off = new Set(s.unequipped ?? []);
+  off.add(slot);
+  s.unequipped = [...off];
+  if (s.tool === id) s.tool = 'tangan'; // put down what you were holding
+  return null;
+}
+
+/** Wear something from the box; whatever was in that slot goes back into the box. */
+export function equipFromBox(s: GameState, key: string): string | null {
+  const [kind, id] = key.split(':');
+  if (kind === 'cos') {
+    const c = costumeById(id);
+    if (!c || !(s.wardrobe ?? []).includes(id)) return 'Kostum tidak ada.';
+    outfitOf(s)[c.slot] = id;
+    return null;
+  }
+  if (kind === 'tool') {
+    s.unequipped = (s.unequipped ?? []).filter((k) => k !== key);
+    return null;
+  }
+  const i = Number(id);
+  const sp = s.spareTools?.[i];
+  if (!sp) return 'Alat tidak ada.';
+  if (atForge(s, sp.tool)) return `${toolNameOf(sp.tool)} utama sedang di Bengkel. Ambil dulu.`;
+  const slot = `tool:${sp.tool}`;
+  const spares = [...(s.spareTools ?? [])];
+  spares.splice(i, 1);
+  if (isWorn(s, slot)) spares.push({ tool: sp.tool, tier: tierOf(s, sp.tool) }); // swap: the old one goes in the box
+  s.toolTier = { ...(s.toolTier ?? {}), [sp.tool]: sp.tier };
+  s.spareTools = spares;
+  s.unequipped = (s.unequipped ?? []).filter((k) => k !== slot);
+  return null;
+}
+
+/** Compatibility helper: take a slot off, or put the slot's own piece back on. */
 export function toggleEquip(s: GameState, key: string): boolean {
   if (!canUnequip(key)) return false;
-  const off = new Set(s.unequipped ?? []);
-  if (off.has(key)) off.delete(key);
-  else {
-    off.add(key);
-    if (key === `tool:${s.tool}`) s.tool = 'tangan'; // put down what you were holding
-  }
-  s.unequipped = [...off];
+  if (isWorn(s, key)) return !unequipSlot(s, key);
+  const [kind, id] = key.split(':');
+  if (kind === 'tool') return !equipFromBox(s, key);
+  const back = (s.wardrobe ?? []).find((w) => costumeById(w)?.slot === id) ?? DEFAULT_OUTFIT[id as Wear];
+  outfitOf(s)[id as Wear] = back;
   return true;
 }
-/** Texture suffix for the outfit pieces taken off, e.g. '-ts' without hat and boots. */
-export const outfitSuffix = (s: GameState) => {
-  const off = WEARS.filter((w) => !isWorn(s, `wear:${w}`)).map((w) => w[0]).join('');
-  return off ? `-${off}` : '';
-};
+
+export function buyCostume(s: GameState, id: string): string | null {
+  const c = costumeById(id);
+  if (!c) return 'Kostum tidak ada.';
+  if ((s.wardrobe ?? []).includes(id)) return `Kamu sudah punya ${c.name}.`;
+  s.wardrobe = [...(s.wardrobe ?? []), id];
+  return null;
+}
+
+export function buySpareTool(s: GameState, t: Tool): string | null {
+  const price = SPARE_TOOL_PRICE[t];
+  if (!price) return 'Alat ini tidak dijual.';
+  if (needsPurchase(t) && !s.ownedTools.includes(t)) return 'Beli alatnya dulu di toko.';
+  if (s.coins < price) return `Uang tidak cukup (butuh ${price.toLocaleString('id-ID')} G).`;
+  s.coins -= price;
+  s.spareTools = [...(s.spareTools ?? []), { tool: t, tier: 0 }];
+  return null;
+}
+
+/** Texture key for the farmer in this outfit, e.g. 'caping|kaos-merah|jeans|' ('' = taken off). */
+export const outfitKey = (s: GameState) => WEARS.map((w) => outfitOf(s)[w]).join('|');
 
 /** Hand a tool to the smith for its next tier; returns an error or null. One tool at a time. */
 export function startUpgrade(s: GameState, t: Tool): string | null {

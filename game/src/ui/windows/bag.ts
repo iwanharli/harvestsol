@@ -18,6 +18,8 @@ import {
   TOOLS,
   TOOL_TIERS,
   needsPurchase,
+  TIER_COLORS,
+  costumeById,
 } from '../../data';
 import { play } from '../../sfx';
 import { C, HEX, bar as drawBar, card, segmented, txt, well } from '../theme';
@@ -38,9 +40,10 @@ import {
   WEARS,
   isWorn,
   canUnequip,
-  toggleEquip,
   tierOf,
-  type Wear,
+  gearBox,
+  unequipSlot,
+  equipFromBox,
 } from '../../state';
 import type { UIScene } from '../../scenes/UIScene';
 
@@ -404,22 +407,25 @@ export function describe(ui: UIScene, bag: 'produce' | 'seeds' | 'other', id: st
 }
 
 let gearSel: string | undefined;
-const WEAR_NAMES: Record<Wear, string> = { topi: 'Caping Bambu', baju: 'Kemeja Biru', celana: 'Celana Kerja', sepatu: 'Sepatu Bot' };
 
-/** Perlengkapan: tools and outfit pieces, worn ones on top, the ones taken off below. Tap one to wear or remove it. */
+/** Perlengkapan: what is worn on top, the box of spare tools and costumes below. Tap one to wear or remove it. */
 function drawGear(ui: UIScene, c: Phaser.GameObjects.Container, x: number, y: number, W: number, H: number) {
   const s = ui.state;
-  type Gear = { key: string; name: string; icon: string; sub: string };
-  const all: Gear[] = [
-    ...WEARS.map((w) => ({ key: `wear:${w}`, name: WEAR_NAMES[w], icon: `wear-${w}`, sub: 'Kostum' })),
-    ...TOOLS.filter((t) => !needsPurchase(t.id) || s.ownedTools.includes(t.id)).map((t) => {
+  type Gear = { sel: string; name: string; icon: string; sub: string; tier?: number; worn: boolean };
+  const tierName = (t?: number) => (t ? ` · ${TOOL_TIERS[t]}` : '');
+  const worn: Gear[] = [
+    ...WEARS.filter((w) => isWorn(s, `wear:${w}`)).map((w) => {
+      const cos = costumeById(s.outfit![w])!;
+      return { sel: `wear:${w}`, name: cos.name, icon: `wear-${cos.id}`, sub: 'Kostum', worn: true };
+    }),
+    ...TOOLS.filter((t) => (!needsPurchase(t.id) || s.ownedTools.includes(t.id)) && isWorn(s, `tool:${t.id}`)).map((t) => {
       const tier = tierOf(s, t.id);
-      return { key: `tool:${t.id}`, name: t.name, icon: `tool-${t.id}`, sub: tier ? `Alat · ${TOOL_TIERS[tier]}` : 'Alat' };
+      return { sel: `tool:${t.id}`, name: t.name, icon: `tool-${t.id}`, sub: `Alat${tierName(tier)}`, tier, worn: true };
     }),
   ];
-  const worn = all.filter((g) => isWorn(s, g.key));
-  const off = all.filter((g) => !isWorn(s, g.key));
-  if (!gearSel || !all.some((g) => g.key === gearSel)) gearSel = all[0]?.key;
+  const kept: Gear[] = gearBox(s).map((b) => ({ sel: `box:${b.key}`, name: b.name, icon: b.icon, sub: b.kind === 'wear' ? 'Kostum' : `Alat${tierName(b.tier)}`, tier: b.tier, worn: false }));
+  const all = [...worn, ...kept];
+  if (!gearSel || !all.some((g) => g.sel === gearSel)) gearSel = all[0]?.sel;
 
   const SZ = 50, GAP = 8, COLS = 6;
   const gx = x + 28;
@@ -436,16 +442,17 @@ function drawGear(ui: UIScene, c: Phaser.GameObjects.Container, x: number, y: nu
       const sx = gx + (i % COLS) * (SZ + GAP);
       const sy = gy + Math.floor(i / COLS) * (SZ + GAP);
       const g = ui.add.graphics();
-      const sel = it.key === gearSel;
+      const sel = it.sel === gearSel;
       card(g, sx, sy, SZ, SZ, sel ? 'selected' : 'muted', 12);
-      if (sel) g.lineStyle(2, HEX.blue, 1).strokeRoundedRect(sx, sy, SZ, SZ, 12);
+      if (it.tier) g.lineStyle(2, TIER_COLORS[it.tier], 1).strokeRoundedRect(sx + 1, sy + 1, SZ - 2, SZ - 2, 11);
+      if (sel) g.lineStyle(2, HEX.blue, 1).strokeRoundedRect(sx - 1, sy - 1, SZ + 2, SZ + 2, 13);
       c.add(g);
-      c.add(ui.add.image(sx + SZ / 2, sy + SZ / 2, it.icon).setScale(it.key.startsWith('wear') ? 3 : 2.2));
-      if (it.key === `tool:${s.tool}`) c.add(ui.add.text(sx + SZ - 5, sy + 3, '●', txt(9, C.blue)).setOrigin(1, 0));
+      c.add(ui.add.image(sx + SZ / 2, sy + SZ / 2, it.icon).setScale(it.icon.startsWith('wear') ? 3 : 2.2));
+      if (it.sel === `tool:${s.tool}`) c.add(ui.add.text(sx + SZ - 5, sy + 3, '●', txt(9, C.blue)).setOrigin(1, 0));
       const z = ui.add.zone(sx, sy, SZ, SZ).setOrigin(0).setInteractive({ useHandCursor: true });
       z.on('pointerdown', () => {
         play('click');
-        gearSel = it.key;
+        gearSel = it.sel;
         openInventory(ui);
       });
       c.add(z);
@@ -453,36 +460,37 @@ function drawGear(ui: UIScene, c: Phaser.GameObjects.Container, x: number, y: nu
     gy += Math.ceil(list.length / COLS) * (SZ + GAP) + 14;
   };
   section('DIPAKAI', worn, 'Tidak ada yang dipakai');
-  section('DI TAS', off, 'Belum ada yang dicopot. Pilih alat atau kostum lalu tekan Copot.');
+  section('DI TAS', kept, 'Kosong. Beli kostum di toko atau alat cadangan di Bengkel.');
   c.add(ui.add.text(gx, y + H - 92, 'Alat & kostum tidak memakai slot tas.', txt(11, C.tertiary, false)));
 
-  // detail card with the wear / remove button
   const dx = x + W - 250, dy = y + 98, dw = 222, dh = 284;
   const g = ui.add.graphics();
   card(g, dx, dy, dw, dh, 'normal', 18);
   c.add(g);
-  const it = all.find((a) => a.key === gearSel);
+  const it = all.find((a) => a.sel === gearSel);
   if (it) {
-    const on = isWorn(s, it.key);
-    well(g, dx + dw / 2, dy + 52, 34, !on);
-    const im = ui.add.image(dx + dw / 2, dy + 52, it.icon).setScale(it.key.startsWith('wear') ? 4.5 : 3.4);
-    if (!on) im.setAlpha(0.6);
-    c.add(im);
+    well(g, dx + dw / 2, dy + 52, 34, !it.worn);
+    c.add(ui.add.image(dx + dw / 2, dy + 52, it.icon).setScale(it.icon.startsWith('wear') ? 4.5 : 3.4));
     c.add(ui.add.text(dx + dw / 2, dy + 96, it.name, txt(16)).setOrigin(0.5, 0));
-    c.add(ui.add.text(dx + dw / 2, dy + 120, `${it.sub} · ${on ? 'dipakai' : 'di tas'}`, txt(12, on ? C.green : C.secondary, false)).setOrigin(0.5, 0));
-    const note = !canUnequip(it.key)
+    c.add(ui.add.text(dx + dw / 2, dy + 120, `${it.sub} · ${it.worn ? 'dipakai' : 'di tas'}`, txt(12, it.worn ? C.green : C.secondary, false)).setOrigin(0.5, 0));
+    const locked = it.worn && !canUnequip(it.sel);
+    const note = locked
       ? 'Tangan tidak bisa dicopot.'
-      : on
-        ? it.key.startsWith('tool') ? 'Dicopot: alat tidak bisa dipakai sampai dipasang lagi.' : 'Dicopot: tampilan karakter ikut berubah.'
-        : 'Pasang lagi untuk memakainya.';
-    c.add(ui.add.text(dx + 16, dy + 150, note, { ...txt(11, C.tertiary, false), wordWrap: { width: dw - 32 }, align: 'center' }).setOrigin(0, 0).setFixedSize(dw - 32, 0));
-    ui.button(c, dx + 14, dy + dh - 48, on ? 'Copot' : 'Pasang', () => {
+      : it.worn
+        ? it.sel.startsWith('tool') ? 'Dicopot: alat tidak bisa dipakai sampai dipasang lagi.' : 'Dicopot: tampilan karakter ikut berubah.'
+        : 'Dipasang menggantikan yang sedang dipakai di slot yang sama.';
+    c.add(ui.add.text(dx + 16, dy + 150, note, { ...txt(11, C.tertiary, false), wordWrap: { width: dw - 32 }, align: 'center' }).setFixedSize(dw - 32, 0));
+    ui.button(c, dx + 14, dy + dh - 48, it.worn ? 'Copot' : 'Pasang', () => {
+      const err = it.worn ? unequipSlot(s, it.sel) : equipFromBox(s, it.sel.slice(4));
+      if (err) {
+        play('error');
+        return ui.toast(err);
+      }
       play('click');
-      toggleEquip(s, it.key);
       save(s);
       ui.game.events.emit('hud');
       openInventory(ui);
-    }, dw - 28, !canUnequip(it.key), on);
+    }, dw - 28, locked, it.worn);
   }
   ui.button(c, x + W - 144, y + H - 52, 'Tutup', () => ui.closeModal(), 120);
 }

@@ -442,6 +442,27 @@ export const BUYABLE_TOOLS: { id: Tool; name: string; price: number; level: numb
 ];
 export const needsPurchase = (tool: Tool) => BUYABLE_TOOLS.some((t) => t.id === tool);
 
+// ---------- outfit & spare tools ----------
+
+export type WearSlot = 'topi' | 'baju' | 'celana' | 'sepatu';
+/** Costume pieces recolour the farmer sprite: hat y/Y/L/r, shirt C/c/l, trousers P/p, boots B. */
+export const COSTUMES: { id: string; slot: WearSlot; name: string; desc: string; price: number; level: number; pal: Record<string, string> }[] = [
+  { id: 'caping', slot: 'topi', name: 'Caping Bambu', desc: 'Topi anyaman bambu berpita merah. Menahan terik matahari di ladang.', price: 0, level: 1, pal: { y: '#b8902f', Y: '#ecc761', L: '#f7df8e', r: '#c0392b' } },
+  { id: 'topi-koboi', slot: 'topi', name: 'Topi Koboi', desc: 'Topi kulit coklat bertepi lebar, gaya peternak.', price: 600, level: 2, pal: { y: '#4a2e1a', Y: '#7a4b2a', L: '#9a6a40', r: '#2a1d17' } },
+  { id: 'topi-rimba', slot: 'topi', name: 'Topi Rimba', desc: 'Topi hijau lembut berpita kuning, cocok untuk memancing.', price: 900, level: 4, pal: { y: '#2f5b34', Y: '#3f7a46', L: '#6fa86a', r: '#f2c94c' } },
+  { id: 'kemeja-biru', slot: 'baju', name: 'Kemeja Biru', desc: 'Kemeja kerja katun, nyaman untuk mencangkul seharian.', price: 0, level: 1, pal: { C: '#3f7fbf', c: '#2f5f95', l: '#5f9bd6' } },
+  { id: 'kaos-merah', slot: 'baju', name: 'Kaos Merah', desc: 'Kaos merah cerah, gampang terlihat dari ujung ladang.', price: 500, level: 2, pal: { C: '#c0392b', c: '#8e2a20', l: '#e0604e' } },
+  { id: 'batik', slot: 'baju', name: 'Kemeja Batik', desc: 'Batik coklat bermotif emas untuk hari festival.', price: 1200, level: 5, pal: { C: '#8a5a2a', c: '#5a3a1a', l: '#f2c94c' } },
+  { id: 'celana-kerja', slot: 'celana', name: 'Celana Kerja', desc: 'Celana ungu tua yang tahan lumpur sawah.', price: 0, level: 1, pal: { P: '#4a4a6a', p: '#38384f' } },
+  { id: 'jeans', slot: 'celana', name: 'Celana Jeans', desc: 'Jeans biru yang awet dipakai bertahun-tahun.', price: 700, level: 3, pal: { P: '#3a5a8a', p: '#2a4066' } },
+  { id: 'sepatu-bot', slot: 'sepatu', name: 'Sepatu Bot', desc: 'Bot karet coklat untuk tanah becek dan pematang.', price: 0, level: 1, pal: { B: '#5a3a22' } },
+  { id: 'sepatu-hitam', slot: 'sepatu', name: 'Sepatu Hitam', desc: 'Sepatu kulit hitam mengilap.', price: 600, level: 3, pal: { B: '#23232a' } },
+];
+export const costumeById = (id: string) => COSTUMES.find((c) => c.id === id);
+export const DEFAULT_OUTFIT: Record<WearSlot, string> = { topi: 'caping', baju: 'kemeja-biru', celana: 'celana-kerja', sepatu: 'sepatu-bot' };
+/** A second (third...) copy of a tool, forged new at the Bengkel; it starts at Biasa. */
+export const SPARE_TOOL_PRICE: Partial<Record<Tool, number>> = { cangkul: 300, siram: 300, pancing: 800, beliung: 1500 };
+
 // ---------- bag capacity ----------
 
 export const STACK_MAX = 50; // items per bag slot
