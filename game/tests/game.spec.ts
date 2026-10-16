@@ -1236,3 +1236,18 @@ test('bengkel: tombol Ambil memperbarui jendela', async ({ page }) => {
   expect(texts).toContain('Tembaga'); // the hoe's card shows its new tier
   noErrors(errors);
 });
+
+test('permintaan yang ditandai muncul di daftar quest HUD', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.requests = [{ id: 1, npc: s.requests[0]?.npc ?? 'pak-darto', kind: 'biasa', items: [{ id: 'kangkung', qty: 3, minStars: 0 }], reward: 100, until: s.day + 2, marked: true }]; s.produce = { 'kangkung@2': 1 }");
+  await page.evaluate(() => (window as any).game.events.emit('hud'));
+  await page.waitForTimeout(150);
+  const ui = await page.evaluate(() => {
+    const sc = (window as any).game.scene.getScene('ui');
+    return { label: sc.questLabel.text, rows: sc.questList.list.filter((o: any) => o.type === 'Text').map((o: any) => o.text) };
+  });
+  expect(ui.label).toBe('Quest 1');
+  expect(ui.rows[1]).toContain('1/3');
+  await page.screenshot({ path: 'test-results/quest-hud.png' });
+  noErrors(errors);
+});

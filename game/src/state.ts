@@ -106,6 +106,7 @@ export interface Request {
   bonusSeeds?: { id: string; qty: number }; // extra seeds handed over with the coins
   note?: string;
   until: number; // last day the request can be delivered
+  marked?: boolean; // pinned to the HUD quest list
 }
 
 export interface Animal {
