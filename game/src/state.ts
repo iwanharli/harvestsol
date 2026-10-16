@@ -1101,7 +1101,9 @@ export const liftFloors = (s: GameState) => {
   const deepest = Math.min(CAVE_BOTTOM, s.cave?.deepest ?? 0);
   const out = CAVE_ZONES.map((z) => z.from).filter((f) => f === 1 || f <= deepest);
   if (deepest > 1 && !out.includes(deepest)) out.push(deepest);
-  return out;
+  const last = s.cave?.floor ?? 0; // the floor you left, as you left it
+  if (last > 1 && !out.includes(last)) out.push(last);
+  return out.sort((a, b) => a - b);
 };
 
 /** Open the chest at the bottom (once ever); returns an error or null. */
