@@ -97,8 +97,10 @@ export function enterCave(scene: FarmScene, floor: number) {
     if (!scene.state.ownedTools.includes('beliung')) return scene.fail('Gua tambang gelap dan berbatu. Bawa Beliung dulu (beli di Toko Peralatan).');
     const R = CAVE_ROOM;
     const before = zoneIndex(scene.state.cave?.deepest ?? 0);
+    // back on the floor you left: the rocks you already broke stay broken; any other floor is fresh
+    const resume = scene.state.cave?.floor === floor && !!scene.state.cave.nodes;
     scene.moveTo((R.x + R.w / 2) * TILE, (R.y + R.h - 1) * TILE - 2, 'up', () => {
-      genFloor(scene.state, floor);
+      if (!resume) genFloor(scene.state, floor);
       scene.refreshCave();
     });
     const z = zoneOf(floor);

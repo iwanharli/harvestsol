@@ -951,7 +951,7 @@ export class FarmScene extends Phaser.Scene {
     if (spot === 'cave') {
       const floors = liftFloors(s);
       if (floors.length > 1 && s.ownedTools.includes('beliung'))
-        return this.game.events.emit('ask-cave-floor', { floors, deepest: s.cave?.deepest ?? 0, onPick: (f: number) => this.enterCave(f) });
+        return this.game.events.emit('ask-cave-floor', { floors, deepest: s.cave?.deepest ?? 0, last: s.cave?.floor, onPick: (f: number) => this.enterCave(f) });
       return this.enterCave(1);
     }
     if (spot === 'pillar') return this.fail('Stalaktit sekeras besi, tidak bisa dipecah. Cari jalan memutar.');

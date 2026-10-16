@@ -969,7 +969,7 @@ test('gua tambang: masuk, pecahkan batu, temukan tangga, turun, kerekan di awal 
     st.cave.deepest = 12;
     return { lift: m.liftFloors(st), shallowGold: d.oreWeights(1)['bijih-emas'], deepGold: d.oreWeights(45)['bijih-emas'] };
   });
-  expect(r.lift).toEqual([1, 10, 12]);
+  expect(r.lift).toEqual([1, 2, 10, 12]); // 2 = the floor you are on now
   expect(r.deepGold).toBeGreaterThan(r.shallowGold * 10);
   noErrors(errors);
 });
@@ -1422,5 +1422,29 @@ test('alat di bengkel tapi ada cadangan: memilih alatnya langsung memakai cadang
   expect(s.toolTier.siram).toBe(1); // the Tembaga spare was the best one in the box
   expect(s.unequipped).toEqual([]);
   expect(s.spareTools).toEqual([]);
+  noErrors(errors);
+});
+
+test('gua: keluar lalu masuk lagi ke lantai terakhir, batu yang sudah digali tidak muncul lagi', async ({ page }) => {
+  const errors = await start(page);
+  const r = await page.evaluate(async () => {
+    const m = await import('/src/state.ts');
+    const s = window.game.registry.get('state');
+    m.genFloor(s, 7);
+    const before = Object.keys(s.cave.nodes).length;
+    delete s.cave.nodes[Object.keys(s.cave.nodes)[0]]; // dig one rock
+    return { before, lift: m.liftFloors(s) };
+  });
+  expect(r.lift).toContain(7);
+  await patch(page, "s.ownedTools = ['beliung']");
+  await page.evaluate(() => window.game.scene.getScene('farm').enterCave(7));
+  await page.waitForTimeout(700);
+  expect(Object.keys((await state(page)).cave.nodes).length).toBe(r.before - 1);
+  // another floor is fresh
+  await page.evaluate(() => window.game.scene.getScene('farm').enterCave(1));
+  await page.waitForTimeout(700);
+  const s = await state(page);
+  expect(s.cave.floor).toBe(1);
+  expect(Object.keys(s.cave.nodes).length).toBeGreaterThanOrEqual(14);
   noErrors(errors);
 });
