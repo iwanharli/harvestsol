@@ -1268,3 +1268,12 @@ test('festival: 5 hasil bintang 5 di tahun ke-2 menang dari warga', async ({ pag
   expect(s.festival.trophies.emas ?? 0).toBeGreaterThanOrEqual(1);
   noErrors(errors);
 });
+
+test('sprinkler bisa dilewati, tidak menabrak', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.plots['12,12'] = { tilled: false, watered: false, sprinkler: true }");
+  await page.evaluate(() => window.game.scene.getScene('farm').refreshPlot('12,12'));
+  const blocked = await page.evaluate(() => (window.game.scene.getScene('farm') as any).isBlocked(12.5 * 16, 12.5 * 16));
+  expect(blocked).toBe(false);
+  noErrors(errors);
+});

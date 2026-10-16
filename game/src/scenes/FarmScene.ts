@@ -194,8 +194,7 @@ export class FarmScene extends Phaser.Scene {
     this.game.events.on('do-sleep', this.sleep, this);
     this.events.once('shutdown', () => this.game.events.off('do-sleep', this.sleep, this));
 
-    for (const [k, p] of Object.entries(this.state.plots)) {
-      if (p.sprinkler) this.blocked.add(k);
+    for (const k of Object.keys(this.state.plots)) {
       this.refreshPlot(k);
     }
   }
@@ -998,7 +997,6 @@ export class FarmScene extends Phaser.Scene {
           const [fx, fy] = this.feet();
           if (Math.floor(fx / TILE) === tx && Math.floor((fy - 2) / TILE) === ty) return;
           s.plots[k] = { tilled: false, watered: false, sprinkler: true };
-          this.blocked.add(k);
           this.toast('Sprinkler dipasang. Menyiram 8 petak di sekitarnya tiap pagi.');
           this.useBagItem('sprinkler');
           this.swing();
@@ -1037,7 +1035,6 @@ export class FarmScene extends Phaser.Scene {
             onOk: () => {
               if (!s.plots[k]?.sprinkler || !canAdd(s, 'seeds', 'sprinkler')) return;
               delete s.plots[k];
-              this.blocked.delete(k);
               add(s.seeds, 'sprinkler', 1);
               play('place');
               this.toast('Sprinkler diambil.');
