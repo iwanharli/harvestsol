@@ -205,7 +205,7 @@ export class UIScene extends Phaser.Scene {
       ['hud', () => this.refresh()],
       ['toast', (m: string) => this.toast(m)],
       ['cycle-seed', () => this.cycleSeed()],
-      ['open-shop', () => openShop(this)],
+      ['open-shop', (kind?: 'benih' | 'alat') => openShop(this, kind)],
       ['open-board', () => openBoard(this)],
       ['open-festival', () => openFestival(this)],
       ['open-kitchen', () => openKitchen(this)],
@@ -365,7 +365,7 @@ export class UIScene extends Phaser.Scene {
       icon.setTint(locked ? 0x8a8070 : 0xffffff).setAlpha(locked ? 0.4 : on ? 1 : 0.85);
       key.setColor(on ? C.blue : C.tertiary);
       const tier = tierOf(s, t.id), away = atForge(s, t.id);
-      let name = locked ? `${t.name} · beli di Toko` : tier ? `${t.name} ${TOOL_TIERS[tier]}` : t.name;
+      let name = locked ? `${t.name} · beli di Toko Peralatan` : tier ? `${t.name} ${TOOL_TIERS[tier]}` : t.name;
       if (away) {
         name = `${t.name} · sedang di Bengkel`;
         icon.setAlpha(0.3);

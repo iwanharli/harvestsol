@@ -608,7 +608,7 @@ export class FarmScene extends Phaser.Scene {
   setTool(i: number) {
     const tool = TOOLS[i].id;
     if (needsPurchase(tool) && !this.state.ownedTools.includes(tool))
-      return this.fail(`Kamu belum punya ${TOOLS[i].name}. Beli di toko (tab Peralatan).`);
+      return this.fail(`Kamu belum punya ${TOOLS[i].name}. Beli di Toko Peralatan (sebelah papan warga).`);
     if (atForge(this.state, tool)) return this.fail(`${TOOLS[i].name} sedang ditempa di Bengkel Pandai Besi.`);
     if (!isWorn(this.state, `tool:${tool}`)) return this.fail(`${TOOLS[i].name} sedang dicopot. Pasang lagi di Tas › Perlengkapan.`);
     this.state.tool = tool;
@@ -903,6 +903,7 @@ export class FarmScene extends Phaser.Scene {
       return this.toast(`${f?.name ?? 'Perabot'} bisa dibeli di Toko Mebel (desa sebelah timur).`);
     }
     if (spot === 'shop') return this.game.events.emit('open-shop');
+    if (spot === 'shop-alat') return this.game.events.emit('open-shop', 'alat');
     if (spot === 'bin') return this.ship();
     if (spot === 'board') {
       if (s.level < FEATURE_LEVEL.board) return this.fail(`Papan permintaan terbuka di Level ${FEATURE_LEVEL.board}.`);
@@ -951,7 +952,7 @@ export class FarmScene extends Phaser.Scene {
     }
     if (spot === 'ore') {
       if (s.tool !== 'beliung') {
-        if (!s.ownedTools.includes('beliung')) return this.fail('Butuh Beliung untuk menambang. Beli di toko (tab Peralatan).');
+        if (!s.ownedTools.includes('beliung')) return this.fail('Butuh Beliung untuk menambang. Beli di Toko Peralatan (sebelah papan warga).');
         return this.fail('Pakai Beliung (6) untuk memecah batu.');
       }
       const r = mineHit(s, k, Math.random, 1 + tierOf(s, 'beliung'));
@@ -1279,7 +1280,7 @@ export class FarmScene extends Phaser.Scene {
 
   tendCoop() {
     const s = this.state;
-    if (!s.animals.length) return this.toast('Kandang masih kosong. Beli ayam di toko (tab Ternak).');
+    if (!s.animals.length) return this.toast('Kandang masih kosong. Beli ayam di Toko Benih & Ternak.');
     const msgs: string[] = [];
     let eggs = 0;
     let golden = 0;

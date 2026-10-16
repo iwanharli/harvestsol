@@ -8,7 +8,7 @@ export const SPEED = 62; // world px per second
 export type Spot =
   | 'door' | 'shop' | 'bin' | 'pond' | 'lakesign' | 'minesign' | 'ore' | 'cave' | 'descend' | 'pillar' | 'treasure' | 'bengkel' | 'board' | 'coop' | 'stage' | 'house'
   | 'bed' | 'stove' | 'tv' | 'shelf' | 'wardrobe' | 'fridge' | 'storage' | 'radio' | 'trophy' | 'slot'
-  | 'mebel' | 'counter' | 'display' | 'sofa';
+  | 'mebel' | 'counter' | 'display' | 'sofa' | 'shop-alat';
 
 /** Shown the first time you reach each zone. */
 export const ZONE_HINTS = [

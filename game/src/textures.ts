@@ -816,6 +816,26 @@ export function makeTextures(scene: Phaser.Scene) {
     px(c, 10, 27, '#efe0bd', 12, 4);
     px(c, 12, 28, '#6b4224', 8, 1);
   }, true);
+  // tools & clothes stall: blue awning, a hoe, a can and a hanging shirt on display
+  canvas(scene, 'shop-alat', 32, 32, (c) => {
+    px(c, 2, 15, '#7a5232', 28, 17);
+    px(c, 3, 16, '#a07048', 26, 8);
+    for (let x = 0; x < 32; x += 6) {
+      px(c, x, 5, '#f4efe2', 3, 9);
+      px(c, x + 3, 5, '#3f6fb0', 3, 9);
+    }
+    for (let x = 0; x < 32; x += 6) px(c, x + 1, 14, '#3f6fb0', 4, 1);
+    px(c, 3, 2, '#5a3a20', 2, 13);
+    px(c, 27, 2, '#5a3a20', 2, 13);
+    px(c, 0, 1, '#2f5a95', 32, 4);
+    px(c, 6, 17, '#8a8f98', 3, 2); px(c, 7, 19, '#7a4b2a', 1, 5); // hoe
+    px(c, 12, 19, '#5f9bd6', 5, 4); px(c, 17, 20, '#5f9bd6', 2, 1); // can
+    px(c, 21, 17, '#c0392b', 6, 4); px(c, 20, 17, '#c0392b', 1, 2); px(c, 27, 17, '#c0392b', 1, 2); // shirt
+    px(c, 22, 21, '#b8902f', 4, 2); // hat
+    px(c, 2, 24, '#5a3a20', 28, 2);
+    px(c, 10, 27, '#efe0bd', 12, 4);
+    px(c, 12, 28, '#5a3a20', 8, 1);
+  }, true);
   canvas(scene, 'board', 24, 28, (c) => {
     px(c, 3, 14, '#6b4224', 3, 14);
     px(c, 18, 14, '#6b4224', 3, 14);

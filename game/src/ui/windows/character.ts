@@ -237,7 +237,7 @@ export function openCharacter(ui: UIScene) {
       head(`wear-${cur.id}`, cur.name, `KOSTUM · ${SLOT_NAME[id as Wear].toUpperCase()} · DIPAKAI`);
       para(cur.desc, C.ink);
       const more = COSTUMES.filter((k) => k.slot === id && (s.wardrobe ?? []).includes(k.id)).length - 1;
-      para(more ? `${more} pilihan lain di kotak Perlengkapan.` : 'Beli kostum lain di toko (tab Pakaian).', C.tertiary);
+      para(more ? `${more} pilihan lain di kotak Perlengkapan.` : 'Beli kostum lain di Toko Peralatan & Pakaian.', C.tertiary);
       actionButton('Copot', false);
     } else {
       head(`wear-${DEFAULT_OUTFIT[id as Wear]}`, 'Kosong', `KOSTUM · ${SLOT_NAME[id as Wear].toUpperCase()}`, true);
@@ -256,7 +256,7 @@ export function openCharacter(ui: UIScene) {
     const has = owned(tool);
     const on = isWorn(s, picked);
     head(`tool-${tool}`, t.name, `ALAT · TOMBOL ${t.key}${!has ? '' : !on ? ' · KOSONG' : s.tool === tool ? ' · DIPEGANG' : ''}`, !has || !on);
-    if (!has) para('Belum punya. Beli di toko.', C.red);
+    if (!has) para('Belum punya. Beli di Toko Peralatan.', C.red);
     else if (!on) para('Slot kosong. Pasang dari kotak Perlengkapan di bawah.', C.secondary);
     else {
       if (canUnequip(picked)) actionButton('Copot', false);
