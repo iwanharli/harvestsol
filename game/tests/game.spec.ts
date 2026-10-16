@@ -1455,7 +1455,7 @@ test('beli cangkul cadangan di toko: masuk Perlengkapan dan label menghitung cad
   await press(page, 'Space');
   const texts = () => page.evaluate(() => (window.game.scene.getScene('ui') as any).modalLayer.list.filter((o: any) => o.type === 'Text').map((o: any) => ({ t: o.text, x: o.x, y: o.y })));
   const before = await texts();
-  const name = before.find((o) => o.t === 'Cangkul (cadangan)')!;
+  const name = before.find((o) => o.t === 'Cangkul')!;
   expect(before.some((o) => o.t === '300 G · cadangan 0')).toBe(true);
   await page.mouse.click(name.x + 159, name.y + 37); // its "Beli" button
   await page.waitForTimeout(150);
