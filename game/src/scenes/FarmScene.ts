@@ -1049,7 +1049,7 @@ export class FarmScene extends Phaser.Scene {
         break;
       }
       case 'benih': {
-        if (!s.seeds[s.seed]) return this.fail(`${itemName(s.seed)} habis. Beli di toko.`);
+        if (!s.seeds[s.seed]) return this.fail(`${itemName(s.seed)} habis. Beli lagi, atau tekan Q untuk ganti.`);
         if (s.seed === 'sprinkler') {
           if (plot?.crop || plot?.sprinkler) return this.fail('Petak ini sudah terisi.');
           const [fx, fy] = this.feet();
@@ -1073,7 +1073,7 @@ export class FarmScene extends Phaser.Scene {
         }
         if (plot.crop) return;
         const def = cropById(s.seed);
-        if (!s.seeds[s.seed]) return this.fail(`Benih ${def.name} habis. Beli di toko.`);
+        if (!s.seeds[s.seed]) return this.fail(`Benih ${def.name} habis. Beli lagi, atau tekan Q untuk ganti.`);
         if (!def.seasons.includes(seasonOf(s.day)))
           return this.fail(`${def.name} tidak tumbuh di musim ${seasonOf(s.day)}.`);
         plot.crop = { id: s.seed, growth: 0 };
@@ -1134,13 +1134,8 @@ export class FarmScene extends Phaser.Scene {
   useBagItem(id: string) {
     const s = this.state;
     add(s.seeds, id, -1);
-    if (!s.seeds[id]) {
-      const next = Object.keys(s.seeds)[0];
-      if (next) {
-        s.seed = next;
-        this.toast(`${itemName(id)} habis. Beralih ke ${itemName(next)}.`);
-      }
-    }
+    // stay on what you picked even when it runs out; Q (or a tap on slot 3) picks another
+    if (!s.seeds[id]) this.toast(`${itemName(id)} habis. Beli lagi, atau tekan Q untuk ganti.`);
   }
 
   ship() {

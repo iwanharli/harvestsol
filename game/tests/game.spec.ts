@@ -1516,3 +1516,19 @@ test('cadangan dipakai selagi alat ditempa: tidak hilang setelah muat ulang dan 
   noErrors(errors);
 });
 
+
+test('benih/pupuk yang dipilih habis: pilihan tidak berubah sendiri', async ({ page }) => {
+  const errors = await start(page);
+  await patch(page, "s.level = 5; s.seeds = { pupuk: 1, kangkung: 5 }; s.seed = 'pupuk'; s.plots['10,10'] = { tilled: true, watered: false, crop: { id: 'kangkung', growth: 0 } }");
+  await page.evaluate(() => window.game.scene.getScene('farm').refreshPlot('10,10'));
+  await at(page, 10, 9, 'down');
+  await use(page, 3); // fertilise: the last pupuk
+  let s = await state(page);
+  expect(s.seeds.pupuk).toBeUndefined();
+  expect(s.seed).toBe('pupuk'); // still picked
+  expect((await toasts(page)).join()).toContain('Pupuk Cepat habis');
+  await page.waitForTimeout(100);
+  s = await state(page);
+  expect(s.seed).toBe('pupuk'); // the toolbar did not switch it either
+  noErrors(errors);
+});
