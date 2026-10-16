@@ -1294,3 +1294,12 @@ test('pagar bawah kebun: berjalan ke pagar langsung melompat', async ({ page }) 
   expect(await tileY()).toBeLessThanOrEqual(16);
   noErrors(errors);
 });
+
+test('jendela karakter: tombol C membuka dan menutup', async ({ page }) => {
+  const errors = await start(page);
+  await press(page, 'c');
+  expect(await page.evaluate(() => window.game.scene.getScene('ui').modalKind)).toBe('character');
+  await press(page, 'c');
+  expect(await modalOpen(page)).toBe(false);
+  noErrors(errors);
+});

@@ -43,6 +43,7 @@ import { openWardrobe } from '../ui/windows/wardrobe';
 import { openMebel } from '../ui/windows/mebel';
 import { openFridge, openStorage } from '../ui/windows/fridge';
 import { openWorldMap } from '../ui/windows/worldmap';
+import { openCharacter } from '../ui/windows/character';
 import { askCaveFloor, type CaveAsk } from '../ui/windows/cave';
 import { openBengkel } from '../ui/windows/bengkel';
 import { openMarket } from '../ui/windows/market';
@@ -145,6 +146,14 @@ export class UIScene extends Phaser.Scene {
       this.refresh();
     });
     this.questList = this.add.container(0, 0);
+    // character button: outfit and tools
+    this.panel(12, 180, 92, 30);
+    this.add.text(58, 195, hasTouch ? 'Karakter' : 'Karakter · C', txt(12)).setOrigin(0.5);
+    this.add.zone(12, 180, 92, 30).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      if (this.registry.get('modal')) return;
+      play('click');
+      openCharacter(this);
+    });
 
     this.panel(W - 232, 12, 220, 112);
     this.bagTitle = this.add.text(W - 216, 22, 'Tas', txt(16));
@@ -232,6 +241,10 @@ export class UIScene extends Phaser.Scene {
     this.input.keyboard!.on('keydown-P', () => {
       if (this.modalLayer && this.modalKind === 'worldmap') return this.closeModal();
       if (!this.registry.get('modal')) openWorldMap(this);
+    });
+    this.input.keyboard!.on('keydown-C', () => {
+      if (this.modalLayer && this.modalKind === 'character') return this.closeModal();
+      if (!this.registry.get('modal')) openCharacter(this);
     });
     this.input.keyboard!.on('keydown-I', () => {
       if (this.modalLayer && this.modalKind === 'inventory') return this.closeModal();
@@ -499,9 +512,9 @@ export class UIScene extends Phaser.Scene {
       }
     }
     const h = 16 + rows.length * 18;
-    this.questList.add(this.panel(12, 180, 210, h));
+    this.questList.add(this.panel(12, 218, 210, h));
     rows.forEach((row, i) => {
-      const ry = 188 + i * 18 + 8;
+      const ry = 226 + i * 18 + 8;
       if (row.icon) this.questList.add(this.add.image(36, ry, row.icon).setScale(0.9));
       this.questList.add(this.add.text(row.icon ? 48 : 24, ry, row.text, txt(11, row.color, !row.icon)).setOrigin(0, 0.5));
     });

@@ -14,7 +14,7 @@ export function showWelcome(ui: UIScene) {
     'Gerak: WASD / panah, atau klik/tap tujuan',
     'Aksi: Spasi / E, atau klik petak di dekatmu',
     'Alat: 1 Cangkul · 2 Penyiram · 3 Benih · 4 Tangan · 5 Pancing · 6 Beliung',
-    'Lari: Shift  ·  Tas: I  ·  Kalender: K  ·  Buku Ikan: J  ·  Peta: P  ·  Musik: N',
+    'Lari: Shift  ·  Tas: I  ·  Karakter: C  ·  Kalender: K  ·  Buku Ikan: J  ·  Peta: P  ·  Musik: N',
     'Ganti benih: Q  ·  Semua suara: M  ·  Tutup jendela: Esc',
     '',
     'Cangkul → tanam → siram setiap hari → panen.',
