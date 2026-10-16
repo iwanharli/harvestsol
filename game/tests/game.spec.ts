@@ -1193,7 +1193,7 @@ test('alat tingkat tinggi: cangkul 3 petak, penyiram 3x3, alat di bengkel tidak 
   for (const x of [11, 12, 13]) for (const y of [10, 11, 12]) expect(s.plots[`${x},${y}`].watered, `${x},${y}`).toBe(true);
   expect(s.water).toBe(91);
 
-  await patch(page, "s.forge = { tool: 'cangkul', tier: 3, ready: 99 }");
+  await patch(page, "s.forge = { tool: 'cangkul', tier: 3, ready: 99 }; s.unequipped = ['tool:cangkul']");
   await press(page, '1');
   expect((await toasts(page)).join()).toContain('sedang ditempa');
   await page.evaluate(() => window.game.events.emit('open-bengkel'));
@@ -1221,7 +1221,7 @@ test('bengkel buka siang, tutup malam', async ({ page }) => {
 
 test('bengkel: tombol Ambil memperbarui jendela', async ({ page }) => {
   const errors = await start(page);
-  await patch(page, "s.forge = { tool: 'cangkul', tier: 1, ready: 1 }; s.toolTier = {}");
+  await patch(page, "s.forge = { tool: 'cangkul', tier: 1, ready: 1 }; s.toolTier = {}; s.unequipped = ['tool:cangkul']");
   await page.evaluate(() => window.game.events.emit('open-bengkel'));
   await page.waitForTimeout(150);
   await page.mouse.click(708, 101); // "Ambil"
@@ -1390,5 +1390,25 @@ test('dua toko: kios benih dan kios peralatan isinya beda', async ({ page }) => 
   expect(await title()).toContain('Toko Benih & Ternak');
   const names = await page.evaluate(() => (window.game.scene.getScene('ui') as any).modalLayer.list.filter((o: any) => o.type === 'Text').map((o: any) => o.text));
   expect(names).toContain('Pupuk Cepat');
+  noErrors(errors);
+});
+
+test('bengkel: selagi alat ditempa, cadangan bisa dipakai; hasil tempa masuk kotak', async ({ page }) => {
+  const errors = await start(page);
+  const r = await page.evaluate(async () => {
+    const m = await import('/src/state.ts');
+    const s = window.game.registry.get('state');
+    s.coins = 9000; s.level = 5; s.produce = { 'bijih-tembaga': 5 };
+    m.buySpareTool(s, 'cangkul');
+    const forge = m.startUpgrade(s, 'cangkul'); // main hoe goes to the smith, its slot is empty
+    const emptyWhileForging = !m.isWorn(s, 'tool:cangkul');
+    const eq = m.equipFromBox(s, 'spare:0'); // wear the spare meanwhile
+    s.day = s.forge.ready;
+    const got = m.collectUpgrade(s);
+    return { forge, emptyWhileForging, eq, got, worn: m.isWorn(s, 'tool:cangkul'), tier: s.toolTier.cangkul ?? 0, spares: s.spareTools };
+  });
+  expect(r).toEqual({ forge: null, emptyWhileForging: true, eq: null, got: null, worn: true, tier: 0, spares: [{ tool: 'cangkul', tier: 1 }] });
+  await press(page, '1');
+  expect((await state(page)).tool).toBe('cangkul'); // the spare works while the main one was away
   noErrors(errors);
 });

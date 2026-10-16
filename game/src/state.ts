@@ -254,6 +254,7 @@ function migrate(s: GameState): GameState {
   for (const w of ['topi', 'baju', 'celana', 'sepatu'] as WearSlot[])
     if (s.unequipped?.includes(`wear:${w}`)) s.outfit![w] = '';
   if (s.unequipped) s.unequipped = s.unequipped.filter((k) => !k.startsWith('wear:'));
+  if (s.forge && !s.unequipped?.includes(`tool:${s.forge.tool}`)) s.unequipped = [...(s.unequipped ?? []), `tool:${s.forge.tool}`];
   s.bagTier ??= 0;
   s.weather ??= 'cerah';
   if (!s.forecasts) {
@@ -1172,7 +1173,7 @@ export function gearBox(s: GameState): BoxItem[] {
       if (c && o[c.slot] !== id) out.push({ key: `cos:${id}`, kind: 'wear', slot: `wear:${c.slot}`, name: c.name, icon: `wear-${id}` });
     }
   for (const t of TOOLS)
-    if (!isWorn(s, `tool:${t.id}`) && (!needsPurchase(t.id) || s.ownedTools.includes(t.id)))
+    if (!isWorn(s, `tool:${t.id}`) && !atForge(s, t.id) && (!needsPurchase(t.id) || s.ownedTools.includes(t.id)))
       out.push({ key: `tool:${t.id}`, kind: 'tool', slot: `tool:${t.id}`, name: t.name, icon: `tool-${t.id}`, tier: tierOf(s, t.id) });
   (s.spareTools ?? []).forEach((sp, i) =>
     out.push({ key: `spare:${i}`, kind: 'tool', slot: `tool:${sp.tool}`, name: toolNameOf(sp.tool), icon: `tool-${sp.tool}`, tier: sp.tier }),
@@ -1188,7 +1189,10 @@ export function unequipSlot(s: GameState, slot: string): string | null {
     outfitOf(s)[id as Wear] = '';
     return null;
   }
-  if (atForge(s, id as Tool)) return `${toolNameOf(id as Tool)} sedang di Bengkel.`;
+  if (atForge(s, id as Tool)) {
+    // the main one is at the smith, so what is in the slot now is a spare: back to the box with it
+    s.spareTools = [...(s.spareTools ?? []), { tool: id as Tool, tier: tierOf(s, id as Tool) }];
+  }
   const off = new Set(s.unequipped ?? []);
   off.add(slot);
   s.unequipped = [...off];
@@ -1212,7 +1216,6 @@ export function equipFromBox(s: GameState, key: string): string | null {
   const i = Number(id);
   const sp = s.spareTools?.[i];
   if (!sp) return 'Alat tidak ada.';
-  if (atForge(s, sp.tool)) return `${toolNameOf(sp.tool)} utama sedang di Bengkel. Ambil dulu.`;
   const slot = `tool:${sp.tool}`;
   const spares = [...(s.spareTools ?? [])];
   spares.splice(i, 1);
@@ -1260,6 +1263,7 @@ export function startUpgrade(s: GameState, t: Tool): string | null {
   if (!UPGRADABLE.includes(t)) return 'Alat ini tidak bisa ditempa.';
   if (s.forge) return 'Pandai besi masih mengerjakan alat lain.';
   if (needsPurchase(t) && !s.ownedTools.includes(t)) return 'Beli alatnya dulu di Toko Peralatan.';
+  if (!isWorn(s, `tool:${t}`)) return `Pasang dulu ${toolNameOf(t)} yang mau ditempa (jendela Karakter).`;
   const next = tierOf(s, t) + 1;
   const cost = UPGRADE_COST[next];
   if (!cost) return 'Sudah tingkat tertinggi.';
@@ -1269,6 +1273,8 @@ export function startUpgrade(s: GameState, t: Tool): string | null {
   s.coins -= cost.coins;
   takeBase(s, cost.ore, cost.qty);
   s.forge = { tool: t, tier: next, ready: s.day + cost.days };
+  // the tool leaves your hands: its slot is empty until you collect it or wear a spare
+  s.unequipped = [...new Set([...(s.unequipped ?? []), `tool:${t}`])];
   if (s.tool === t) s.tool = 'tangan';
   return null;
 }
@@ -1277,8 +1283,16 @@ export function startUpgrade(s: GameState, t: Tool): string | null {
 export function collectUpgrade(s: GameState): string | null {
   if (!s.forge) return 'Tidak ada alat di bengkel.';
   if (s.day < s.forge.ready) return `Belum selesai. Ambil hari ke-${dayOfSeason(s.forge.ready)} ${seasonOf(s.forge.ready)}.`;
-  s.toolTier = { ...(s.toolTier ?? {}), [s.forge.tool]: s.forge.tier };
-  if (s.forge.tool === 'siram') s.water = waterMax(s);
+  const { tool, tier } = s.forge;
+  const slot = `tool:${tool}`;
+  if (isWorn(s, slot)) {
+    // a spare is in use: the upgraded one goes to the box
+    s.spareTools = [...(s.spareTools ?? []), { tool, tier }];
+  } else {
+    s.toolTier = { ...(s.toolTier ?? {}), [tool]: tier };
+    s.unequipped = (s.unequipped ?? []).filter((k) => k !== slot);
+    if (tool === 'siram') s.water = waterMax(s);
+  }
   s.forge = undefined;
   return null;
 }

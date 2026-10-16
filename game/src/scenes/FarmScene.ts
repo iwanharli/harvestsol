@@ -609,8 +609,10 @@ export class FarmScene extends Phaser.Scene {
     const tool = TOOLS[i].id;
     if (needsPurchase(tool) && !this.state.ownedTools.includes(tool))
       return this.fail(`Kamu belum punya ${TOOLS[i].name}. Beli di Toko Peralatan (sebelah papan warga).`);
-    if (atForge(this.state, tool)) return this.fail(`${TOOLS[i].name} sedang ditempa di Bengkel Pandai Besi.`);
-    if (!isWorn(this.state, `tool:${tool}`)) return this.fail(`${TOOLS[i].name} sedang dicopot. Pasang lagi di Tas › Perlengkapan.`);
+    if (!isWorn(this.state, `tool:${tool}`))
+      return this.fail(atForge(this.state, tool)
+        ? `${TOOLS[i].name} sedang ditempa di Bengkel. Pakai cadangan dari jendela Karakter (C) kalau punya.`
+        : `${TOOLS[i].name} sedang dicopot. Pasang lagi di Tas › Perlengkapan.`);
     this.state.tool = tool;
     this.game.events.emit('hud');
   }

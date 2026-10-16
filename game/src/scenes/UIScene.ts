@@ -364,7 +364,7 @@ export class UIScene extends Phaser.Scene {
       icon.setScale(on ? 2.4 : 2.1);
       icon.setTint(locked ? 0x8a8070 : 0xffffff).setAlpha(locked ? 0.4 : on ? 1 : 0.85);
       key.setColor(on ? C.blue : C.tertiary);
-      const tier = tierOf(s, t.id), away = atForge(s, t.id);
+      const tier = tierOf(s, t.id), away = atForge(s, t.id) && !isWorn(s, `tool:${t.id}`);
       let name = locked ? `${t.name} · beli di Toko Peralatan` : tier ? `${t.name} ${TOOL_TIERS[tier]}` : t.name;
       if (away) {
         name = `${t.name} · sedang di Bengkel`;

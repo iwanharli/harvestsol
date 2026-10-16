@@ -10,6 +10,7 @@ import {
   maxStamina,
   save,
   slotsUsed,
+  atForge,
   tierOf,
   unequipSlot,
   waterMax,
@@ -135,7 +136,7 @@ export function openCharacter(ui: UIScene) {
       const img = ui.add.image(mx, my - (tool && UPGRADABLE.includes(tool) && !off ? 5 : 0), icon).setScale(kind === 'wear' ? 4.6 : size >= B ? 3.2 : 2.4);
       if ((tool && !owned(tool)) || off) img.setTint(0x1d1d1f).setAlpha(0.14);
       c.add(img);
-      if (off) c.add(ui.add.text(mx, cy + size - 6, 'kosong', txt(9, C.tertiary)).setOrigin(0.5, 1));
+      if (off) c.add(ui.add.text(mx, cy + size - 6, tool && atForge(s, tool) ? 'di Bengkel' : 'kosong', txt(9, tool && atForge(s, tool) ? C.orange : C.tertiary)).setOrigin(0.5, 1));
       else if (tool && owned(tool) && UPGRADABLE.includes(tool)) c.add(tierBadge(ui, g, mx, cy + size, tierOf(s, tool), size < B));
       if (tool && s.tool === tool) c.add(ui.add.text(cx + size - 5, cy + 4, '●', txt(9, C.blue)).setOrigin(1, 0));
     }
@@ -260,7 +261,11 @@ export function openCharacter(ui: UIScene) {
     const on = isWorn(s, picked);
     head(`tool-${tool}`, t.name, `ALAT · TOMBOL ${t.key}${!has ? '' : !on ? ' · KOSONG' : s.tool === tool ? ' · DIPEGANG' : ''}`, !has || !on);
     if (!has) para('Belum punya. Beli di Toko Peralatan.', C.red);
-    else if (!on) para('Slot kosong. Pasang dari kotak Perlengkapan di bawah.', C.secondary);
+    else if (!on && atForge(s, tool)) {
+      const spare = box.some((b) => b.slot === picked);
+      para(`${t.name} utamamu sedang ditempa di Bengkel Pandai Besi.`, C.orange);
+      para(spare ? 'Pakai cadangan dari kotak Perlengkapan sementara: klik 2× atau seret ke slot ini.' : 'Beli cadangan di Bengkel kalau mau tetap bekerja sambil menunggu.', C.secondary);
+    } else if (!on) para('Slot kosong. Pasang dari kotak Perlengkapan di bawah.', C.secondary);
     else {
       if (canUnequip(picked)) actionButton('Copot', false);
       if (UPGRADABLE.includes(tool)) tiers(tool, tierOf(s, tool));
