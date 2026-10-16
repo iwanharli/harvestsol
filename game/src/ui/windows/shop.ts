@@ -2,6 +2,7 @@ import {
   BAG_TIERS,
   BUYABLE_TOOLS,
   COSTUMES,
+  SPARE_TOOL_PRICE,
   CHICKEN_PRICE,
   FEATURE_LEVEL,
   FEED_PRICE,
@@ -29,6 +30,7 @@ export function openShop(ui: UIScene, kind?: 'benih' | 'alat') {
     shopTab = kind === 'benih' ? 'benih' : 'alat';
   }
   const s = ui.state;
+  const spares = (t: string) => (s.spareTools ?? []).filter((sp) => sp.tool === t).length;
   type Entry = { id: string; name: string; price: number; level: number; info: string; owned: () => string; buy: (n: number) => string | null; unique?: () => boolean; icon?: string };
   const bag = (id: string) => (n: number) => {
     if (!canAdd(s, 'seeds', id, n)) return 'Tas penuh! Upgrade tas atau kosongkan slot.';
@@ -80,14 +82,34 @@ export function openShop(ui: UIScene, kind?: 'benih' | 'alat') {
             },
           ];
         })(),
-        ...BUYABLE_TOOLS.map((t) => ({
-          id: t.id, name: t.name, price: t.price, level: t.level, info: t.desc,
-          owned: () => '',
-          unique: () => s.ownedTools.includes(t.id),
+        // the first one goes on your belt; after that each purchase is a spare in Tas › Perlengkapan
+        ...BUYABLE_TOOLS.map((t) => {
+          const has = s.ownedTools.includes(t.id);
+          return {
+            id: t.id, name: has ? `${t.name} (cadangan)` : t.name, price: has ? SPARE_TOOL_PRICE[t.id] ?? t.price : t.price, level: t.level,
+            info: has ? 'alat kedua, disimpan di Tas › Perlengkapan' : t.desc,
+            owned: () => (has ? `${1 + spares(t.id)}` : ''),
+            unique: () => false,
+            buy: () => {
+              if (!s.ownedTools.includes(t.id)) {
+                s.ownedTools.push(t.id);
+                ui.toast(`${t.name} terpasang di slot ${TOOLS.findIndex((x) => x.id === t.id) + 1}.`);
+              } else {
+                s.spareTools = [...(s.spareTools ?? []), { tool: t.id, tier: 0 }];
+                ui.toast(`${t.name} cadangan masuk Tas › Perlengkapan.`);
+              }
+              return null;
+            },
+          };
+        }),
+        ...(['cangkul', 'siram'] as const).map((id) => ({
+          id: `tool-${id}`, name: `${TOOLS.find((x) => x.id === id)!.name} (cadangan)`, price: SPARE_TOOL_PRICE[id]!, level: 1, icon: `tool-${id}`,
+          info: 'alat kedua, disimpan di Tas › Perlengkapan',
+          owned: () => `${1 + spares(id)}`,
+          unique: () => false,
           buy: () => {
-            if (s.ownedTools.includes(t.id)) return `Kamu sudah punya ${t.name}.`;
-            s.ownedTools.push(t.id);
-            ui.toast(`${t.name} terpasang di slot ${TOOLS.findIndex((x) => x.id === t.id) + 1}.`);
+            s.spareTools = [...(s.spareTools ?? []), { tool: id, tier: 0 }];
+            ui.toast(`${TOOLS.find((x) => x.id === id)!.name} cadangan masuk Tas › Perlengkapan.`);
             return null;
           },
         })),
@@ -176,7 +198,7 @@ export function openShop(ui: UIScene, kind?: 'benih' | 'alat') {
     card(g, cx, cy, cw, ch, locked ? 'locked' : 'normal', 16);
     well(g, cx + 40, cy + ch / 2, 26, locked);
     c.add(g);
-    const icon = ui.add.image(cx + 40, cy + ch / 2, it.icon ?? (shopTab === 'benih' ? seedIcon(it.id) : `icon-${it.id}`)).setScale(it.icon?.startsWith('wear') ? 3.2 : 2.5);
+    const icon = ui.add.image(cx + 40, cy + ch / 2, it.icon ?? (shopTab === 'benih' ? seedIcon(it.id) : `icon-${it.id}`)).setScale(it.icon?.startsWith('wear') ? 3.2 : it.icon?.startsWith('tool') ? 2.2 : 2.5);
     if (locked) icon.setTint(0x9a9aa0).setAlpha(0.5);
     c.add(icon);
     const tx = cx + 78;
