@@ -40,18 +40,20 @@ export function openShop(ui: UIScene, kind?: 'benih' | 'alat') {
     {
       id: 'benih',
       name: 'Benih',
-      items: shopStock(s).map((d) => ({
-        id: d.id, name: d.name, price: d.seedPrice, level: d.level,
-        info: d.regrow ? `${d.days} hari, lalu tiap ${d.regrow} hari` : `${d.days} hari · jual ${d.sellPrice}`,
-        owned: () => `${s.seeds[d.id] ?? 0}`,
-        buy: bag(d.id),
-      })),
-      // fertiliser sits with the seeds: both are for the field
-      ...ITEMS.filter((i) => i.id === 'pupuk').map((i) => ({
-        id: i.id, name: i.name, price: i.price, level: i.level, info: i.desc, icon: `icon-${i.id}`,
-        owned: () => `${s.seeds[i.id] ?? 0}`,
-        buy: bag(i.id),
-      })),
+      items: [
+        ...shopStock(s).map((d) => ({
+          id: d.id, name: d.name, price: d.seedPrice, level: d.level,
+          info: d.regrow ? `${d.days} hari, lalu tiap ${d.regrow} hari` : `${d.days} hari · jual ${d.sellPrice}`,
+          owned: () => `${s.seeds[d.id] ?? 0}`,
+          buy: bag(d.id),
+        })),
+        // fertiliser sits with the seeds: both are for the field
+        ...ITEMS.filter((i) => i.id === 'pupuk').map((i) => ({
+          id: i.id, name: i.name, price: i.price, level: i.level, info: i.desc, icon: `icon-${i.id}`,
+          owned: () => `${s.seeds[i.id] ?? 0}`,
+          buy: bag(i.id),
+        })),
+      ],
     },
     {
       id: 'alat',
