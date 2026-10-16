@@ -16,7 +16,7 @@ import {
   type BoxItem,
   type Wear,
 } from '../../state';
-import { C, HEX, card, txt } from '../theme';
+import { C, HEX, card, tierBadge, txt } from '../theme';
 import { openInventory } from './bag';
 import type { UIScene } from '../../scenes/UIScene';
 
@@ -132,10 +132,11 @@ export function openCharacter(ui: UIScene) {
       c.add(ui.add.text(mx, my + 15, 'Tas', txt(9, C.tertiary)).setOrigin(0.5));
     } else {
       icon = kind === 'wear' ? `wear-${s.outfit?.[id as Wear] || id}` : `tool-${id}`;
-      const img = ui.add.image(mx, my, icon).setScale(kind === 'wear' ? 4.6 : size >= B ? 3.6 : 2.4);
+      const img = ui.add.image(mx, my - (tool && UPGRADABLE.includes(tool) && !off ? 5 : 0), icon).setScale(kind === 'wear' ? 4.6 : size >= B ? 3.2 : 2.4);
       if ((tool && !owned(tool)) || off) img.setTint(0x1d1d1f).setAlpha(0.14);
       c.add(img);
       if (off) c.add(ui.add.text(mx, cy + size - 6, 'kosong', txt(9, C.tertiary)).setOrigin(0.5, 1));
+      else if (tool && owned(tool) && UPGRADABLE.includes(tool)) c.add(tierBadge(ui, g, mx, cy + size, tierOf(s, tool), size < B));
       if (tool && s.tool === tool) c.add(ui.add.text(cx + size - 5, cy + 4, '●', txt(9, C.blue)).setOrigin(1, 0));
     }
     const z = ui.add.zone(cx, cy, size, size).setOrigin(0).setInteractive({ useHandCursor: true });
@@ -172,7 +173,9 @@ export function openCharacter(ui: UIScene) {
     if (!it) continue;
     if (it.tier) ig.lineStyle(2, TIER_COLORS[it.tier], 1).strokeRoundedRect(sx + 1, sy + 1, IS - 2, IS - 2, 9);
     if (sel === picked) ig.lineStyle(2, HEX.blue, 1).strokeRoundedRect(sx - 1, sy - 1, IS + 2, IS + 2, 11);
-    c.add(ui.add.image(sx + IS / 2, sy + IS / 2, it.icon).setScale(it.kind === 'wear' ? 2.8 : 2.1));
+    c.add(ui.add.image(sx + IS / 2, sy + IS / 2 - (it.kind === 'tool' ? 6 : 0), it.icon).setScale(it.kind === "wear" ? 2.8 : 1.9));
+    const tool = it.slot.slice(5) as Tool;
+    if (it.kind === 'tool' && UPGRADABLE.includes(tool)) c.add(tierBadge(ui, ig, sx + IS / 2, sy + IS, it.tier ?? 0, true));
     const z = ui.add.zone(sx, sy, IS, IS).setOrigin(0).setInteractive({ useHandCursor: true });
     interact(sel, 'inv', it.icon, z);
     c.add(z);

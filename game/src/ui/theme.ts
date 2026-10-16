@@ -148,3 +148,13 @@ export function segmented(
   });
   return out;
 }
+
+const TIER_LABEL = ['Biasa', 'Tembaga', 'Besi', 'Emas'];
+const TIER_FILL = [0x8e8e93, 0xc0703a, 0x7d8a99, 0xd4a017];
+/** A small pill at the bottom of a tool slot naming its tier, so upgrades are visible at a glance. */
+export function tierBadge(scene: Phaser.Scene, g: Phaser.GameObjects.Graphics, cx: number, bottom: number, tier: number, small = false) {
+  const t = scene.add.text(cx, bottom - (small ? 3 : 5), TIER_LABEL[tier] ?? '', txt(small ? 10 : 11, C.white)).setOrigin(0.5, 1);
+  const w = t.width + 10, h = t.height + 2;
+  g.fillStyle(TIER_FILL[tier] ?? TIER_FILL[0], tier ? 1 : 0.75).fillRoundedRect(cx - w / 2, t.y - t.height - 1, w, h, h / 2);
+  return t;
+}
