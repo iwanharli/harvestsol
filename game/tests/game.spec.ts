@@ -987,7 +987,7 @@ test('hari berganti sendiri jam 00:00 tanpa tidur', async ({ page }) => {
   expect(s.coins).toBe(360); // paid at midnight, while awake
   expect(s.shipping).toEqual({});
   expect(s.minutes).toBeLessThan(60);
-  expect((await toasts(page)).join()).toContain('Tengah malam: hari baru');
+  expect((await toasts(page)).join()).toContain('Tengah malam: tanggal');
   const ui = await page.evaluate(() => {
     const t = window.game.scene.getScene('ui').timeText;
     return { text: t.text, color: t.style.color };
