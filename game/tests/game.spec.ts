@@ -1327,3 +1327,33 @@ test('perlengkapan: alat dan kostum bisa dicopot dan dipasang lagi', async ({ pa
   expect((await state(page)).tool).toBe('cangkul');
   noErrors(errors);
 });
+
+test('karakter: klik 2× atau seret untuk copot/pasang', async ({ page }) => {
+  const errors = await start(page);
+  await press(page, 'c');
+  await page.waitForTimeout(200);
+  // double-click the hoe on the doll: it goes to the Perlengkapan box
+  await page.mouse.click(153, 215);
+  await page.waitForTimeout(80);
+  await page.mouse.click(153, 215);
+  await page.waitForTimeout(200);
+  expect((await state(page)).unequipped).toEqual(['tool:cangkul']);
+  await page.screenshot({ path: 'test-results/char-inv.png' });
+  // drag it from the box back onto the doll
+  await page.mouse.move(427, 357);
+  await page.mouse.down();
+  await page.mouse.move(300, 300, { steps: 6 });
+  await page.mouse.move(240, 260, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForTimeout(200);
+  expect((await state(page)).unequipped).toEqual([]);
+  // drag the hat off the doll into the box
+  await page.mouse.move(241, 127);
+  await page.mouse.down();
+  await page.mouse.move(400, 300, { steps: 6 });
+  await page.mouse.move(500, 360, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForTimeout(200);
+  expect((await state(page)).unequipped).toEqual(['wear:topi']);
+  noErrors(errors);
+});
