@@ -433,17 +433,16 @@ export class UIScene extends Phaser.Scene {
       }
       if (tier && !locked) frame.fillStyle(TIER_COLORS[tier], 1).fillCircle(x + 9, y + SLOT - 9, 4).lineStyle(1, 0xffffff, 1).strokeCircle(x + 9, y + SLOT - 9, 4);
       if (t.id === 'benih' && count) {
-        // an empty selection jumps to something still in the bag, or shows an empty sack
-        if (!s.seeds[s.seed] && Object.keys(s.seeds).length) s.seed = Object.keys(s.seeds)[0];
+        // the picked item stays picked when it runs out: dimmed, with a 0 on it
         const empty = !s.seeds[s.seed];
         icon.setTint(empty ? 0x8a8070 : 0xffffff).setAlpha(empty ? 0.4 : on ? 1 : 0.85);
-        name = empty ? 'Benih · kosong' : `${itemName(s.seed)} ×${s.seeds[s.seed]}`;
-        this.seedIcon.setVisible(!empty);
-        if (!empty) this.seedIcon.setTexture(seedIcon(s.seed));
-        count.setVisible(!empty).setText(`${s.seeds[s.seed] ?? 0}`).setPosition(x + SLOT - 9, y + SLOT - 9);
-        if (!empty) {
+        name = s.seed ? (empty ? `${itemName(s.seed)} · habis` : `${itemName(s.seed)} ×${s.seeds[s.seed]}`) : 'Benih · kosong';
+        this.seedIcon.setVisible(!!s.seed).setAlpha(empty ? 0.45 : 1);
+        if (s.seed) this.seedIcon.setTexture(seedIcon(s.seed));
+        count.setVisible(!!s.seed).setText(`${s.seeds[s.seed] ?? 0}`).setPosition(x + SLOT - 9, y + SLOT - 9);
+        if (s.seed) {
           const w = Math.max(16, count.width + 8);
-          frame.fillStyle(on ? HEX.blue : 0x8e8e93, 1).fillRoundedRect(count.x - w / 2, count.y - 7, w, 14, 7);
+          frame.fillStyle(empty ? 0xb0b0b6 : on ? HEX.blue : 0x8e8e93, 1).fillRoundedRect(count.x - w / 2, count.y - 7, w, 14, 7);
         }
       }
       if (on) activeName = name;
