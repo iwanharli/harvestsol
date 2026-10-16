@@ -1,7 +1,7 @@
 import { ALARM_WAKE_MIN, DAY_START_MIN, FULL_SLEEP_HOURS, NAP_HOURS } from '../../data';
-import { WEEKDAYS, WEATHER_INFO, isWet } from '../../data';
+import { WEATHER_INFO, isWet } from '../../data';
 import { C, HEX, card, txt, well } from '../theme';
-import { festivalTheme, isFestivalDay, dayOfSeason, seasonOf, type DayReport } from '../../state';
+import { festivalTheme, isFestivalDay, dayOfSeason, seasonOf, weekdayOf, type DayReport } from '../../state';
 import type { UIScene } from '../../scenes/UIScene';
 
 const INK = C.ink;
@@ -122,7 +122,7 @@ export function showReport(ui: UIScene, r: DayReport) {
   c.add(ui.add.image(x + P + 24, y + 42, `wx-${s.weather}`).setScale(2.5));
   c.add(ui.add.text(x + P + 60, y + 22, 'Selamat pagi!', txt(20)));
   c.add(
-    ui.add.text(x + P + 60, y + 48, `Musim ${seasonOf(s.day)} · Hari ${dayOfSeason(s.day)} · ${WEEKDAYS[(s.day - 1) % 7]}`, txt(13, C.secondary, false)),
+    ui.add.text(x + P + 60, y + 48, `Tanggal ${dayOfSeason(s.day)} musim ${seasonOf(s.day)}, hari ${weekdayOf(s.day)}`, txt(13, C.secondary, false)),
   );
 
   // grouped list

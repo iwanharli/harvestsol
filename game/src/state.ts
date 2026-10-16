@@ -313,8 +313,9 @@ export function resetSave() {
 
 export const seasonOf = (day: number): Season => SEASONS[Math.floor((day - 1) / DAYS_PER_SEASON) % 4];
 export const dayOfSeason = (day: number) => ((day - 1) % DAYS_PER_SEASON) + 1;
-const WEEKDAY_FULL = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+export const WEEKDAY_FULL = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 /** "tanggal 17, hari Rabu"; the season is added only when it is not this season. */
+export const weekdayOf = (day: number) => WEEKDAY_FULL[(day - 1) % 7];
 export const dateLabel = (day: number, today: number) =>
   `tanggal ${dayOfSeason(day)}${seasonOf(day) !== seasonOf(today) ? ` musim ${seasonOf(day)}` : ''}, hari ${WEEKDAY_FULL[(day - 1) % 7]}`;
 export const yearOf = (day: number) => Math.floor((day - 1) / (DAYS_PER_SEASON * 4)) + 1;
